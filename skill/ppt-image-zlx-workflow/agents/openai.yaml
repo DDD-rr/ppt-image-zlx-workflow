@@ -1,0 +1,6 @@
+interface:
+  display_name: "PPT-Image-zlx-workflow"
+  short_description: "个人风格 PPT 图片生成工作流"
+  default_prompt: "Use $ppt-image-zlx-workflow to turn my documents or outline into reviewed PPT slide images."
+policy:
+  allow_implicit_invocation: true

@@ -1,0 +1,9 @@
+{
+  "slides": [
+    {
+      "body_file": "slide_01_body.png",
+      "output_file": "slide_01.png",
+      "title": "页面标题"
+    }
+  ]
+}

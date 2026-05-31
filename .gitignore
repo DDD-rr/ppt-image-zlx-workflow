@@ -1,0 +1,24 @@
+# Local snapshots and temporary files
+.snapshots/
+.tmp/
+*.zip
+*.bak
+*.tmp
+
+# PPT projects and generated media
+PPT_Image_Project_*/
+assets/images/
+body_image/
+body_images/
+final_image/
+final_images/
+origin_image/
+sample/
+generated_images/
+
+# Credentials and local environment files
+.env
+.env.*
+auth.json
+*.token
+
