@@ -20,24 +20,23 @@ Copy-Item -LiteralPath $script:ActiveSkillPath -Destination $script:RepositorySk
 Assert-DirectoriesMatch -Expected $script:ActiveSkillPath -Actual $script:RepositorySkillPath
 
 Write-Host 'Active skill copied into repository and verified.'
-git -C $script:RepositoryRoot status --short
+git -c "safe.directory=$script:RepositoryRoot" -C $script:RepositoryRoot status --short
 
 if ($CommitMessage) {
-    git -C $script:RepositoryRoot add --all
-    git -C $script:RepositoryRoot commit -m $CommitMessage
+    git -c "safe.directory=$script:RepositoryRoot" -C $script:RepositoryRoot add --all
+    git -c "safe.directory=$script:RepositoryRoot" -C $script:RepositoryRoot commit -m $CommitMessage
 }
 
 if ($StableTag) {
     if (-not $CommitMessage) {
         throw 'Use -CommitMessage when creating a stable tag.'
     }
-    git -C $script:RepositoryRoot tag -a $StableTag -m "Stable workflow version $StableTag"
+    git -c "safe.directory=$script:RepositoryRoot" -C $script:RepositoryRoot tag -a $StableTag -m "Stable workflow version $StableTag"
 }
 
 if ($Push) {
-    git -C $script:RepositoryRoot push
+    git -c "safe.directory=$script:RepositoryRoot" -C $script:RepositoryRoot push
     if ($StableTag) {
-        git -C $script:RepositoryRoot push origin $StableTag
+        git -c "safe.directory=$script:RepositoryRoot" -C $script:RepositoryRoot push origin $StableTag
     }
 }
-

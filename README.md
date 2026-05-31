@@ -21,7 +21,7 @@ $HOME\.codex\skills\ppt-image-zlx-workflow
 From the repository root:
 
 ```powershell
-.\tools\backup-active-skill.ps1
+powershell -ExecutionPolicy Bypass -File .\tools\backup-active-skill.ps1
 git diff
 git add .
 git commit -m "Describe workflow update"
@@ -31,7 +31,7 @@ git push
 To commit and push in one step:
 
 ```powershell
-.\tools\backup-active-skill.ps1 -CommitMessage "Describe workflow update" -Push
+powershell -ExecutionPolicy Bypass -File .\tools\backup-active-skill.ps1 -CommitMessage "Describe workflow update" -Push
 ```
 
 After confirming a stable version:
@@ -46,13 +46,13 @@ git push origin v0.2.0
 Deploy the current repository source:
 
 ```powershell
-.\tools\deploy-skill.ps1
+powershell -ExecutionPolicy Bypass -File .\tools\deploy-skill.ps1
 ```
 
 Restore a stable tagged release without changing the working branch:
 
 ```powershell
-.\tools\rollback-skill.ps1 -Tag v0.1.0
+powershell -ExecutionPolicy Bypass -File .\tools\rollback-skill.ps1 -Tag v0.1.0
 ```
 
 Every deploy and rollback creates a timestamped local snapshot under:
@@ -62,4 +62,3 @@ $HOME\.codex\skill-backups\ppt-image-zlx-workflow
 ```
 
 Restart Codex after deployment or rollback so the skill is reloaded.
-
