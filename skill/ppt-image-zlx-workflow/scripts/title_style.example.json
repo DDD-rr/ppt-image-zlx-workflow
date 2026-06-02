@@ -1,0 +1,36 @@
+{
+  "style_name": "theme-adaptive-example",
+  "design_note": "Use the project theme and page role to choose a restrained title treatment. Prefer no decoration when it has no clear visual value.",
+  "font_name": "Microsoft YaHei UI",
+  "font_size_px": 48,
+  "title_x": 50,
+  "title_y": 36,
+  "text_color": [255, 255, 255, 255],
+  "shadow": {
+    "enabled": true,
+    "offset_x": 3,
+    "offset_y": 3,
+    "color": [150, 0, 0, 0]
+  },
+  "components": [
+    {
+      "type": "rect",
+      "x": 50,
+      "y": 104,
+      "width_mode": "title_ratio",
+      "width_ratio": 0.22,
+      "min_width": 56,
+      "max_width": 150,
+      "height": 3,
+      "color": [255, 0, 163, 255]
+    },
+    {
+      "type": "ellipse",
+      "x": 205,
+      "y": 102,
+      "width": 7,
+      "height": 7,
+      "color": [220, 87, 198, 220]
+    }
+  ]
+}

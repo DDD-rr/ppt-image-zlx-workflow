@@ -26,10 +26,11 @@ Read only the files required for the current stage:
 | Stage | Read |
 | --- | --- |
 | Messy source materials to outline | `references/outline-template.md` |
-| Confirmed outline to page guide | `references/page-guide-template.md`, `references/visual-core.md`, and `references/master-template-template.md` |
+| Confirmed outline to page guide | `references/page-guide-template.md`, `references/visual-core.md`, `references/master-template-template.md`, and `references/title-style.md` |
 | Select a page layout | `references/page-patterns.md`: read `Pattern Selection`, then only the chosen pattern |
 | Write or QA an image prompt | `references/prompt-contract.md`; add `references/title-safety.md` for standard content pages or title-area issues |
-| Overlay titles | Run `scripts/add_slide_titles.ps1`; script defaults are authoritative |
+| Evidence-heavy page | Add `references/evidence-scenarios.md`, then read only the relevant scenario |
+| Design and overlay titles | Read `references/title-style.md`, create project-level `title_style.json`, then run `scripts/add_slide_titles.ps1`; script defaults are the backward-compatible fallback |
 
 Do not read every reference at startup.
 
@@ -43,7 +44,7 @@ Do not read every reference at startup.
 4. Create `PPT_Page_Image_Guide.md` from `references/page-guide-template.md`, then stop for review.
 5. Resolve and verify local real-image files. Assign each a page role and actual input method.
 6. Select the riskiest representative page and generate one sample body image.
-7. Overlay its title with `scripts/add_slide_titles.ps1`, show the final sample, then stop for review.
+7. Create a theme-adaptive, page-role-aware title-style proposal. When needed, show two or three local title candidate previews on the same body image, choose or confirm one project family, create `title_style.json`, overlay the sample title with `scripts/add_slide_titles.ps1`, show the final sample and title treatment, then stop for review.
 8. After approval, batch-generate body images into `body_image/`, overlay titles into `final_image/`, and run focused QA.
 9. Regenerate only pages with high-impact failures.
 
@@ -52,10 +53,11 @@ Do not read every reference at startup.
 When the user explicitly requests generation without a sample:
 
 1. Generate the requested body image.
-2. Overlay its title.
-3. Run focused QA using `references/prompt-contract.md`.
-4. Automatically revise and regenerate once when the page degrades into a generic template, flat same-color card grid, weak semantic background, missing material contrast, or unclear visual hierarchy.
-5. Deliver the best passing version without stopping for sample confirmation.
+2. Create the project title-style proposal and `title_style.json` when they do not exist.
+3. Overlay its title.
+4. Run compliance QA and visual QA using `references/prompt-contract.md`.
+5. Automatically revise and regenerate once when the page degrades into a generic template, flat same-color card grid, weak semantic background, large meaningless blank title area, missing material contrast, unclear visual hierarchy, or a tidy but visually forgettable composition without one memorable anchor.
+6. Deliver the best passing version without stopping for sample confirmation.
 
 ## Confirmation Gates
 
@@ -86,6 +88,8 @@ Create `PPT_Image_Project_<topic>_<YYYYMMDD_HHMM>` with only needed files:
 - `PPT_Outline_Draft.md` when starting from source materials
 - `Master_Template.md`
 - `PPT_Page_Image_Guide.md`
+- `Title_Style_Proposal.md`
+- `title_style.json`
 - `assets/images/`
 - `prompts/`
 - `body_image/`

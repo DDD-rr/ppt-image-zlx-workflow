@@ -4,7 +4,7 @@ Use for standard content pages, title overlay preparation, and title-area QA.
 
 ## Source Of Truth
 
-`scripts/add_slide_titles.ps1` owns title font, size, coordinates, colors, shadow, and decoration-line geometry. Do not duplicate those values in prompts or other references.
+`scripts/add_slide_titles.ps1` owns title rendering. Project-level `title_style.json` may adapt font, size, coordinates, colors, shadow, and decoration geometry. See `references/title-style.md`. Do not duplicate exact values in prompts.
 
 ## Body Image Rule
 
@@ -20,7 +20,9 @@ Do not place these inside or visually attached to the local title area:
 - Card borders, module edges, process lines, arrows, or bright strokes.
 - Strong glow, high-contrast texture, detailed diagrams, or foreground image edges.
 
-The rest of the header is not a blank band. Outside the local title area, allow soft, non-critical atmosphere, background grids, spatial extension, or a far-right visual edge when title readability remains clear.
+The local title area is visually quiet, not necessarily empty. Allow low-contrast, topic-specific atmosphere behind it when title readability remains clear: darkened environment depth, distant silhouettes, material texture, soft light, or spatial extension. Do not use readable text, strong object edges, dense detail, or high-contrast subjects.
+
+The rest of the header is not a blank band. Outside the local title area, allow soft, non-critical atmosphere, background grids, spatial extension, or a far-right visual edge when title readability remains clear. Prefer semantic context over generic gradient or grid decoration when the topic supports it.
 
 ## Content Start
 
@@ -34,8 +36,8 @@ After overlay, reject the page if:
 
 - Any title or decoration element covers body content.
 - A screenshot, interface, card group, or diagram visually competes with the title.
+- The title area is technically clear but feels like a large meaningless blank patch when a quiet semantic background would improve continuity.
 - The upper half feels empty because body content was pushed too low.
 - A title-area repair would require masking meaningful body content.
 
 Revise the prompt and regenerate the body image instead of covering collisions manually.
-
