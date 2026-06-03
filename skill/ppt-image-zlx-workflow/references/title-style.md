@@ -50,10 +50,28 @@ Use one or two decoration components by default. Add more only when the visual s
 The project-level JSON may adapt:
 
 - Font family, font size, and title position.
+- Maximum title width and minimum font size for long-title fallback.
 - Text color and shadow treatment.
 - Component type, count, colors, thickness, length, spacing, and position.
 - Title-width-aware component length with `width_mode: "title_ratio"`.
 - No decoration at all by using an empty `components` array.
+- Optional `role_variants` for `cover`, `section`, `content`, and `evidence`. Each variant overrides only the fields it needs.
+- Optional subtitle and page-label styling. Supply subtitle and page label per slide in `title_map.json`.
+
+## Long Titles
+
+- Keep confirmed titles verbatim.
+- Use `max_title_width` and `min_font_size_px` to reduce title size only when the confirmed title does not fit.
+- Prefer a slightly smaller single-line title over arbitrary rewriting. If a title still cannot fit, revise the project title style deliberately instead of silently truncating it.
+
+## Role Mapping
+
+In `title_map.json`, assign each slide a `role`:
+
+- `cover`: cover and solution-overview pages.
+- `section`: section-divider and closing pages.
+- `content`: standard content pages and the backward-compatible default.
+- `evidence`: evidence, policy, audit, and architecture pages.
 
 Use simple restrained geometry. The title style should support the theme without becoming a decorative centerpiece.
 

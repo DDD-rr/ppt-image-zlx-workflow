@@ -61,11 +61,35 @@ function Get-ValueOrDefault {
   return $Default
 }
 
+function Get-StyleForRole {
+  param(
+    [object]$BaseStyle,
+    [string]$Role
+  )
+
+  if (-not $BaseStyle) { return $null }
+  if (-not $Role) { $Role = "content" }
+
+  $effectiveStyle = $BaseStyle | ConvertTo-Json -Depth 20 | ConvertFrom-Json
+  if ($effectiveStyle.role_variants) {
+    $variant = $effectiveStyle.role_variants.PSObject.Properties[$Role].Value
+    if ($variant) {
+      foreach ($property in $variant.PSObject.Properties) {
+        $effectiveStyle | Add-Member -NotePropertyName $property.Name -NotePropertyValue $property.Value -Force
+      }
+    }
+  }
+  return $effectiveStyle
+}
+
 function Add-Title {
   param(
     [string]$InputPath,
     [string]$OutputPath,
-    [string]$Title
+    [string]$Title,
+    [string]$Role = "content",
+    [string]$Subtitle = "",
+    [string]$PageLabel = ""
   )
 
   $img = [System.Drawing.Image]::FromFile($InputPath)
@@ -78,33 +102,51 @@ function Add-Title {
       $g.TextRenderingHint = [System.Drawing.Text.TextRenderingHint]::AntiAliasGridFit
       $g.DrawImage($img, 0, 0, $img.Width, $img.Height)
 
-      $font = New-Object System.Drawing.Font($FontName, $FontSizePx, [System.Drawing.FontStyle]::Bold, [System.Drawing.GraphicsUnit]::Pixel)
-      $textBrush = New-Object System.Drawing.SolidBrush((New-Color $style.text_color @(255, 255, 255, 255)))
+      $slideStyle = Get-StyleForRole $style $Role
+      $slideFontName = [string](Get-ValueOrDefault $slideStyle.font_name $FontName)
+      $slideFontSize = [int](Get-ValueOrDefault $slideStyle.font_size_px $FontSizePx)
+      $minFontSize = [int](Get-ValueOrDefault $slideStyle.min_font_size_px $slideFontSize)
+      $maxTitleWidth = [int](Get-ValueOrDefault $slideStyle.max_title_width 0)
+      $slideTitleX = [int](Get-ValueOrDefault $slideStyle.title_x $TitleX)
+      $slideTitleY = [int](Get-ValueOrDefault $slideStyle.title_y $TitleY)
+
+      $font = New-Object System.Drawing.Font($slideFontName, $slideFontSize, [System.Drawing.FontStyle]::Bold, [System.Drawing.GraphicsUnit]::Pixel)
+      if ($maxTitleWidth -gt 0) {
+        while (($g.MeasureString($Title, $font).Width -gt $maxTitleWidth) -and ($slideFontSize -gt $minFontSize)) {
+          $font.Dispose()
+          $slideFontSize--
+          $font = New-Object System.Drawing.Font($slideFontName, $slideFontSize, [System.Drawing.FontStyle]::Bold, [System.Drawing.GraphicsUnit]::Pixel)
+        }
+        if ($g.MeasureString($Title, $font).Width -gt $maxTitleWidth) {
+          Write-Warning "Title exceeds max_title_width after reaching min_font_size_px: $Title"
+        }
+      }
+      $textBrush = New-Object System.Drawing.SolidBrush((New-Color $slideStyle.text_color @(255, 255, 255, 255)))
 
       $shadowEnabled = $true
       $shadowX = 3
       $shadowY = 3
-      if ($style -and $style.shadow) {
-        if ($null -ne $style.shadow.enabled) { $shadowEnabled = [bool]$style.shadow.enabled }
-        if ($null -ne $style.shadow.offset_x) { $shadowX = [int]$style.shadow.offset_x }
-        if ($null -ne $style.shadow.offset_y) { $shadowY = [int]$style.shadow.offset_y }
+      if ($slideStyle -and $slideStyle.shadow) {
+        if ($null -ne $slideStyle.shadow.enabled) { $shadowEnabled = [bool]$slideStyle.shadow.enabled }
+        if ($null -ne $slideStyle.shadow.offset_x) { $shadowX = [int]$slideStyle.shadow.offset_x }
+        if ($null -ne $slideStyle.shadow.offset_y) { $shadowY = [int]$slideStyle.shadow.offset_y }
       }
       if ($shadowEnabled) {
-        $shadowBrush = New-Object System.Drawing.SolidBrush((New-Color $style.shadow.color @(150, 0, 0, 0)))
-        $g.DrawString($Title, $font, $shadowBrush, $TitleX + $shadowX, $TitleY + $shadowY)
+        $shadowBrush = New-Object System.Drawing.SolidBrush((New-Color $slideStyle.shadow.color @(150, 0, 0, 0)))
+        $g.DrawString($Title, $font, $shadowBrush, $slideTitleX + $shadowX, $slideTitleY + $shadowY)
         $shadowBrush.Dispose()
       }
-      $g.DrawString($Title, $font, $textBrush, $TitleX, $TitleY)
+      $g.DrawString($Title, $font, $textBrush, $slideTitleX, $slideTitleY)
 
       $components = @(
         [PSCustomObject]@{ type = "rect"; x = 50; y = 104; width = 90; height = 5; color = @(255, 0, 163, 255) },
         [PSCustomObject]@{ type = "rect"; x = 145; y = 105; width = 70; height = 2; color = @(220, 87, 198, 220) }
       )
-      if ($style -and $null -ne $style.components) {
-        $components = @($style.components)
-      } elseif ($style -and $null -ne $style.decorations) {
+      if ($slideStyle -and $null -ne $slideStyle.components) {
+        $components = @($slideStyle.components)
+      } elseif ($slideStyle -and $null -ne $slideStyle.decorations) {
         # Keep older project-level title styles working unchanged.
-        $components = @($style.decorations | ForEach-Object {
+        $components = @($slideStyle.decorations | ForEach-Object {
           [PSCustomObject]@{
             type = "rect"
             x = $_.x
@@ -119,8 +161,8 @@ function Add-Title {
       $titleWidth = $g.MeasureString($Title, $font).Width
       foreach ($component in $components) {
         $componentType = [string](Get-ValueOrDefault $component.type "rect")
-        $componentX = [int](Get-ValueOrDefault $component.x $TitleX)
-        $componentY = [int](Get-ValueOrDefault $component.y ($TitleY + $FontSizePx + 20))
+        $componentX = [int](Get-ValueOrDefault $component.x $slideTitleX)
+        $componentY = [int](Get-ValueOrDefault $component.y ($slideTitleY + $slideFontSize + 20))
         $componentWidth = [int](Get-ValueOrDefault $component.width 0)
         $componentHeight = [int](Get-ValueOrDefault $component.height 2)
         if ($component.width_mode -eq "title_ratio") {
@@ -141,6 +183,30 @@ function Add-Title {
         }
       }
 
+      if ($Subtitle -and $slideStyle -and $slideStyle.subtitle -and [bool](Get-ValueOrDefault $slideStyle.subtitle.enabled $true)) {
+        $subtitleFontName = [string](Get-ValueOrDefault $slideStyle.subtitle.font_name $slideFontName)
+        $subtitleFontSize = [int](Get-ValueOrDefault $slideStyle.subtitle.font_size_px 21)
+        $subtitleX = [int](Get-ValueOrDefault $slideStyle.subtitle.x $slideTitleX)
+        $subtitleY = [int](Get-ValueOrDefault $slideStyle.subtitle.y ($slideTitleY + $slideFontSize + 30))
+        $subtitleFont = New-Object System.Drawing.Font($subtitleFontName, $subtitleFontSize, [System.Drawing.FontStyle]::Regular, [System.Drawing.GraphicsUnit]::Pixel)
+        $subtitleBrush = New-Object System.Drawing.SolidBrush((New-Color $slideStyle.subtitle.color @(210, 255, 255, 255)))
+        $g.DrawString($Subtitle, $subtitleFont, $subtitleBrush, $subtitleX, $subtitleY)
+        $subtitleBrush.Dispose()
+        $subtitleFont.Dispose()
+      }
+
+      if ($PageLabel -and $slideStyle -and $slideStyle.page_label -and [bool](Get-ValueOrDefault $slideStyle.page_label.enabled $true)) {
+        $pageLabelFontName = [string](Get-ValueOrDefault $slideStyle.page_label.font_name "Segoe UI")
+        $pageLabelFontSize = [int](Get-ValueOrDefault $slideStyle.page_label.font_size_px 18)
+        $pageLabelX = [int](Get-ValueOrDefault $slideStyle.page_label.x 1510)
+        $pageLabelY = [int](Get-ValueOrDefault $slideStyle.page_label.y 845)
+        $pageLabelFont = New-Object System.Drawing.Font($pageLabelFontName, $pageLabelFontSize, [System.Drawing.FontStyle]::Regular, [System.Drawing.GraphicsUnit]::Pixel)
+        $pageLabelBrush = New-Object System.Drawing.SolidBrush((New-Color $slideStyle.page_label.color @(150, 255, 255, 255)))
+        $g.DrawString($PageLabel, $pageLabelFont, $pageLabelBrush, $pageLabelX, $pageLabelY)
+        $pageLabelBrush.Dispose()
+        $pageLabelFont.Dispose()
+      }
+
       $font.Dispose()
       $textBrush.Dispose()
 
@@ -157,6 +223,6 @@ function Add-Title {
 foreach ($item in $titleMap.slides) {
   $input = Join-Path $bodyPath $item.body_file
   $output = Join-Path $outPath $item.output_file
-  Add-Title -InputPath $input -OutputPath $output -Title $item.title
+  Add-Title -InputPath $input -OutputPath $output -Title $item.title -Role $item.role -Subtitle $item.subtitle -PageLabel $item.page_label
   Write-Output $output
 }

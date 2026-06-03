@@ -41,12 +41,16 @@ Do not read every reference at startup.
    - For a structured outline, normalize it and continue.
 2. Ask for overall style: dark, white, or user-specified.
 3. Create one project-level `Master_Template.md` from `references/master-template-template.md`.
-4. Create `PPT_Page_Image_Guide.md` from `references/page-guide-template.md`, then stop for review.
+4. Create `PPT_Page_Image_Guide.md` from `references/page-guide-template.md`. Define the project palette brief and each slide's title zone, content blueprint, and module priorities before image generation, then stop for review.
 5. Resolve and verify local real-image files. Assign each a page role and actual input method.
 6. Select the riskiest representative page and generate one sample body image.
 7. Create a theme-adaptive, page-role-aware title-style proposal. When needed, show two or three local title candidate previews on the same body image, choose or confirm one project family, create `title_style.json`, overlay the sample title with `scripts/add_slide_titles.ps1`, show the final sample and title treatment, then stop for review.
 8. After approval, batch-generate body images into `body_image/`, overlay titles into `final_image/`, and run focused QA.
 9. Regenerate only pages with high-impact failures.
+
+When repairing title-area collisions, re-layout locally before moving content downward: shrink or merge lower-priority modules, tighten internal spacing, and re-balance the grid around the primary visual anchor.
+
+When title collision risk is high, run `scripts/create_title_reference_mask.ps1` and use the temporary mask during planning or as an actual GPT Image 2 visual input when supported. Never deliver the mask.
 
 ## Internal QA When Sample Review Is Waived
 

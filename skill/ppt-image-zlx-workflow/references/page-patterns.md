@@ -84,7 +84,7 @@ Read `Pattern Selection`, then only the chosen pattern. Adapt labels, evidence, 
 - Quiet but lifeless title area -> add low-contrast topic-specific atmosphere without adding readable content or strong edges.
 - Generic gradient or grid background -> replace or supplement it with restrained semantic context appropriate to the page role.
 - Tidy but forgettable page -> strengthen one memorable visual anchor instead of adding more decorative modules.
-- Crowded title area -> move strong subjects down or right; soften only non-critical header atmosphere.
+- Crowded title area -> locally re-layout first: shrink or merge low-priority modules, tighten internal gaps, and re-balance the grid around the primary anchor. Move individual strong subjects down or right only when needed. Avoid translating the whole composition downward.
 - Floating modules -> define content bounds and shared alignment edges.
 - Weak dark theme -> add restrained local light, depth, and material contrast.
 - Busy whitespace -> remove decorative micro-elements before reducing spacing.

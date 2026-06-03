@@ -3,6 +3,8 @@
   "design_note": "Use the project theme and page role to choose a restrained title treatment. Prefer no decoration when it has no clear visual value.",
   "font_name": "Microsoft YaHei UI",
   "font_size_px": 48,
+  "min_font_size_px": 38,
+  "max_title_width": 720,
   "title_x": 50,
   "title_y": 36,
   "text_color": [255, 255, 255, 255],
@@ -32,5 +34,47 @@
       "height": 7,
       "color": [220, 87, 198, 220]
     }
-  ]
+  ],
+  "subtitle": {
+    "enabled": true,
+    "font_name": "Microsoft YaHei UI",
+    "font_size_px": 21,
+    "x": 50,
+    "y": 122,
+    "color": [210, 255, 255, 255]
+  },
+  "page_label": {
+    "enabled": true,
+    "font_name": "Segoe UI",
+    "font_size_px": 18,
+    "x": 1510,
+    "y": 845,
+    "color": [150, 255, 255, 255]
+  },
+  "role_variants": {
+    "cover": {
+      "font_size_px": 58,
+      "max_title_width": 860
+    },
+    "section": {
+      "font_size_px": 54,
+      "components": [
+        {
+          "type": "rect",
+          "x": 50,
+          "y": 112,
+          "width": 130,
+          "height": 4,
+          "color": [255, 0, 163, 255]
+        }
+      ]
+    },
+    "content": {},
+    "evidence": {
+      "shadow": {
+        "enabled": false
+      },
+      "components": []
+    }
+  }
 }

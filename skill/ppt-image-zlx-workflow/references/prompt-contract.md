@@ -13,10 +13,14 @@ Use before generating each GPT Image 2 body image and during focused QA.
 - Information budget: primary visual system, supporting module count, and optional closure or flow system.
 - Layout proportions, content bounds, repeated-module grid, safe margins, and closure alignment if used.
 - Reading path, depth strategy, color hierarchy, and whitespace strategy.
+- Project palette brief: palette source, approximate color distribution, material colors, functional signal colors, and combinations to avoid.
+- Content blueprint: title zone, usable body region, primary anchor bounds, module grid, first-module start line, bottom safe line, and module priorities.
 - Locked text and allowed extensible text.
 - Page-specific forbidden items.
 - Body image only: omit the main slide title and title decoration.
+- For standard content pages, state the hard local title exclusion region explicitly instead of using only a vague request to leave title space. Require a visible breathing gap before the first body module.
 - For standard content pages, state that the hard local title area must remain visually continuous with the background. Forbid rectangles, frames, corner brackets, panel outlines, empty cards, placeholder boxes, divider lines, UI containers, glow borders, decorative strokes, and any title-related structure in or around that area.
+- When space is tight, instruct the model to re-layout locally by scaling, merging, or simplifying lower-priority modules. Do not ask it to move the complete body composition downward.
 
 For real images, also include:
 
@@ -56,6 +60,7 @@ Check each body image and final overlaid image:
 - Blur or mentally hide the body text: the remaining image should still suggest the topic through its scene, proof object, or visual system.
 - Modules align, supporting elements belong to clear groups, and important objects respect safe bounds.
 - The title area stays clear after overlay.
+- No body border, section label, icon, bright line, screenshot edge, or foreground object is visually attached to the title overlay area. Treat any collision as a high-impact failure and regenerate the body image.
 - The title treatment fits the page role and body composition. Reject decoration that feels arbitrary, too heavy, or visually disconnected from the page.
 - Do not accept a page merely because it is clean, aligned, and compliant. Reject over-corrected pages that become flat, repetitive, oversized, or template-like after detail removal.
 

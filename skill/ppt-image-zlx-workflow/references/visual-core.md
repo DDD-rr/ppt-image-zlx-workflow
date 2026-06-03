@@ -47,7 +47,11 @@ Use this file when creating the project master template and page guide. It defin
 
 ## Color
 
-- Use one dominant background family, one primary accent, and at most one secondary contrast.
+- Build a project-level palette brief from topic semantics, required real images, brand constraints, and audience tone before generating the first sample. Do not choose colors from a generic industry stereotype alone.
+- Use one dominant background family, one primary accent, at most one secondary contrast, and restrained functional signal colors only when meaning requires them.
+- Define approximate color distribution, such as `70 / 20 / 8 / 2`, so accents remain accents instead of spreading evenly across every panel.
+- Define material colors for panels, outlines, shadows, translucent layers, and local highlights. Material contrast should create hierarchy even when accent colors are restrained.
+- Name project-specific combinations to avoid. Reject default AI-looking blue-purple neon, same-color card grids, and full-page accent saturation unless the subject genuinely requires them.
 - For dark themes, use restrained blue, cyan, or topic-appropriate accents with controlled highlights. Avoid neon overload and cheap cyberpunk effects.
 - For white themes, use light backgrounds, fine lines, whitespace, and restrained shadows. Avoid empty template-like pages.
 
