@@ -16,6 +16,7 @@ Use before generating each GPT Image 2 body image and during focused QA.
 - Locked text and allowed extensible text.
 - Page-specific forbidden items.
 - Body image only: omit the main slide title and title decoration.
+- For standard content pages, state that the hard local title area must remain visually continuous with the background. Forbid rectangles, frames, corner brackets, panel outlines, empty cards, placeholder boxes, divider lines, UI containers, glow borders, decorative strokes, and any title-related structure in or around that area.
 
 For real images, also include:
 
@@ -50,6 +51,7 @@ Check each body image and final overlaid image:
 - The visual translation is topic-specific. Reject a page that could keep the same visual design after swapping in an unrelated topic.
 - Material contrast and semantic background support the message. Reject same-color card grids, generic gradient-only backgrounds, and decorative texture without topic meaning.
 - The quiet title area remains visually alive without competing with the title. Reject both title collisions and large meaningless blank patches.
+- Reject any empty frame, corner bracket, panel outline, placeholder box, divider line, UI container, glow border, or decorative stroke in or visually attached to the local title area.
 - Foreground, midground, and background have a clear relationship when the page role benefits from spatial depth.
 - Blur or mentally hide the body text: the remaining image should still suggest the topic through its scene, proof object, or visual system.
 - Modules align, supporting elements belong to clear groups, and important objects respect safe bounds.
