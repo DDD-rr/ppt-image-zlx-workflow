@@ -13,9 +13,13 @@ Use this file when creating the project master template and page guide. It defin
 - Define one primary visual system per page: screenshot cockpit, evidence roadmap, process path, architecture, diagnosis map, comparison, or value closure.
 - Use one dominant visual focus for pages centered on one proof, object, workflow, or conclusion.
 - Give each page one memorable visual anchor: a meaningful scene, proof object, highlighted transformation, or conclusion. Do not rely on decoration alone for visual appeal.
+- Define information as visual objects before defining it as generic modules. A module should have a semantic object identity such as evidence object, device surface, control panel, process part, spatial marker, material tag, document piece, dashboard unit, map marker, or product node. Avoid prompting for "cards", "labels", or "modules" without saying what kind of real or product-world object they are.
+- Give repeated information objects a material identity. They may be paper, metal, screen, sticker, nameplate, floating layer, light strip, console panel, folder, glass, board, or another topic-specific material. Do not let "box + text + icon" become the default object language.
 - Use an organized equal-weight system only for genuinely parallel capabilities, categories, or stakeholders.
+- Equal information priority does not require identical visual form. Repeated objects may share a grid and grammar, but should vary through content-specific details, material cues, micro-layout, scale, rhythm, or local emphasis when needed to avoid a mechanical template.
 - Build a clear reading path: title area -> primary visual -> supporting modules -> optional conclusion.
 - Use an information budget by default: one primary visual system, two to four supporting modules, and at most one closure or flow system.
+- Assign visual intensity levels before prompting: S for the main anchor, A for key conclusion or number, B for module headings, C for body text, and D for background or ornament. Do not let repeated modules, icons, borders, and labels all compete at the same intensity.
 
 ## Layout And Alignment
 
@@ -23,7 +27,25 @@ Use this file when creating the project master template and page guide. It defin
 - Name concrete alignment references in prompts: content bounds, primary visual bounds, repeated-module grid, and optional closure alignment.
 - Repeated modules share width logic, alignment edge, internal padding, icon start, and text start.
 - Supporting labels, icons, and captions belong to clear parent groups. Do not scatter them into gaps.
+- Define how supporting objects attach to the primary visual system. They can align to an edge, follow a process path, sit on a perspective surface, orbit a core object, annotate a proof object, or become a quiet bottom note layer. Reject supporting objects that merely occupy empty space.
 - Preserve breathing space for grouping and rhythm. Do not fill whitespace with microcopy, badges, or decorative icons.
+- When a page has multiple major visual zones, define their shared layout order before prompting. Auxiliary zones, legends, side modules, callouts, evidence groups, process notes, or summary strips must relate to the primary content system through shared top edge, bottom edge, vertical center, column rhythm, module height, or reading-path anchor. Do not let a secondary zone float at an arbitrary position or look pasted onto the slide.
+- Alignment does not require symmetry or a fixed sidebar. Asymmetrical layouts are valid when their visual zones share clear anchors, spacing logic, or reading-path relationships.
+- Treat vertical distribution as part of composition quality. After reserving the title area, the main visual system should usually occupy the active middle of the slide rather than drifting into the lower half and leaving a large inactive upper-middle region.
+- Distinguish useful breathing space from dead space. Useful space frames a primary object, supports a scene, or clarifies grouping; dead space is a broad low-information area that neither strengthens the title nor adds topic context.
+- If repeated modules sit too low and create dead space above them, first consider moving the module row upward, increasing the module height, adding a meaningful secondary structure, or strengthening the semantic background. Do not fix dead space by adding random badges, particles, or filler labels.
+- Balance closure elements against the primary visual. A bottom conclusion strip, formula, or callout should support the page, not become heavier than the evidence, process, or capability system it summarizes.
+- For timelines, each date, node marker, connector, and related content object should form a clear group. Do not let timeline markers hover near cards without explicit stems, shared columns, matching color markers, or another visible one-to-one relationship.
+
+## Visual Energy And Canvas Use
+
+- A page can pass compliance and still fail because it is visually underpowered. Evaluate whether the slide has enough visual energy in the upper, middle, and lower thirds after the title is overlaid.
+- Do not let title safety turn into emptiness. A title-safe region should remain a low-contrast semantic background with space, texture, distant scene, or atmospheric continuity, while avoiding readable text, hard panel edges, bright UI borders, and title-like structure.
+- Prefer two-layer information structure when a single row of modules feels thin: for example, evidence pages can pair "policy directions" with "policy documents", process pages can pair "stages" with "outputs", and capability pages can pair "categories" with "platform core". The second layer must explain the message, not decorate it.
+- For evidence, policy, and institutional pages, consider a strong material contrast between dark surroundings and light or semi-light proof objects when it improves authority and focus. Do not make every evidence module a dark translucent card if the page loses object presence.
+- Use topic-specific scene context to activate quiet regions: a school campus and classroom screen for education policy, a product environment for software capability, a lab or server room for local deployment, or document material for governance. Keep it subordinate but recognizable.
+- When comparing candidate layouts, mentally blur the text. The remaining composition should still show a balanced page with a clear subject, not just a low-contrast background with modules parked near the bottom.
+- Treat bottom closure as the final reading beat. It should normally use smaller type, lower brightness, thinner containment, or lower glow than the main proof, process, or capability modules. If the closure reads before the primary content, reduce it or strengthen the primary content.
 
 ## Visual Depth
 
@@ -47,11 +69,23 @@ Use this file when creating the project master template and page guide. It defin
 
 ## Color
 
-- Build a project-level palette brief from topic semantics, required real images, brand constraints, and audience tone before generating the first sample. Do not choose colors from a generic industry stereotype alone.
+- Build a project-level palette brief from topic semantics, required real images, brand constraints, audience tone, document mood, page roles, and `references/user-color-preference.md` before generating the first sample. Do not choose colors from a generic industry stereotype alone.
+- Make an autonomous color decision by default. Consider 2-3 possible directions, then choose one and name why the others were rejected.
+- If the user voluntarily provides preferred PPT or image samples, extract reusable taste signals as optional calibration: background family, accent behavior, saturation, material handling, color distribution, and repeated avoidances. Use the samples to guide taste, not to copy a fixed palette or layout.
 - Use one dominant background family, one primary accent, at most one secondary contrast, and restrained functional signal colors only when meaning requires them.
 - Define approximate color distribution, such as `70 / 20 / 8 / 2`, so accents remain accents instead of spreading evenly across every panel.
+- Define component-level color roles for repeated modules: module background, border, icon, heading, body text, key number, decoration, and signal state. At least three of these roles should differ by brightness, saturation, opacity, material treatment, scale, or hue. Do not use one accent or one same-strength color for every layer.
+- Shared material identity does not justify same-color, same-brightness treatment. A metal nameplate, screen panel, document object, or light strip can share a material family while still separating icon, heading, body text, border, and glow by brightness, opacity, saturation, stroke weight, scale, or small hue shifts. If icon and text intentionally share a hue, make one clearly quieter or smaller.
+- Build tonal steps inside each important color family instead of treating a color family as one flat swatch. Any dominant or accent family can have deep base, low-intensity support, mid-intensity structure, and high-intensity emphasis. Use the highest-intensity step only for the most important information.
+- Separate icon and heading hierarchy inside modules. Icons are recognition aids; headings are reading anchors. They should not share the same color strength, line weight, glow, and visual priority unless the page intentionally treats them as one combined mark.
+- Component contrast should serve information priority, not color variety for its own sake: key numbers or conclusions may be brightest, headings next, body text quieter, and borders/decorations lower still.
+- Define page-level color roles for each slide. Keep a shared project family, but let page role change emphasis: stronger atmosphere for cover or closing pages, clearer material separation for evidence and architecture pages, and quieter functional colors for dense process pages.
 - Define material colors for panels, outlines, shadows, translucent layers, and local highlights. Material contrast should create hierarchy even when accent colors are restrained.
 - Name project-specific combinations to avoid. Reject default AI-looking blue-purple neon, same-color card grids, and full-page accent saturation unless the subject genuinely requires them.
+- Balance anti-AI correction with visual ambition. Do not remove glow, gradients, glass, futuristic cues, or dramatic lighting just because they are common AI tropes; keep them when they support topic meaning, material depth, or a strong visual anchor.
+- Do not force color novelty. Blue remains a valid choice when it is semantically, materially, or brand appropriate; prevent sameness through hue specificity, accent discipline, material contrast, and page-role variation.
+- For AI, technology, data, and intelligent-system dark themes, consider the `Dark AI Technology Direction` in `references/user-color-preference.md` as a candidate direction. Use it only when the page can name a specific visual anchor and a reason for blue-cyan light beyond generic technology mood.
+- Reject any palette that could be moved unchanged to an unrelated topic without losing meaning.
 - For dark themes, use restrained blue, cyan, or topic-appropriate accents with controlled highlights. Avoid neon overload and cheap cyberpunk effects.
 - For white themes, use light backgrounds, fine lines, whitespace, and restrained shadows. Avoid empty template-like pages.
 
@@ -60,6 +94,12 @@ Use this file when creating the project master template and page guide. It defin
 - Separate locked text from extensible text.
 - Lock facts, dates, sources, product names, policy names, titles, and user-required wording.
 - Allow concise supporting explanations only when they improve visual clarity without inventing facts.
+- Readability does not require white rectangles or generic text boxes. Preserve the chosen object material while achieving contrast through typography scale, spacing, local highlight, panel lighting, or tonal separation.
+- Split text into fidelity tiers before image generation: Tier A must appear verbatim and should stay under about 6-10 items per page; Tier B may be compressed but must keep its meaning; Tier C should be translated visually and need not appear as readable text.
+- For text-heavy pages, preserve information by designing fewer larger text modules instead of many small decorative chips. Use module headings with stronger weight, brightness, or small labels, and keep body copy lower contrast with stable line spacing.
+- For body-text carrier pages, body copy should look like readable body copy, not display typography. Use medium text scale, stable line spacing, adequate column width, and clear paragraph rhythm. Highlight key terms locally instead of making the whole paragraph oversized.
+- Preserve the source outline's first-level information groups. Definitions, background, application scenarios, core functions, conclusions, and user-highlighted sections may be compressed or assigned different visual weights, but they should not disappear silently.
+- Image-generated Chinese text is prone to glyph distortion when long, dense, small, or placed on perspective panels. Reduce risk by using wider flat text areas, fewer characters per line, short sentences, front-facing 2D panels, and explicit normal-width typography. Avoid horizontal squeezing, vertical stretching, narrow fonts, perspective-warped body copy, and sticky or malformed strokes.
 - For evidence pages, distinguish factual detail from visual material. Remove unverifiable claims, labels, marks, identifiers, signatures, quotations, and numbers, but preserve useful material cues, layering, framing, contrast, and semantic atmosphere.
 - When repairing invented evidence detail, keep the successful composition and material depth whenever possible. Do not flatten the page into oversized empty cards, blank panels, or repetitive placeholders.
 - Use charts only when real data exists. Do not invent data panels, KPI values, axes, trends, logos, or watermarks.
@@ -68,7 +108,16 @@ Use this file when creating the project master template and page guide. It defin
 ## Avoid
 
 - Unrelated people, handshakes, city scenes, generic abstract backgrounds, decorative business photos, fake UI, and fake charts.
-- Repeated equal-weight cards without hierarchy.
+- Repeated equal-weight cards without hierarchy, object identity, material identity, or attachment to the primary visual system.
+- Generic "PPT component" visuals where information becomes a box, icon, and text without semantic object meaning.
+- Modules where icons, headings, body text, borders, connector lines, and key numbers all use the same color strength, even when they share the same material language.
 - Excessive glow, glass effects, gradients, badges, labels, and decorative connector lines.
+- Overcorrected anti-AI visuals that become flat, timid, low-energy, or less useful for explanation.
+- Dark technology pages where blue is used everywhere with no hierarchy: glowing labels, glowing icons, glowing borders, glowing connectors, and glowing background all at the same visual strength.
 - Large meaningless blank areas caused by over-reserving title clearance.
+- Large inactive upper-middle areas caused by pushing the main module group too low.
+- Oversized bottom conclusion strips that visually overpower the page's main evidence, process, or capability system.
+- Timeline dates, nodes, and cards that are only loosely near each other, with no clear one-to-one grouping.
+- Secondary visual zones that float without shared alignment, rhythm, or reading-path relationship to the primary content system.
 - Crowded edges, floating modules, random indentation, and unreadably small text.
+- Body text that looks horizontally compressed, vertically stretched, perspective-warped, or treated as decorative texture instead of readable typography.

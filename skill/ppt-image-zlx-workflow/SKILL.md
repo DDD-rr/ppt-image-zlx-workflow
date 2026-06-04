@@ -26,7 +26,7 @@ Read only the files required for the current stage:
 | Stage | Read |
 | --- | --- |
 | Messy source materials to outline | `references/outline-template.md` |
-| Confirmed outline to page guide | `references/page-guide-template.md`, `references/visual-core.md`, `references/master-template-template.md`, and `references/title-style.md` |
+| Confirmed outline to page guide | `references/page-guide-template.md`, `references/visual-core.md`, `references/user-color-preference.md`, `references/master-template-template.md`, and `references/title-style.md`; add `references/color-preference-sample.md` only when the user provides preference samples |
 | Select a page layout | `references/page-patterns.md`: read `Pattern Selection`, then only the chosen pattern |
 | Write or QA an image prompt | `references/prompt-contract.md`; add `references/title-safety.md` for standard content pages or title-area issues |
 | Evidence-heavy page | Add `references/evidence-scenarios.md`, then read only the relevant scenario |
@@ -39,14 +39,16 @@ Do not read every reference at startup.
 1. Classify input.
    - For messy documents, create `PPT_Outline_Draft.md` from `references/outline-template.md`, then stop for review.
    - For a structured outline, normalize it and continue.
-2. Ask for overall style: dark, white, or user-specified.
-3. Create one project-level `Master_Template.md` from `references/master-template-template.md`.
-4. Create `PPT_Page_Image_Guide.md` from `references/page-guide-template.md`. Define the project palette brief and each slide's title zone, content blueprint, and module priorities before image generation, then stop for review.
-5. Resolve and verify local real-image files. Assign each a page role and actual input method.
-6. Select the riskiest representative page and generate one sample body image.
-7. Create a theme-adaptive, page-role-aware title-style proposal. When needed, show two or three local title candidate previews on the same body image, choose or confirm one project family, create `title_style.json`, overlay the sample title with `scripts/add_slide_titles.ps1`, show the final sample and title treatment, then stop for review.
-8. After approval, batch-generate body images into `body_image/`, overlay titles into `final_image/`, and run focused QA.
-9. Regenerate only pages with high-impact failures.
+2. Ask for overall style only when the user has not already implied it: dark, white, user-specified, or let the assistant decide from the topic.
+3. Decide the project color direction autonomously from topic semantics, audience, document tone, required real images, page roles, anti-template risks, and `references/user-color-preference.md`. If the user provides preferred PPT screenshots or slide images, use `references/color-preference-sample.md` as optional calibration only; never make repeated samples a normal requirement.
+4. Create one project-level `Master_Template.md` from `references/master-template-template.md`.
+5. Before creating `PPT_Page_Image_Guide.md`, ask a concise page-type question when the source page could reasonably be treated as more than one information type, especially when a page contains both full explanatory prose and feature/capability lists. Offer only the relevant choices, such as body-text carrier page, feature overview page, or hybrid page, and briefly explain the tradeoff: body-text carrier pages preserve more original prose with visual hierarchy; feature overview pages are more modular and scannable but compress prose; hybrid pages preserve one core prose block plus a few supporting modules. Do not suggest local post-processing or local script overlays for body text.
+6. Create `PPT_Page_Image_Guide.md` from `references/page-guide-template.md`. Define the project palette brief, each slide's color role, component-level color roles, page type, text fidelity budget, visual intensity scale, title zone, content blueprint, and module priorities before image generation, then stop for review.
+7. Resolve and verify local real-image files. Assign each a page role and actual input method.
+8. Select the riskiest representative page and generate one sample body image.
+9. Create a theme-adaptive, page-role-aware title-style proposal. When needed, show two or three local title candidate previews on the same body image, choose or confirm one project family, create `title_style.json`, overlay the sample title with `scripts/add_slide_titles.ps1`, show the final sample and title treatment, then stop for review.
+10. After approval, batch-generate body images into `body_image/`, overlay titles into `final_image/`, and run focused QA.
+11. Regenerate only pages with high-impact failures.
 
 When repairing title-area collisions, re-layout locally before moving content downward: shrink or merge lower-priority modules, tighten internal spacing, and re-balance the grid around the primary visual anchor.
 
@@ -60,7 +62,7 @@ When the user explicitly requests generation without a sample:
 2. Create the project title-style proposal and `title_style.json` when they do not exist.
 3. Overlay its title.
 4. Run compliance QA and visual QA using `references/prompt-contract.md`.
-5. Automatically revise and regenerate once when the page degrades into a generic template, flat same-color card grid, weak semantic background, large meaningless blank title area, missing material contrast, unclear visual hierarchy, or a tidy but visually forgettable composition without one memorable anchor.
+5. Automatically revise and regenerate once when the page degrades into a generic template, flat same-color card grid, weak semantic background, large meaningless blank title area, missing material contrast, missing text fidelity, unclear component hierarchy, unclear visual intensity, or a tidy but visually forgettable composition without one memorable anchor.
 6. Deliver the best passing version without stopping for sample confirmation.
 
 ## Confirmation Gates
