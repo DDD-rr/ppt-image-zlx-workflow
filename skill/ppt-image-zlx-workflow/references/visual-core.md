@@ -17,9 +17,24 @@ Use this file when creating the project master template and page guide. It defin
 - Give repeated information objects a material identity. They may be paper, metal, screen, sticker, nameplate, floating layer, light strip, console panel, folder, glass, board, or another topic-specific material. Do not let "box + text + icon" become the default object language.
 - Use an organized equal-weight system only for genuinely parallel capabilities, categories, or stakeholders.
 - Equal information priority does not require identical visual form. Repeated objects may share a grid and grammar, but should vary through content-specific details, material cues, micro-layout, scale, rhythm, or local emphasis when needed to avoid a mechanical template.
+- When three to six repeated modules appear, run the role gate before styling them. If they carry the page's main message or reading path, treat them as high risk for "correct but boring" output and elevate them into one visual system. If they are only supporting labels, proof points, navigation chips, cover benefits, or side notes, keep them visibly subordinate to the primary visual anchor.
 - Build a clear reading path: title area -> primary visual -> supporting modules -> optional conclusion.
 - Use an information budget by default: one primary visual system, two to four supporting modules, and at most one closure or flow system.
 - Assign visual intensity levels before prompting: S for the main anchor, A for key conclusion or number, B for module headings, C for body text, and D for background or ornament. Do not let repeated modules, icons, borders, and labels all compete at the same intensity.
+
+## Repeated Module Role Gate
+
+Use this section whenever a page contains three to six peer modules: policy nodes, product functions, pain points, stakeholder values, process stages, capability groups, scenarios, risks, deliverables, architecture layers, cover benefits, proof points, or supporting labels.
+
+- First decide the module role. Ask whether the viewer needs the modules to understand the slide's core claim, whether removing them would remove the main message, and whether another stronger object already carries the page. Do not skip this judgment.
+- If the modules are the main content skeleton, elevate them. Give the group a shared system anchor: a stage, apparatus, map, cockpit, wall, path, hub, platform, board, shelf, timeline, resource pool, canvas, scene, or another topic-specific structure that explains why the modules belong together.
+- For main-module pages, add a second information layer when the page would otherwise be a thin row of modules. The layer can be direction, state, input/output, stakeholder role, risk level, result, implementation meaning, phase, evidence type, or conclusion. It must explain the message, not decorate the slide.
+- For main-module pages, preserve shared grammar but create local rhythm. Modules may align and share proportions, but they should differ through scale, stacking depth, material detail, icon strength, connector behavior, local highlight, perspective, image content, or emphasis.
+- For auxiliary-module pages, demote the modules. Use light tags, slim panels, quiet chips, low-depth labels, small icons, low contrast, low shadow, and little or no glow. Avoid independent podiums, strong bases, large circular badges, heavy 3D treatment, or a second visual stage.
+- Auxiliary modules must serve the primary visual, not become a competing display system. Keep them below the primary anchor in brightness, size, depth, glow, and detail density.
+- Make the relationship visible after text is blurred. Main-module pages should still show a shared system and relationship; auxiliary-module pages should still show a clear primary anchor with subordinate support. If the result is either only tidy rectangles or two competing stages, the page fails visual QA.
+- Keep energy across the canvas according to role. If main modules are visually thin, strengthen their shared system anchor or second layer. If auxiliary modules become too strong, reduce their material depth, glow, scale, or icon weight before changing the primary visual.
+- Use this rule across page types. For example, a feature page may become a product cockpit or capability surface when features are the main story; cover benefits should remain light support tags when a product hero already dominates. A pain-point page may become a broken workflow or diagnosis map; a value page may become a stakeholder system around a closure; an evidence page may become a proof path or document stage.
 
 ## Layout And Alignment
 
@@ -42,6 +57,7 @@ Use this file when creating the project master template and page guide. It defin
 - A page can pass compliance and still fail because it is visually underpowered. Evaluate whether the slide has enough visual energy in the upper, middle, and lower thirds after the title is overlaid.
 - Do not let title safety turn into emptiness. A title-safe region should remain a low-contrast semantic background with space, texture, distant scene, or atmospheric continuity, while avoiding readable text, hard panel edges, bright UI borders, and title-like structure.
 - Prefer two-layer information structure when a single row of modules feels thin: for example, evidence pages can pair "policy directions" with "policy documents", process pages can pair "stages" with "outputs", and capability pages can pair "categories" with "platform core". The second layer must explain the message, not decorate it.
+- Apply `Repeated Module Role Gate` before accepting any page with a row or grid of peer modules. A clean equal-module layout is not enough for main-module pages unless the page also has a shared system anchor, a meaningful second layer, and local rhythm. For auxiliary-module pages, check that the modules remain subordinate and do not create a second visual stage.
 - For evidence, policy, and institutional pages, consider a strong material contrast between dark surroundings and light or semi-light proof objects when it improves authority and focus. Do not make every evidence module a dark translucent card if the page loses object presence.
 - Use topic-specific scene context to activate quiet regions: a school campus and classroom screen for education policy, a product environment for software capability, a lab or server room for local deployment, or document material for governance. Keep it subordinate but recognizable.
 - When comparing candidate layouts, mentally blur the text. The remaining composition should still show a balanced page with a clear subject, not just a low-contrast background with modules parked near the bottom.
@@ -109,6 +125,9 @@ Use this file when creating the project master template and page guide. It defin
 
 - Unrelated people, handshakes, city scenes, generic abstract backgrounds, decorative business photos, fake UI, and fake charts.
 - Repeated equal-weight cards without hierarchy, object identity, material identity, or attachment to the primary visual system.
+- Three to six same-size modules that remain only "container + icon + heading + short text" after the page's text is blurred.
+- Auxiliary modules that become brighter, deeper, larger, more dimensional, or more detailed than the page's intended primary anchor.
+- Two competing visual stages caused by over-designed supporting labels, proof points, cover benefits, or side notes.
 - Generic "PPT component" visuals where information becomes a box, icon, and text without semantic object meaning.
 - Modules where icons, headings, body text, borders, connector lines, and key numbers all use the same color strength, even when they share the same material language.
 - Excessive glow, glass effects, gradients, badges, labels, and decorative connector lines.

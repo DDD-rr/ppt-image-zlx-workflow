@@ -12,6 +12,7 @@ Use before generating each GPT Image 2 body image and during focused QA.
 - Information-bearing visual objects.
 - Visual object identity for each information group: name what the object is in the slide world, not only its abstract role. Examples include evidence object, device surface, control panel, process part, spatial marker, material tag, document piece, dashboard unit, map marker, or product node.
 - Material identity for repeated objects: define whether they read as paper, metal, screen, sticker, nameplate, floating layer, light strip, console panel, folder, glass, board, or another topic-specific material. State that readability must be achieved without collapsing into generic white text boxes unless the page intentionally uses document material.
+- Repeated module role gate when three to six peer modules appear: state whether they are main content or auxiliary support. If main, name the shared system anchor, meaningful second information layer, and local rhythm differences. If auxiliary, state how they stay subordinate to the primary visual through lower brightness, depth, glow, scale, and detail density.
 - Attachment relationship for supporting objects: state how they connect to the primary visual system through edge alignment, process path, perspective surface, orbit, proof annotation, bottom note layer, or another clear relationship. Do not let them float merely to fill empty space.
 - Information budget: primary visual system, supporting module count, and optional closure or flow system.
 - Text fidelity budget: Tier A verbatim text, Tier B compressible text, and Tier C visual-only meaning. Keep Tier A short enough to render reliably; if too much exact text is required, plan deterministic local text overlay instead of relying on the image model.
@@ -74,6 +75,11 @@ Check each body image and final overlaid image:
 - The page has a clear primary visual system, reading path, and meaningful depth.
 - The page has one memorable visual anchor. Reject pages that are tidy but visually forgettable.
 - Information appears as semantic visual objects rather than generic PPT components. Reject pages where the main information groups are only boxes, icons, and text without object or material identity.
+- If three to six repeated modules appear, their visual treatment must match their role. Reject pages where main modules are under-designed into a plain row/grid, and reject pages where auxiliary modules are over-designed into a competing visual stage.
+- Main repeated modules must form a shared visual system rather than a plain row or grid. Reject main-module pages where the modules lack a shared stage, path, cockpit, map, platform, wall, hub, or other system anchor.
+- Main repeated modules should include a meaningful second layer when the main row feels thin: direction, state, role, input/output, phase, risk, result, evidence type, or conclusion. Reject second layers that are only decorative labels, badges, or filler.
+- Main repeated modules should show local rhythm inside shared grammar. Reject pages where each main module has identical size, icon strength, border strength, material depth, and visual priority unless the page intentionally uses a strict matrix and has another strong anchor.
+- Auxiliary repeated modules should remain subordinate to the primary anchor. Reject auxiliary tags, proof points, cover benefits, or side notes that use independent podiums, large badges, strong glow, heavy 3D bases, or equal-or-greater visual weight than the main object.
 - Repeated information objects retain the intended material identity. Reject pages where the model solves readability by flattening them into generic white text boxes, unless white document material was explicitly chosen as the page's main object language.
 - Supporting objects visibly attach to the primary visual system through alignment, path, perspective, orbit, annotation, or note-layer logic. Reject auxiliary tags, cards, or labels that simply sit in empty space.
 - The active body composition uses the canvas well after the title overlay. Reject pages with a broad inactive upper-middle region when the main modules could be higher, larger, or supported by meaningful topic context.
@@ -86,6 +92,7 @@ Check each body image and final overlaid image:
 - Repeated modules have internal hierarchy. Reject modules where background, border, icon, heading, body text, key number, decoration, and glow all use the same hue and brightness.
 - Same-material repeated modules still separate icon, heading, body text, border, and glow. Reject modules where shared material language collapses into same-color same-intensity icon/text treatment, unless one combined mark is explicitly intended and documented.
 - Repeated modules have controlled visual weight. Reject secondary objects whose borders, icons, glow, and text scale make them compete with the primary visual anchor.
+- Check for role inversion: supporting modules should not be brighter, more complex, more dimensional, or more attention-grabbing than the intended S/A-level subject.
 - Headings and body text have distinct treatment. Reject pages where module headings are not separated from body copy by weight, brightness, spacing, label treatment, or restrained decoration.
 - Body-text carrier pages use true body-copy hierarchy: medium text scale, readable line spacing, adequate column width, and local keyword emphasis. Reject oversized paragraph typography that crowds out required information or competes with the main visual.
 - The source outline's first-level information groups have visible destinations. Reject pages that silently drop required sections such as application scenarios, definitions, core functions, conclusions, or user-highlighted groups when the page is meant to preserve them.
@@ -100,6 +107,8 @@ Check each body image and final overlaid image:
 - Bottom conclusions are closure, not second titles. Reject pages where the bottom conclusion uses title-like scale, brightness, or glow and becomes the first or second thing the viewer reads before the primary content.
 - Foreground, midground, and background have a clear relationship when the page role benefits from spatial depth.
 - Blur or mentally hide the body text: the remaining image should still suggest the topic through its scene, proof object, or visual system.
+- For main repeated-module pages, the blur test must still show why the modules belong together. If the result is only several neat rectangles, regenerate with a stronger shared system anchor or second layer.
+- For auxiliary repeated-module pages, the blur test should still show one dominant primary anchor with quiet support. If the auxiliary group reads as a second hero, reduce its weight.
 - Modules align, supporting elements belong to clear groups, and important objects respect safe bounds.
 - The title area stays clear after overlay.
 - No body border, section label, icon, bright line, screenshot edge, or foreground object is visually attached to the title overlay area. Treat any collision as a high-impact failure and regenerate the body image.

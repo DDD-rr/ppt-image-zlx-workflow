@@ -80,6 +80,7 @@ Read `Pattern Selection`, then only the chosen pattern. Adapt labels, evidence, 
 ## Common Corrections
 
 - Flat cards -> add one meaningful visual focus and organize supporting modules around it.
+- Three to six peer modules -> run the role gate first. Main modules should become a visual system with shared anchor, second layer, and local rhythm. Auxiliary modules should remain light support and must not become a second stage.
 - Empty top area -> move body content upward while preserving title clearance.
 - Quiet but lifeless title area -> add low-contrast topic-specific atmosphere without adding readable content or strong edges.
 - Generic gradient or grid background -> replace or supplement it with restrained semantic context appropriate to the page role.
