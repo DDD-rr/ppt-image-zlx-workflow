@@ -88,8 +88,7 @@ function Add-Title {
     [string]$OutputPath,
     [string]$Title,
     [string]$Role = "content",
-    [string]$Subtitle = "",
-    [string]$PageLabel = ""
+    [string]$Subtitle = ""
   )
 
   $img = [System.Drawing.Image]::FromFile($InputPath)
@@ -195,18 +194,6 @@ function Add-Title {
         $subtitleFont.Dispose()
       }
 
-      if ($PageLabel -and $slideStyle -and $slideStyle.page_label -and [bool](Get-ValueOrDefault $slideStyle.page_label.enabled $true)) {
-        $pageLabelFontName = [string](Get-ValueOrDefault $slideStyle.page_label.font_name "Segoe UI")
-        $pageLabelFontSize = [int](Get-ValueOrDefault $slideStyle.page_label.font_size_px 18)
-        $pageLabelX = [int](Get-ValueOrDefault $slideStyle.page_label.x 1510)
-        $pageLabelY = [int](Get-ValueOrDefault $slideStyle.page_label.y 845)
-        $pageLabelFont = New-Object System.Drawing.Font($pageLabelFontName, $pageLabelFontSize, [System.Drawing.FontStyle]::Regular, [System.Drawing.GraphicsUnit]::Pixel)
-        $pageLabelBrush = New-Object System.Drawing.SolidBrush((New-Color $slideStyle.page_label.color @(150, 255, 255, 255)))
-        $g.DrawString($PageLabel, $pageLabelFont, $pageLabelBrush, $pageLabelX, $pageLabelY)
-        $pageLabelBrush.Dispose()
-        $pageLabelFont.Dispose()
-      }
-
       $font.Dispose()
       $textBrush.Dispose()
 
@@ -223,6 +210,6 @@ function Add-Title {
 foreach ($item in $titleMap.slides) {
   $input = Join-Path $bodyPath $item.body_file
   $output = Join-Path $outPath $item.output_file
-  Add-Title -InputPath $input -OutputPath $output -Title $item.title -Role $item.role -Subtitle $item.subtitle -PageLabel $item.page_label
+  Add-Title -InputPath $input -OutputPath $output -Title $item.title -Role $item.role -Subtitle $item.subtitle
   Write-Output $output
 }

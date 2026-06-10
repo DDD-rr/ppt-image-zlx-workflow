@@ -25,6 +25,13 @@ For each sample group, describe:
 - Color distribution: approximate dominant / secondary / accent / signal ratio.
 - Repeated avoidances: colors, gradients, effects, or card styles the user seems not to like.
 
+Also separate reference signals into two groups:
+
+- Transferable design principles: information hierarchy, primary/secondary relationship, visual weight distribution, spacing rhythm, color-role distribution, material depth, and how the page creates a memorable focus.
+- Non-transferable visual motifs: highly recognizable hero shapes, decorative symbols, scene settings, image metaphors, or graphic languages that carry the reference deck's own subject matter.
+
+Borrow the design function, not the literal form. For example, if a reference uses a strong hero motif to create memory, rebuild a new hero motif from the current topic's own objects, evidence, workflow, or environment instead of reusing the sample's recognizable shape language.
+
 ## Convert To Project Strategy
 
 Write a short `Color Preference Summary` in `Master_Template.md`:
@@ -32,6 +39,8 @@ Write a short `Color Preference Summary` in `Master_Template.md`:
 - User taste signals:
 - How this project adapts those signals:
 - What must not be copied from the references:
+- Which design principles are borrowed:
+- Which recognizable motifs must be reinterpreted or avoided:
 - Color risks for this topic:
 
 Then define the project palette brief from the current topic, audience, real images, and this preference summary.
@@ -43,3 +52,4 @@ Then define the project palette brief from the current topic, audience, real ima
 - Do not turn preference samples into a permanent visual library unless the user explicitly asks.
 - Keep page-role variation. Cover, evidence, process, architecture, and closing pages may shift color emphasis while staying in one family.
 - Reject results that merely imitate the sample's surface style without improving the current deck's message.
+- Reject results that copy the reference's most memorable motif but only change the topic text. A successful adaptation should still feel native to the current subject after the reference is removed.

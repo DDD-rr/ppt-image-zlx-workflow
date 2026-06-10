@@ -5,8 +5,7 @@
       "output_file": "slide_01.png",
       "title": "页面标题",
       "role": "content",
-      "subtitle": "可选副标题",
-      "page_label": "01"
+      "subtitle": "可选副标题"
     }
   ]
 }

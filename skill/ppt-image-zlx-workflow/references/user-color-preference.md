@@ -10,6 +10,10 @@ Avoid making future decks overly blue just because many reference slides are blu
 
 Anti-AI correction must not become overcorrection. Do not remove atmosphere, glow, gradients, depth, futuristic cues, or strong visual drama merely because they are common in AI images. Keep them when they have a clear semantic role, disciplined proportion, and good craft.
 
+Confirmed user correction: blue, cyan, and blue-purple are not banned. They are useful when they act as screen glow, video signal, system connection, night-event depth, brand/industry atmosphere, or another named visual role. The failure mode is overuse, same-strength glow everywhere, or treating blue-purple as the default technology answer. The opposite failure mode is overcorrection: stripping cold light from topics that naturally need screens, video, signal processing, or digital atmosphere.
+
+Material hierarchy is a preferred way to solve color sameness. Before changing palette, separate surfaces such as paper/report panels, glass monitors, matte metal devices, translucent overlays, signal lines, evidence photos, and nameplates. Let brightness, opacity, reflection, shadow, texture, and edge weight create hierarchy so accent colors do not have to carry every distinction.
+
 ## Dark Theme Signals
 
 - Backgrounds are usually deep navy, blue-black, charcoal, or near-black, but they work because of depth and lighting, not because of hue alone.
@@ -45,6 +49,9 @@ Approximate distribution can start around `72 / 16 / 8 / 4`: dark atmosphere / b
 
 - Use one dominant background family, one main accent, one optional contrast accent, and very limited signal colors.
 - Keep approximate distribution disciplined, often around `70 / 20 / 8 / 2`.
+- Do not make cyan + orange the habitual answer. The user does not want repeated decks to converge on that pairing. Treat cyan + orange as one possible project-specific solution, not a personal default.
+- When cyan + orange is used, define why it belongs to the current topic: for example cyan for system depth, data flow, product illumination, or technical order; orange only for value, alert, growth, energy, outcome, or a small decision signal. If those roles cannot be named, choose another direction.
+- Prefer palette variety across projects when the topic allows it. Consider alternatives such as graphite + muted green, charcoal + amber, mist white + restrained red-gold, deep neutral + violet, paper white + graphite + one brand accent, or other topic-led combinations before returning to cyan + orange.
 - Let material contrast do some hierarchy work: panel translucency, fine borders, soft shadows, depth, blur, reflection, and local highlights.
 - Change accent emphasis by page role. Cover and closing pages can be more atmospheric; evidence and architecture pages should be clearer and more restrained; process pages should keep functional colors quiet.
 - Choose colors from topic meaning, real images, brand cues, and page role before applying this preference.
@@ -62,6 +69,8 @@ Approximate distribution can start around `72 / 16 / 8 / 4`: dark atmosphere / b
 ## Avoid
 
 - Default AI blue-purple neon as the automatic visual answer.
+- Reusing cyan + orange as the automatic technology/business palette across unrelated decks.
+- Cyan icons, cyan headings, cyan borders, cyan glow, and orange highlights applied with the same hierarchy on every page.
 - Rejecting blue only to prove variety.
 - Full-page saturated gradients with no semantic reason.
 - Same-color card grids where every module has equal visual weight.

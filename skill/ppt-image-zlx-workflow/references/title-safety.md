@@ -16,6 +16,8 @@ On a 1600x900 body image, reserve a local upper-left exclusion area around the f
 
 Treat the exclusion area as a hard local layout boundary, not a soft preference. For a standard content page, start with an upper-left region of about 45% canvas width and 16% canvas height, then adapt only when the project-level title style clearly requires a different local footprint. The first body module must begin below this region with a visibly intentional breathing gap.
 
+For generated-image prompts, convert the exclusion into an explicit first-module boundary. On a 1600x900 body image, a typical content page should state both the exclusion footprint and a first body top edge below it, for example `title exclusion x=0-720, y=0-145; first body module top edge y>=170`. Adapt the numbers only when the title style or page role requires it, and keep at least one visible gap between the title decoration line and the first module edge.
+
 Do not place these inside or visually attached to the local title area:
 
 - Body text, labels, icons, readable screenshots, or dense UI.
@@ -39,14 +41,17 @@ For standard content pages, prompts must describe the title exclusion area expli
 - Forbid body text, section labels, icons, module borders, card edges, bright lines, arrows, device edges, screenshot edges, strong glow, and high-contrast texture inside or visually attached to it.
 - Forbid rectangles, frames, corner brackets, panel outlines, empty cards, placeholder boxes, divider lines, UI containers, glow borders, decorative strokes, and any title-related structure in or visually attached to it.
 - Require the first body module to start below the exclusion region with a visible breathing gap.
+- Require a concrete first-module top boundary, not only "leave space". For example: "the first body module top edge begins below y=170 on a 1600x900 canvas." Also forbid module borders, panel edges, device/screenshot edges, section labels, bright strokes, and decorative lines from touching the title exclusion zone or the title decoration area.
 
 Do not rely on a vague instruction such as "leave space for the title." Models may still place a card border or section label directly beneath the future overlay.
 
 ## Content Start
 
 - Standard content pages should begin near the lower edge of the local title area, without creating a large empty upper half.
+- Prefer local title avoidance over whole-page downward movement. For upper-left titles, protect the local upper-left exclusion zone, but allow the upper-right region to carry low-risk content such as background atmosphere, small scenario tags, or quiet evidence when it does not compete with the title. Do not convert every title repair into a full-width header band unless the page guide explicitly accepts the loss of vertical space.
 - Covers and overview pages may use a subtitle, value statement, or compact tags below the title line.
 - If space is tight, repair locally in this order: reduce low-priority module size, tighten internal spacing, merge related supporting modules, remove expendable microcopy or decoration, and re-balance the grid around the primary visual anchor.
+- If title safety causes the main content to become cramped, revise the layout into an L-shaped composition or reduce auxiliary content before pushing the whole page downward.
 - Do not treat whole-page downward movement as the default repair. Use it only when the lower content boundary remains healthy after re-layout.
 - Do not shrink safety margins or crowd the title.
 
@@ -64,10 +69,12 @@ When title collision risk is high, run `scripts/create_title_reference_mask.ps1`
 After overlay, reject the page if:
 
 - Any title or decoration element covers body content.
+- The first body module starts immediately under the title decoration with no visible breathing gap, even if the title text itself remains readable.
 - A screenshot, interface, card group, or diagram visually competes with the title.
 - The local title area contains or touches a visible empty frame, corner bracket, panel outline, placeholder box, divider line, UI container, or decorative stroke.
 - The title area is technically clear but feels like a large meaningless blank patch when a quiet semantic background would improve continuity.
 - The upper half feels empty because body content was pushed too low.
+- The page protects the title but makes the main content visibly cramped, especially a core matrix, table, architecture, roadmap, or workflow.
 - A title-area repair would require masking meaningful body content.
 
 Revise the blueprint and prompt, then regenerate the body image instead of covering collisions manually. Prefer local re-layout over translating the complete composition downward.
