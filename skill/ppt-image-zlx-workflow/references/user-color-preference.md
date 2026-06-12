@@ -47,8 +47,13 @@ Approximate distribution can start around `72 / 16 / 8 / 4`: dark atmosphere / b
 
 ## Preferred Color Behavior
 
+- Default external palette source: consider WebGradients first for project atmosphere and material color direction, especially for dark, cinematic, product, technology, video, sports, broadcast, event, and high-end commercial presentation pages. Use other libraries such as Ant Design Colors, Tailwind Colors, Material, or ColorBrewer when the page needs stricter UI/data semantics, neutral report structure, categorical data, or brand-system alignment.
+- Use WebGradients as an atmosphere and material-gradient source, not as a decorative gradient background library. Prefer mature dark, cool, metallic, misty, or restrained warm gradients that support the topic. Avoid candy gradients, pastel lifestyle gradients, full-page saturated gradient washes, and visually attractive gradients that do not explain the content.
 - Use one dominant background family, one main accent, one optional contrast accent, and very limited signal colors.
 - Keep approximate distribution disciplined, often around `70 / 20 / 8 / 2`.
+- When using an external color library such as Ant Design Colors, Tailwind Colors, Material, or ColorBrewer, use it as a tonal source and role system, not as a UI-template source. Borrow color ramps, contrast discipline, and semantic color logic; do not borrow dashboard widgets, button-like section headers, heavy admin cards, or product-interface layout language unless the page is intentionally a product UI.
+- Prefer tonal depth inside one selected color family over a flat one-accent page. A successful same-family direction should use multiple steps for spatial background, raised surfaces, borders, icons, headings, signal lines, glow, and high-emphasis objects. Do not collapse a deck into neutral dark plus one repeated blue, green, or gold.
+- Preserve information modules while improving their shells. If a page needs market judgment, evidence, capability, demand, or comparison modules, keep those modules visible and aligned; make the containers more mature through shared parent surfaces, material depth, thin dividers, hierarchy, and tonal steps instead of deleting modules to reduce UI flavor.
 - Do not make cyan + orange the habitual answer. The user does not want repeated decks to converge on that pairing. Treat cyan + orange as one possible project-specific solution, not a personal default.
 - When cyan + orange is used, define why it belongs to the current topic: for example cyan for system depth, data flow, product illumination, or technical order; orange only for value, alert, growth, energy, outcome, or a small decision signal. If those roles cannot be named, choose another direction.
 - Prefer palette variety across projects when the topic allows it. Consider alternatives such as graphite + muted green, charcoal + amber, mist white + restrained red-gold, deep neutral + violet, paper white + graphite + one brand accent, or other topic-led combinations before returning to cyan + orange.
@@ -74,6 +79,9 @@ Approximate distribution can start around `72 / 16 / 8 / 4`: dark atmosphere / b
 - Rejecting blue only to prove variety.
 - Full-page saturated gradients with no semantic reason.
 - Same-color card grids where every module has equal visual weight.
+- Overcorrecting color discipline into a flat, thin, one- or two-color page with weak material depth.
+- Removing needed modules just to avoid a dashboard feeling. The better fix is to keep module clarity and improve hierarchy, shell design, material, and tonal steps.
+- Directly importing Ant Design, Tailwind, Material, or similar UI component language into a presentation page: blue filled section headers, button-like tabs, admin dashboard cards, status chips everywhere, or default product-interface grouping.
 - Generic glassmorphism, glow borders, decorative particles, or grid backgrounds without topic meaning.
 - Flattening the page into conservative, low-energy blocks after trying to remove AI flavor.
 - Copying the reference screenshots' exact palettes or layouts.
