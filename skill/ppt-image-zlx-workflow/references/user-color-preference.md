@@ -47,7 +47,7 @@ Approximate distribution can start around `72 / 16 / 8 / 4`: dark atmosphere / b
 
 ## Preferred Color Behavior
 
-- Default external palette source: consider WebGradients first for project atmosphere and material color direction, especially for dark, cinematic, product, technology, video, sports, broadcast, event, and high-end commercial presentation pages. Use other libraries such as Ant Design Colors, Tailwind Colors, Material, or ColorBrewer when the page needs stricter UI/data semantics, neutral report structure, categorical data, or brand-system alignment.
+- Default external palette source: call WebGradients first for project atmosphere and material color direction, especially for dark, cinematic, product, technology, video, sports, broadcast, event, and high-end commercial presentation pages. Use other libraries such as Ant Design Colors, Tailwind Colors, Material, or ColorBrewer when the page needs stricter UI/data semantics, neutral report structure, categorical data, or brand-system alignment.
 - Use WebGradients as an atmosphere and material-gradient source, not as a decorative gradient background library. Prefer mature dark, cool, metallic, misty, or restrained warm gradients that support the topic. Avoid candy gradients, pastel lifestyle gradients, full-page saturated gradient washes, and visually attractive gradients that do not explain the content.
 - Use one dominant background family, one main accent, one optional contrast accent, and very limited signal colors.
 - Keep approximate distribution disciplined, often around `70 / 20 / 8 / 2`.
