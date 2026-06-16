@@ -20,6 +20,7 @@ Use before generating each GPT Image 2 body image. For QA, load `references/qa-g
 - Text fidelity budget: Tier A verbatim text, Tier B compressible text, and Tier C visual-only meaning. Keep Tier A short enough to render reliably with GPT Image 2. If too much exact text is required, reduce, split, or reclassify the page before generation; do not plan local body-text overlay.
 - For body-text carrier or hybrid pages, include a body-copy typography rule: medium body size, normal-width Chinese glyphs, stable line spacing, front-facing 2D text area, and no oversized paragraph display type.
 - Include source-outline information coverage when applicable: name each first-level information group and whether it is preserved as body text, compressed into modules, represented as scenario tags, or translated visually. Do not silently omit application scenarios, definitions, core functions, conclusions, or user-highlighted sections.
+- If `required_section_titles` exists, include those titles as required visible section labels or equivalent group headings. Do not rely on `locked_text` alone for section headings, and do not drop headings such as product definition, application scenarios, or core functions merely because content is modularized.
 - Layout proportions, content bounds, repeated-module grid, safe margins, and closure alignment if used.
 - Alignment contract with explicit parent frame: define one page-level content frame with approximate x/y bounds, then state which major zones share its left edge, right edge, column widths, row heights, vertical center, or baseline. For multi-zone pages, state that upper modules and lower main modules are children of the same parent frame when they should visually belong together. Do not rely on vague words like "aligned", "balanced", "left/right/top/bottom", or "clearly arranged" without naming the shared edges.
 - For pages with a top row and a large lower matrix or system panel, explicitly require: the top row outer left edge equals the lower matrix outer left edge, the top row outer right edge equals the lower matrix outer right edge, and internal gutters align to the same column grid unless the page guide documents a deliberate exception.
@@ -64,6 +65,7 @@ For real images, also include:
 - Its page role.
 - Its actual input method: direct image input, shown conversation reference, or blocked.
 - Preservation requirement: keep it recognizable; do not replace it with fake UI or an AI-similar image.
+- If `real_image_policy` is `skip_when_missing` and a slot has no resolved image input, state that the slot is skipped and forbid fake-real replacement evidence.
 
 For standard content pages, apply `references/title-safety.md`.
 
