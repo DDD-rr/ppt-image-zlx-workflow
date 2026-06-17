@@ -147,11 +147,18 @@ function fallbackOptions() {
       { id: 'reading-first', label: '阅读优先', summary: '正文或清单完整性优先，视觉降级为辅助。' }
     ],
     visual_focus_options: [
-      { id: 'product-proof', label: '产品实物', summary: '以设备、截图、界面或真实对象作为证明锚点。' },
+      { id: 'product-anchor', label: '中等产品锚点', summary: '产品图有存在感，用于建立真实感，但不自动成为最大主视觉。' },
+      { id: 'product-proof', label: '辅助证据图', summary: '以设备、截图、界面或真实对象作为证明材料，视觉权重低于主信息。' },
       { id: 'function-list', label: '功能清单', summary: '优先呈现功能条目、能力边界和文本完整性。' },
       { id: 'scene-atmosphere', label: '场景氛围', summary: '通过使用场景、业务现场或空间感建立记忆点。' },
       { id: 'process-architecture', label: '流程架构', summary: '以流程、链路、层级和系统关系作为主线。' },
       { id: 'data-evidence', label: '数据证明', summary: '突出数字、表格、对比或证据对象。' }
+    ],
+    emphasis_methods: [
+      { id: 'reading-priority', label: '阅读突出', summary: '主重点最先读到、文本保留最多，但不必占最大面积。' },
+      { id: 'area-priority', label: '面积突出', summary: '主重点占最大版面，适合矩阵、架构图或流程图。' },
+      { id: 'visual-anchor', label: '视觉锚点突出', summary: '主重点通过大图、大场景或强视觉对象建立记忆。' },
+      { id: 'path-priority', label: '路径突出', summary: '主重点通过流程、连接、因果或系统路径表达。' }
     ]
   };
 }
@@ -165,6 +172,7 @@ function normalizeOptions(options) {
     page_treatments: options.page_treatments || options.page_treatment_choices || [],
     visual_strengths: options.visual_strengths || fallbackOptions().visual_strengths,
     visual_focus_options: options.visual_focus_options || fallbackOptions().visual_focus_options,
+    emphasis_methods: options.emphasis_methods || fallbackOptions().emphasis_methods,
     recommended_default: options.recommended_default || {}
   };
 }
@@ -423,10 +431,12 @@ function renderHtml(initialOptions = fallbackOptions()) {
 
     <section>
       <h2>2. 画面主次与侧重点</h2>
-      <div class="hint">默认选择“主视觉”。如果某页需要完整正文或功能清单，请在侧重点里选择对应标签，并在自定义意图中写明不要压缩。</div>
+      <div class="hint">默认选择“主视觉”。如果某页需要完整正文或功能清单，请在侧重点里选择对应标签。重点不等于面积最大，请用“重点表达方式”说明主重点如何被突出。</div>
       <div id="visualStrength" class="pill-grid"></div>
       <div id="visualFocus" class="pill-grid"></div>
-      <textarea id="visualIntent" placeholder="填写画面侧重点，例如：设备不要太大，核心功能必须完整可读；或产品实物 + 核心功能清单。"></textarea>
+      <h3>重点表达方式</h3>
+      <div id="emphasisMethod" class="pill-grid"></div>
+      <textarea id="visualIntent" placeholder="填写画面侧重点，例如：核心功能阅读优先但不铺满全屏；产品图作为中等锚点；采用产品锚点 + 功能清单 + 底部场景支撑。"></textarea>
     </section>
 
     <section>
@@ -511,6 +521,7 @@ function renderHtml(initialOptions = fallbackOptions()) {
         page_treatments: options.page_treatments || options.page_treatment_choices || [],
         visual_strengths: options.visual_strengths || INLINE_OPTIONS.visual_strengths || [],
         visual_focus_options: options.visual_focus_options || INLINE_OPTIONS.visual_focus_options || [],
+        emphasis_methods: options.emphasis_methods || INLINE_OPTIONS.emphasis_methods || [],
         recommended_default: options.recommended_default || {}
       };
     }
@@ -612,6 +623,7 @@ function renderHtml(initialOptions = fallbackOptions()) {
       renderRealImages(options.real_images || options.real_image_items || []);
       renderPillOptions('visualStrength', options.visual_strengths || [], 'visual_strength', false);
       renderPillOptions('visualFocus', options.visual_focus_options || [], 'visual_focus', true);
+      renderPillOptions('emphasisMethod', options.emphasis_methods || [], 'primary_emphasis_method', false);
       renderSectionTitleOptions(options.required_section_title_candidates || DEFAULT_SECTION_TITLE_CANDIDATES);
       const defaults = options.recommended_default || {};
       for (const [groupName, [key, field]] of Object.entries(groups)) {
@@ -628,6 +640,9 @@ function renderHtml(initialOptions = fallbackOptions()) {
         const focusTarget = document.querySelector('#visualFocus .pill-option[data-id="' + id + '"]');
         if (focusTarget) focusTarget.click();
       });
+      const emphasisDefault = defaults.primary_emphasis_method || 'reading-priority';
+      const emphasisTarget = document.querySelector('#emphasisMethod .pill-option[data-id="' + emphasisDefault + '"]');
+      if (emphasisTarget) emphasisTarget.click();
       document.getElementById('message').textContent = '选项已载入。';
     }
 

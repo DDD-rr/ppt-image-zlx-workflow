@@ -15,6 +15,8 @@ Create:
 - `decision_board/previews/` only when preview images are available
 - `decision_board/style_decision.json` after user confirmation
 
+Before creating `options.json`, preserve authoritative source page boundaries. If the source file already has ordered slide/page markers such as `Slide01`, `Slide02`, `第 1 页`, `Page 1`, or `P01`, the `slides` array in `options.json` must have exactly one item for each source-marked page, in the same order. Do not split a marked source slide into several review-board tabs or generated PPT images because it is text-heavy. Compress, group, or ask for approval instead. Only infer a new slide split when the source has no clear page markers.
+
 If the local server is unavailable, show the same choices in chat and write `style_decision.json` only from the user's explicit reply.
 
 Do not hand-author a static non-clickable HTML board. Use `scripts/decision-board-server.mjs` to create `decision_board/index.html` so the page has selectable cards, hover/focus/selected states, file-mode JSON fallback, and the same option schema as the server.
@@ -36,7 +38,14 @@ Keep choices few and meaningful:
 - Density choices: `speaker-led`, `reading-first`, `hybrid`.
 - Page treatment choices: `body-text-carrier`, `feature-overview`, `hybrid`.
 - Visual strength choices default to `primary`, `supporting`, and `reading-first`; the board should preselect `primary` unless `recommended_default.visual_strength` says otherwise.
-- Prefer a small set of visual focus tags plus a free-form intent field over adding many near-duplicate visual-direction options. Useful focus tags include product proof, function list, scene atmosphere, process architecture, and data evidence.
+- Page mode choices should be offered when the enhanced per-slide board is used: `text-enhanced`（正文增强型）, `module-structure`（模块结构型）, and `visual-led`（视觉主导型）. Page mode may auto-populate `density`, `page_treatment`, and default `visual_strength`, but the saved JSON must still include those downstream-compatible fields.
+- Prefer a small set of visual focus tags plus a free-form intent field over adding many near-duplicate visual-direction options. Useful focus tags include medium product anchor, auxiliary product proof, function list, scene atmosphere, process architecture, and data evidence.
+- Add `primary_emphasis_method` to avoid treating the selected main information group as a pure area-size command. The default options are:
+  - `reading-priority`: 主重点最先读到、文本保留最多，但不必占最大面积。
+  - `area-priority`: 主重点占最大版面，适合矩阵、架构图或流程图。
+  - `visual-anchor`: 主重点通过大图、大场景或强视觉对象建立记忆。
+  - `path-priority`: 主重点通过流程、连接、因果或系统路径表达。
+- If the board collects per-page `information_groups` and `group_weights`, make clear that `primary` means reading priority / information priority by default, not necessarily the largest rectangle. Use `primary_emphasis_method` to decide whether the priority becomes area, reading order, visual anchor, or path.
 
 Density and page treatment options must include simple visual layout cues in the board, not text-only descriptions. Use compact diagrams or preview images to show the difference between speaker-led, reading-first, hybrid, body-text carrier, feature overview, and hybrid page treatment.
 
@@ -101,8 +110,39 @@ The board must provide a short notes field under each major decision section:
 - density notes
 - page treatment notes
 - section-structure notes
+- primary-emphasis notes, when the board exposes `primary_emphasis_method`
 
 Keep the final free-form field as `Other Notes` only for cross-cutting requests that do not belong to one section. Save section notes under `section_notes` in `style_decision.json`.
+
+## Information Group Weights
+
+For each slide in the enhanced board, identify the first-level information groups from the outline, such as `产品定义`, `产品形态`, `应用场景`, `核心功能`, `市场背景`, or `需求`.
+
+The board should let the user assign each group one of four weights:
+
+- `primary`: main information priority; preserve more text and make it the clearest reading target.
+- `secondary`: preserve enough detail but keep below the primary group.
+- `supporting`: use as proof, context, anchor, or schematic support.
+- `light`: compress into icons, tags, brief labels, or background semantics.
+
+Do not equate `primary` with the largest area unless `primary_emphasis_method` is `area-priority`. A `reading-priority` primary group may be smaller than a product image but must have the strongest reading path, best text fidelity, and most complete information. A `visual-anchor` supporting image can be medium sized when it improves memorability without becoming the main message.
+
+When saving JSON, include:
+
+```json
+{
+  "page_mode": "module-structure",
+  "primary_emphasis_method": "reading-priority",
+  "information_groups": [
+    { "id": "core_features", "label": "核心功能" },
+    { "id": "product_shape", "label": "产品形态" }
+  ],
+  "group_weights": {
+    "core_features": "primary",
+    "product_shape": "supporting"
+  }
+}
+```
 
 ## Required Section Titles
 
@@ -146,6 +186,16 @@ Use this shape:
 
 The board saves uploaded image records under `real_image_answers`. These records do not replace the Real Image Intake rules in `SKILL.md`; they make the needed assets and actual saved paths visible before prompts are written.
 
+For real-image roles, distinguish area dominance from proof value. Recommended role options:
+
+- `main-visual`: image is the first visual read and may occupy the hero area.
+- `medium-anchor`: image has meaningful presence and anchors the page, but the primary information group can still be a reading-first list or system panel.
+- `evidence-schematic`: image remains recognizable as evidence or schematic proof, with lower visual weight than the main message.
+- `atmosphere`: image or reference informs mood only and is not evidence.
+- `skip`: do not use.
+
+Do not automatically turn a real product image into the hero just because it exists. Its role must be read together with `group_weights` and `primary_emphasis_method`.
+
 ## File Mode
 
 `File mode` means the user opened `decision_board/index.html` directly from disk with a `file://` URL. In file mode, the page can show options, record selected state, and generate/copy JSON, but browsers do not allow it to write `style_decision.json` automatically. Automatic saving requires opening the board through `node scripts/decision-board-server.mjs <project-path>`.
@@ -167,6 +217,8 @@ One option should usually be the responsible default. The other two should be re
   "visual_direction": "Notebook Tabs",
   "visual_strength": "primary",
   "visual_focus": ["function-list"],
+  "page_mode": "module-structure",
+  "primary_emphasis_method": "reading-priority",
   "palette_direction": "warm paper with muted accent tabs",
   "density": "reading-first",
   "page_treatment": "hybrid",
@@ -187,23 +239,28 @@ In `PPT_Page_Image_Guide.md`, translate:
 
 - `density` into default text fidelity budget, visual intensity, and space budget.
 - `page_treatment` into page type, content blueprint, and module priorities.
+- `page_mode` into the first-pass page type, while still preserving explicit `density` and `page_treatment` as the downstream compatibility fields.
+- `information_groups`, `group_weights`, and `primary_emphasis_method` into reading order, text fidelity, area allocation, visual anchor size, and auxiliary-content degradation. Do not translate `primary` into "largest area" unless `primary_emphasis_method` is `area-priority`.
 - `visual_strength`, `visual_focus`, and `section_notes.visual_intent` into the page's primary visual anchor, auxiliary-content degradation, and module-vs-text tradeoff.
 - `required_section_titles` into visible page section labels and QA checks.
 - `real_image_policy: "skip_when_missing"` into real-image intake decisions; do not substitute missing real images with fake-real evidence.
 
 If the user explicitly skips the board, continue with autonomous judgment and note in `Master_Template.md` that no decision board was used.
 
-## Enhanced V3.1 Board Requirement
+## Enhanced V4.1 Board Requirement
 
-For this user's workflow, the Visual Decision Board must default to the enhanced V3.1 review board, not the minimal global-only board. Use `references/decision-board-v3-requirements.md` as the acceptance checklist.
+For this user's workflow, the Visual Decision Board must default to the enhanced V4.1 review board, not the minimal global-only board. Use `references/decision-board-v4-requirements.md` as the acceptance checklist.
+
+Create the reusable board with `scripts/create-v4-review-board.mjs` after `decision_board/options.json` exists. Serve the resulting `decision_board/index.html` with `scripts/v4-review-server.mjs`.
 
 A board is not complete unless it includes:
 
 - Global palette category and concrete palette selection.
 - Global color strength controls such as saturation, gradient usage, and bright-area proportion.
-- One tab for every outline slide.
+- One tab for every outline slide, preserving any explicit source slide/page boundaries exactly.
 - Per-slide raw source text for review.
 - Per-slide choices for visual direction, expression mode, visual strength, visual restraint, density, and page treatment.
+- Per-slide page mode, information-group weights, and primary emphasis method when the outline contains multiple first-level groups.
 - Per-slide notes fields for those decisions.
 - Per-slide required section titles and locked text controls.
 - Per-slide review questions that affect generation.
