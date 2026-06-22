@@ -89,6 +89,13 @@
       border-bottom: 2px solid var(--dark);
     }
     .section-title h2 { margin: 0; }
+    .global-title h2 {
+      margin-top: 2px;
+      font-size: clamp(30px, 2.5vw, 42px);
+      line-height: 1.06;
+      letter-spacing: -0.03em;
+      font-weight: 950;
+    }
     .eyebrow {
       display: inline-flex;
       align-items: center;
@@ -468,6 +475,26 @@
       margin-top: 12px;
     }
     .chips { display: flex; flex-wrap: wrap; gap: 7px; }
+    .compact-toggle {
+      display: inline-flex;
+      gap: 6px;
+      padding: 4px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: #f6eee3;
+    }
+    .toggle-option {
+      min-height: 32px;
+      padding: 6px 12px;
+      border-radius: 999px;
+      background: transparent;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 900;
+      box-shadow: none;
+    }
+    .toggle-option:hover { transform: none; box-shadow: none; }
+    .toggle-option.selected { background: var(--accent); color: white; }
     .chip {
       min-height: 28px;
       padding: 5px 9px;
@@ -586,6 +613,10 @@
         { id: 'small-accent', label: '小面积强调', summary: '推荐，数字和结论更突出。' },
         { id: 'medium-focus', label: '中面积焦点', summary: '适合产品主视觉和案例页。' },
         { id: 'very-low', label: '低亮面积', summary: '适合阅读优先或表格页。' }
+      ],
+      title_overlay: [
+        { id: 'overlay-title', label: '叠加标题' },
+        { id: 'no-title-reserved', label: '不叠加标题' }
       ]
     };
 
@@ -594,7 +625,7 @@
         {
           id: 'text-enhanced',
           label: '正文增强型',
-          summary: '尽量保留原文，同时用结构、层级和视觉锚点提升阅读效率。',
+          summary: '尽量保留原文，同时用结构、层级和视觉锚点提升阅读效率；避免整页只是平铺文字块。',
           density: 'reading-first',
           page_treatment: 'body-text-carrier',
           visual_strength: 'supporting'
@@ -602,7 +633,7 @@
         {
           id: 'module-structure',
           label: '模块结构型',
-          summary: '功能、参数、架构、流程或对比是主角，适合模块化突出重点。',
+          summary: '功能、参数、架构、流程或对比是主角；模块需要共享系统锚点或路径关系。',
           density: 'hybrid',
           page_treatment: 'feature-overview',
           visual_strength: 'supporting'
@@ -674,6 +705,7 @@
       color_saturation: 'medium',
       gradient_usage: 'local-light',
       bright_area: 'small-accent',
+      title_overlay: 'overlay-title',
       global_notes: '',
       global_palette_notes: '',
       slides: {}
@@ -686,7 +718,7 @@
         state.slides[slide.id] = {
           title: slide.title,
           page_mode: mode.id,
-          primary_emphasis_method: 'reading-priority',
+          primary_emphasis_method: slide.defaultPrimaryEmphasisMethod || 'reading-priority',
           visual_direction: slide.visualDirections[0].id,
           expression_mode: 'realistic-scene',
           visual_strength: mode.visual_strength,
@@ -741,7 +773,7 @@
     function renderGlobal() {
       const panel = document.getElementById('globalPanel');
       panel.innerHTML = `
-        <div class="section-title">
+        <div class="section-title global-title">
           <div><span class="eyebrow">GLOBAL</span><h2>全局风格</h2></div>
           <span class="hint">先定全局，Slide 区只做逐页表达</span>
         </div>
@@ -755,6 +787,11 @@
           <div>
             <h3>色彩强度</h3>
             <div class="triad-grid" id="globalControls"></div>
+          </div>
+          <div>
+            <h3>标题叠加策略</h3>
+            <p>控制是否生成每页标题；不叠加时仍保留标题区域。</p>
+            <div id="titleOverlayControl"></div>
           </div>
           <div>
             <h3>全局补充</h3>
@@ -784,7 +821,10 @@
         paletteGrid.appendChild(button);
       });
       const controlMount = panel.querySelector('#globalControls');
-      Object.entries(globalControls).forEach(([field, options]) => controlMount.appendChild(renderMiniModule(fieldLabel(field), options, state[field], value => { state[field] = value; renderAll(false); })));
+      ['color_saturation', 'gradient_usage', 'bright_area'].forEach(field => {
+        controlMount.appendChild(renderMiniModule(fieldLabel(field), globalControls[field], state[field], value => { state[field] = value; renderAll(false); }));
+      });
+      panel.querySelector('#titleOverlayControl').appendChild(renderCompactToggle(globalControls.title_overlay, state.title_overlay, value => { state.title_overlay = value; renderAll(false); }));
       const gp = panel.querySelector('#globalPaletteNotes');
       gp.value = state.global_palette_notes;
       gp.addEventListener('input', () => { state.global_palette_notes = gp.value; updateOutput(false); });
@@ -805,6 +845,17 @@
         row.appendChild(button);
       });
       wrap.appendChild(row);
+      return wrap;
+    }
+
+    function renderCompactToggle(options, selected, onPick) {
+      const wrap = el('div', 'compact-toggle');
+      options.forEach(option => {
+        const button = el('button', 'toggle-option' + (selected === option.id ? ' selected' : ''), option.label);
+        button.type = 'button';
+        button.addEventListener('click', () => onPick(option.id));
+        wrap.appendChild(button);
+      });
       return wrap;
     }
 
@@ -835,7 +886,8 @@
         ['色系', `${paletteCategoryLabels[palette.category]} / ${palette.label}`],
         ['饱和度', labelOf(globalControls.color_saturation, state.color_saturation)],
         ['光感', labelOf(globalControls.gradient_usage, state.gradient_usage)],
-        ['亮色面积', labelOf(globalControls.bright_area, state.bright_area)]
+        ['亮色面积', labelOf(globalControls.bright_area, state.bright_area)],
+        ['标题输出', labelOf(globalControls.title_overlay, state.title_overlay)]
       ].forEach(([label, value]) => {
         const item = el('li');
         item.innerHTML = `<strong>${label}</strong>：${value}`;
@@ -870,7 +922,7 @@
 
     function rawBlock(slide) {
       const wrap = el('div', 'content-group');
-      wrap.innerHTML = `<div class="group-head"><h3>本页原始材料与提炼摘要</h3><span class="hint">默认展开，便于审阅</span></div><p><strong>提炼摘要：</strong>${slide.summary}</p><textarea readonly style="height:92px">${slide.raw}</textarea>`;
+      wrap.innerHTML = `<div class="group-head"><h3>本页原始材料</h3><span class="hint">使用源文档该页原文，不用摘要替代</span></div><textarea readonly style="height:160px">${slide.raw}</textarea>`;
       return wrap;
     }
 
@@ -881,7 +933,7 @@
       const coreNote = el('div', 'supplement');
       coreNote.innerHTML = '<h4>页面核心设计补充说明</h4>';
       const note = document.createElement('textarea');
-      note.placeholder = '写影响整页取舍的总要求，例如：核心功能是主角，产品图只做示意；产品定义完整保留，应用场景图标化。';
+      note.placeholder = '写影响整页取舍的总要求，例如：主信息组完整保留，辅助信息压缩为标签；真实图只做证据，不抢主信息。';
       note.value = s.page_notes;
       note.addEventListener('input', () => { s.page_notes = note.value; updateOutput(false); });
       coreNote.appendChild(note);
@@ -936,7 +988,7 @@
         grid.appendChild(button);
       });
       wrap.appendChild(grid);
-      const hint = el('p', 'hint', '例如 Slide02 可选“阅读突出”：核心功能是最高阅读优先级，产品图作为中等锚点或辅助证据，避免满屏均分模块。');
+      const hint = el('p', 'hint', '例如 Slide02 可选“阅读突出”：核心功能是最高阅读优先级，产品图作为中等锚点或辅助证据，避免满屏均分模块；阅读优先也要有视觉锚点、路径或共享系统，不把整页做成平均卡片墙。');
       wrap.appendChild(hint);
       return wrap;
     }
@@ -1015,7 +1067,8 @@
     }
 
     function diagram(type) {
-      const light = type === 'text' ? ' light' : '';
+      const diagramType = normalizeDiagramType(type);
+      const light = diagramType === 'text' ? ' light' : '';
       const shapes = {
         broadcast: '<span class="screen"></span><span class="console"></span>',
         hero: '<span class="hero"></span><span class="a"></span><span class="b"></span><span class="c"></span>',
@@ -1027,8 +1080,19 @@
         nodes: '<span class="node1"></span><span class="node2"></span><span class="node3"></span><span class="line"></span>',
         split: '<span class="hero"></span><span class="a"></span><span class="b"></span><span class="c"></span>',
         map: '<span class="node1"></span><span class="node2"></span><span class="node3"></span><span class="line"></span>'
-      }[type] || '<span class="hero"></span><span class="a"></span><span class="b"></span><span class="c"></span>';
+      }[diagramType] || '<span class="hero"></span><span class="a"></span><span class="b"></span><span class="c"></span>';
       return `<div class="diagram${light}">${shapes}</div>`;
+    }
+
+    function normalizeDiagramType(type) {
+      const text = String(type || '').toLowerCase();
+      if (/broadcast|control-room|转播|指挥|监看|控制台/.test(text)) return 'broadcast';
+      if (/architecture|system|hardware|nodes|架构|系统|硬件|链路|模块|能力层/.test(text)) return 'nodes';
+      if (/report|brief|proof|evidence|executive|汇报|报告|证据|表格|正文|阅读/.test(text)) return 'text';
+      if (/matrix|compare|comparison|竞品|对比|参数/.test(text)) return 'matrix';
+      if (/map|gap|distribution|地图|缺口|分布/.test(text)) return 'map';
+      if (/scene|hero|visual|场景|主视觉|现场/.test(text)) return 'hero';
+      return type || 'hybrid';
     }
 
     function realImageBlock(slide) {
@@ -1078,7 +1142,8 @@
         zone.appendChild(records);
         zone.appendChild(el('h4', '', '图片用途'));
         const grid = el('div', 'asset-type-grid');
-        imageTypes.forEach(type => grid.appendChild(choiceButton(type, s.real_image_types[asset.id], value => { s.real_image_types[asset.id] = value; renderAll(false); })));
+        const roleOptions = (asset.roleOptions && asset.roleOptions.length ? asset.roleOptions : imageTypes);
+        roleOptions.forEach(type => grid.appendChild(choiceButton(type, s.real_image_types[asset.id], value => { s.real_image_types[asset.id] = value; renderAll(false); })));
         zone.appendChild(grid);
         wrap.appendChild(zone);
       });
@@ -1226,7 +1291,7 @@
     }
 
     function fieldLabel(field) {
-      return { color_saturation: '饱和度', gradient_usage: '渐变/光感', bright_area: '亮色面积' }[field] || field;
+      return { color_saturation: '饱和度', gradient_usage: '渐变/光感', bright_area: '亮色面积', title_overlay: '标题输出' }[field] || field;
     }
 
     function labelOf(options, id) {
@@ -1254,6 +1319,14 @@
           gradient_usage: state.gradient_usage,
           bright_area: state.bright_area,
           notes: state.global_palette_notes
+        },
+        title_overlay: {
+          mode: state.title_overlay,
+          label: labelOf(globalControls.title_overlay, state.title_overlay),
+          output_dir: 'final_image',
+          note: state.title_overlay === 'no-title-reserved'
+            ? '去标题版：不叠加主标题，但主体图必须保留标题安全区，最终图片仍保存到 final_image。'
+            : '叠加标题版：生成主体图后使用本地标题样式叠加主标题。'
         },
         slides: state.slides,
         global_notes: state.global_notes,

@@ -11,7 +11,8 @@ param(
   [string]$FontName = "Microsoft YaHei UI",
   [int]$FontSizePx = 48,
   [int]$TitleX = 50,
-  [int]$TitleY = 36
+  [int]$TitleY = 36,
+  [switch]$NoTitleOverlay
 )
 
 Add-Type -AssemblyName System.Drawing
@@ -19,6 +20,12 @@ Add-Type -AssemblyName System.Drawing
 $bodyPath = Join-Path $ProjectDir $BodyDir
 $outPath = Join-Path $ProjectDir $OutputDir
 New-Item -ItemType Directory -Path $outPath -Force | Out-Null
+$noTitleLabel = [string]::Concat([char]21435, [char]26631, [char]39064, [char]29256)
+
+if ($NoTitleOverlay) {
+  $notePath = Join-Path $outPath "title_overlay_note.txt"
+  Set-Content -LiteralPath $notePath -Value ($noTitleLabel + ': no title overlay; body image keeps the title-safe area for manual post-production.') -Encoding UTF8
+}
 
 $titleMap = Get-Content -LiteralPath $TitleMapPath -Raw -Encoding UTF8 | ConvertFrom-Json
 $stylePath = $TitleStylePath
@@ -210,6 +217,11 @@ function Add-Title {
 foreach ($item in $titleMap.slides) {
   $input = Join-Path $bodyPath $item.body_file
   $output = Join-Path $outPath $item.output_file
-  Add-Title -InputPath $input -OutputPath $output -Title $item.title -Role $item.role -Subtitle $item.subtitle
-  Write-Output $output
+  if ($NoTitleOverlay) {
+    Copy-Item -LiteralPath $input -Destination $output -Force
+    Write-Output ($output + ' (' + $noTitleLabel + ')')
+  } else {
+    Add-Title -InputPath $input -OutputPath $output -Title $item.title -Role $item.role -Subtitle $item.subtitle
+    Write-Output $output
+  }
 }

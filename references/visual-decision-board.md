@@ -6,6 +6,8 @@ Use before creating `Master_Template.md` and `PPT_Page_Image_Guide.md` when the 
 
 Turn abstract style questions into a small visual decision set. The board reduces guide-stage rework; it does not replace the first generated sample image or later QA.
 
+The board should not replace `PPT_Outline_Draft.md`. The outline is responsible for source fidelity: page boundaries, first-level information modules, required module titles, locked facts, and unresolved content questions. The board is responsible for generation decisions: visual direction, palette, density, page treatment, information-group weights, real-image usage, title-overlay mode, and per-page visual notes. If the same concern appears in both places, keep the source-completeness check in the outline and keep only the generation-affecting choice in the board.
+
 ## Project Files
 
 Create:
@@ -16,6 +18,10 @@ Create:
 - `decision_board/style_decision.json` after user confirmation
 
 Before creating `options.json`, preserve authoritative source page boundaries. If the source file already has ordered slide/page markers such as `Slide01`, `Slide02`, `第 1 页`, `Page 1`, or `P01`, the `slides` array in `options.json` must have exactly one item for each source-marked page, in the same order. Do not split a marked source slide into several review-board tabs or generated PPT images because it is text-heavy. Compress, group, or ask for approval instead. Only infer a new slide split when the source has no clear page markers.
+
+For each slide in `options.json`, `raw` must be the exact original source text for that slide, including headings, tables, lists, and source wording. Do not replace it with an outline summary, normalized rewrite, or shortened prompt material. Put any condensed explanation in `summary` only.
+
+For each slide header, keep role and summary semantically different. role is the review task for that page, such as what visual or information tradeoff the user is deciding. summary is the source-content synopsis. The V4.1 board renders both fields; duplicating the same sentence creates visible repeated copy.
 
 If the local server is unavailable, show the same choices in chat and write `style_decision.json` only from the user's explicit reply.
 
@@ -35,6 +41,7 @@ Keep choices few and meaningful:
 
 - Exactly three visual directions by default.
 - Exactly three palette directions by default.
+- Overall dark/light/assistant-recommended style selection belongs in the board when the board is used. Do not ask a separate pre-board style question unless the user skipped the board or the board is unavailable and the user approved a chat fallback.
 - Density choices: `speaker-led`, `reading-first`, `hybrid`.
 - Page treatment choices: `body-text-carrier`, `feature-overview`, `hybrid`.
 - Visual strength choices default to `primary`, `supporting`, and `reading-first`; the board should preselect `primary` unless `recommended_default.visual_strength` says otherwise.
@@ -50,6 +57,8 @@ Keep choices few and meaningful:
 Density and page treatment options must include simple visual layout cues in the board, not text-only descriptions. Use compact diagrams or preview images to show the difference between speaker-led, reading-first, hybrid, body-text carrier, feature overview, and hybrid page treatment.
 
 Visual directions should also be visually legible. Prefer a preview image when one exists. When no preview image exists yet, use a compact scene/composition diagram that communicates the direction, such as command-center monitors, architecture cutaway, editorial paper, product brochure, or dark-stage hero composition. The visual cue is approximate; the final sample image remains the proof.
+
+The compact diagram must match the option text. Do not let architecture, map/gap, report/evidence, comparison/table, or broadcast/control-room options fall back to the same generic hero diagram. If an option has no explicit `diagram`, infer one from its id, label, and summary; otherwise add a suitable `diagram` value when creating `options.json`.
 
 Each visual direction must include:
 
@@ -158,6 +167,8 @@ Downstream prompts and QA must treat `required_section_titles` as information-st
 
 When the project has real images, screenshots, product photos, evidence images, or output proofs, include a `real_images` section in `options.json` so the board can show them before image generation.
 
+Also create real-image slots when the source implies that such evidence may exist or is missing, such as product device photos, field-test images, competition evidence screenshots, architecture diagrams, venue/scene references, or a literal placeholder like “现场画面：”. Missing images remain optional and must default to `skip`; the point is to expose the decision, not to invent evidence.
+
 The board must make this default visible to the user: if a real-image slot is not supplemented with an actual uploaded or resolved image, image generation will skip real-image input for that slot and must not create fake-real replacement evidence. Save this policy as `real_image_policy: "skip_when_missing"` in `style_decision.json`.
 
 Each real-image slot must support multiple images. The board should let the user paste images into the slot, drag and drop images, or browse and select multiple files. When opened through the local Node service, uploaded images are saved under `decision_board/uploads/<slot>/` and recorded in `real_image_answers`. In file mode, the board can preview images and include unsaved file records in JSON, but it cannot write image files to disk.
@@ -174,15 +185,19 @@ Use this shape:
       "preview": "previews/front_panel.png",
       "detail": "Use as a real product proof image.",
       "role_options": [
-        { "id": "hero_screenshot", "label": "Hero screenshot" },
-        { "id": "evidence_screenshot", "label": "Evidence screenshot" },
-        { "id": "local_zoom", "label": "Local zoom" },
-        { "id": "output_proof", "label": "Output proof" }
-      ]
+        { "id": "main-visual", "label": "主视觉", "summary": "图片占核心版面，作为页面第一视觉。" },
+        { "id": "medium-anchor", "label": "中等锚点", "summary": "图片有存在感，但不自动成为最大主视觉。" },
+        { "id": "evidence-schematic", "label": "辅助证据/示意", "summary": "保留真实感，但不抢主信息。" },
+        { "id": "atmosphere", "label": "氛围参考", "summary": "只用于场景气氛，不当事实证明。" },
+        { "id": "skip", "label": "暂不使用", "summary": "缺图时按概念页处理。" }
+      ],
+      "default_role": "skip"
     }
   ]
 }
 ```
+
+`role_options` must be objects with `id`, `label`, and `summary`; never write bare strings, because the board renders option labels and summaries. Always include `skip` / `暂不使用` and default missing-image slots to `skip`.
 
 The board saves uploaded image records under `real_image_answers`. These records do not replace the Real Image Intake rules in `SKILL.md`; they make the needed assets and actual saved paths visible before prompts are written.
 
@@ -199,6 +214,16 @@ Do not automatically turn a real product image into the hero just because it exi
 ## File Mode
 
 `File mode` means the user opened `decision_board/index.html` directly from disk with a `file://` URL. In file mode, the page can show options, record selected state, and generate/copy JSON, but browsers do not allow it to write `style_decision.json` automatically. Automatic saving requires opening the board through `node scripts/decision-board-server.mjs <project-path>`.
+
+## Local Server Reliability
+
+After generating decision_board/index.html, start the local server and verify it before reporting a URL.
+
+- Check GET / or GET /api/status with a short timeout.
+- Report the URL only after HTTP status 200 is returned.
+- On Windows, Start-Process may fail in sandboxed environments because of duplicated Path / PATH environment keys. If that happens, launch Node with System.Diagnostics.ProcessStartInfo, UseShellExecute = false, CreateNoWindow = true, and no stdout/stderr redirection.
+- If the server still cannot stay alive, provide the absolute index.html path as file mode and explain that automatic saving requires the local server.
+- Do not spend extra turns repeatedly restarting the server without checking process lifetime and /api/status.
 
 ## Candidate Quality
 
@@ -220,6 +245,11 @@ One option should usually be the responsible default. The other two should be re
   "page_mode": "module-structure",
   "primary_emphasis_method": "reading-priority",
   "palette_direction": "warm paper with muted accent tabs",
+  "title_overlay": {
+    "mode": "overlay-title",
+    "label": "叠加标题",
+    "output_dir": "final_image"
+  },
   "density": "reading-first",
   "page_treatment": "hybrid",
   "required_section_titles": ["产品定义", "应用场景", "核心功能"],
@@ -239,6 +269,7 @@ In `PPT_Page_Image_Guide.md`, translate:
 
 - `density` into default text fidelity budget, visual intensity, and space budget.
 - `page_treatment` into page type, content blueprint, and module priorities.
+- `title_overlay.mode` into finalization behavior. For `overlay-title`, create and apply `title_style.json`. For `no-title-reserved`, keep a clear title-safe region in every body prompt, run `scripts/add_slide_titles.ps1 -NoTitleOverlay`, save the outputs under `final_image/`, and label the set `去标题版`.
 - `page_mode` into the first-pass page type, while still preserving explicit `density` and `page_treatment` as the downstream compatibility fields.
 - `information_groups`, `group_weights`, and `primary_emphasis_method` into reading order, text fidelity, area allocation, visual anchor size, and auxiliary-content degradation. Do not translate `primary` into "largest area" unless `primary_emphasis_method` is `area-priority`.
 - `visual_strength`, `visual_focus`, and `section_notes.visual_intent` into the page's primary visual anchor, auxiliary-content degradation, and module-vs-text tradeoff.
@@ -257,6 +288,7 @@ A board is not complete unless it includes:
 
 - Global palette category and concrete palette selection.
 - Global color strength controls such as saturation, gradient usage, and bright-area proportion.
+- Global title-overlay mode: `overlay-title` by default, or `no-title-reserved` when the user wants title-safe images for manual post-production. No-title mode must still save outputs into `final_image/` and mark them as `去标题版`.
 - One tab for every outline slide, preserving any explicit source slide/page boundaries exactly.
 - Per-slide raw source text for review.
 - Per-slide choices for visual direction, expression mode, visual strength, visual restraint, density, and page treatment.
@@ -268,3 +300,7 @@ A board is not complete unless it includes:
 - JSON output and a save action that writes `decision_board/style_decision.json` when served locally.
 
 Do not silently fall back to the minimal standard board. If the enhanced board cannot be generated, tell the user clearly and pause for approval before proceeding with a fallback.
+
+## Cost Control Notes
+
+Visual Decision Board generation can become expensive mainly because it loads several long references, creates verbose per-slide JSON, embeds raw source text, and may generate a large HTML file. To control cost: do not print full reference files or full generated JSON back into the chat; inspect only targeted snippets after writing files; keep `options.json` concise except for required exact slide raw text; and avoid regenerating the board repeatedly for cosmetic changes.

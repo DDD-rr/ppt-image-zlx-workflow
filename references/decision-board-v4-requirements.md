@@ -1,39 +1,17 @@
-# 视觉决策网页 V4.1 审阅说明
+# Visual Decision Board V4.1 Checklist
 
-V4.1 在 V3 分层审阅基础上固化“页面表达类型、信息组权重、主重点表达方式、真实图片支配角色”，避免把主重点粗暴翻译成最大面积或满屏均分模块。
+Use this checklist only when creating or accepting the enhanced V4.1 review board. The detailed option schema and downstream mapping live in `references/visual-decision-board.md`.
 
-1. 全局色系方向
-   - 先分亮色系、暗色系两类。
-   - 每类提供 3 个具体色系方向。
-   - 全局色系只选一次，不在每页重复选择。
+A V4.1 board is complete only if it includes:
 
-2. 全局补充
-   - 用于填写跨页要求，会影响后续母版、页面图像指南和样张策略。
+1. Global palette category, concrete palette choice, saturation/gradient/bright-area controls, global title-overlay mode, and global notes.
+2. One tab for every outline slide, preserving explicit source slide/page boundaries exactly.
+3. Per-slide raw source text for side-by-side review.
+4. Per-slide visual direction, expression mode, visual strength/restraint, density, page treatment, and page mode.
+5. Per-slide information groups, group weights, and `primary_emphasis_method` when the outline contains multiple first-level groups.
+6. Per-slide required section titles, locked text controls, review questions, notes, and real-image slots.
+7. Real-image dominance roles: main visual, medium anchor, evidence schematic, atmosphere, or skip; missing images use `real_image_policy: "skip_when_missing"`.
+8. JSON output and a save action that writes `decision_board/style_decision.json` when served locally.
+9. A no-title output mode that saves title-reserved final PNGs into `final_image/` and marks the set as `去标题版` instead of bypassing finalization.
 
-3. 每个源页 / 大纲页独立 Tab
-   - 如果原始材料已经用 `Slide01`、`Slide02`、`第 1 页`、`Page 1`、`P01` 等方式区分页码，网页必须严格沿用这些页边界：一段源页对应一个 Tab、一张 body image 和一张 final image。
-   - 不得因为某个源页内容较多而擅自拆成多张 PPT 图片；应在该页内通过压缩、分组、模块化或审阅问题处理。只有原始材料没有明确页边界时，才由 workflow 自主拆分为合理页面。
-   - 每页独立选择画面主视觉、信息密度、信息组织方式。
-   - 每页优先选择页面表达类型：正文增强型、模块结构型、视觉主导型。页面表达类型可自动推导信息密度和信息组织方式，但网页仍需保存下游兼容字段。
-   - 每页应识别一级信息组，并支持设置权重：主重点、次重点、辅助、轻量。
-   - 每页应支持选择主重点表达方式：阅读突出、面积突出、视觉锚点突出、路径突出。主重点默认不等于面积最大；只有选择面积突出时才按最大版面处理。
-   - 每个 Tab 顶部显示本页原始材料，可边看原文边审阅。
-   - 画面主视觉：决定这页用什么画面对象或场景来讲。
-   - 信息密度：决定这页保留多少文字、参数和模块。
-   - 信息组织方式：决定信息怎么排列、阅读和取舍。
-   - 三个选择项均配有页面补充输入框。
-   - 三个选择项均带有缩略示意图。
-   - 补充输入框默认显示为一行，可手动拉高。
-   - 每页列出锁定文本、待审阅问题和真实图片槽位。
-   - 锁定文本支持点击选中/取消，也支持手动新增。
-   - 真实图片与其他审阅项同级，支持选择文件，也支持点击槽位后粘贴图片。
-   - 真实图片用途应区分主视觉、中等锚点、辅助证据/示意、氛围参考、暂不使用，避免上传产品图后默认成为最大主视觉。
-
-4. 反平铺约束
-   - 当用户选择“阅读突出”或“路径突出”时，生成提示不得把主重点粗暴转成满屏均分卡片。
-   - 网页输出 JSON 应提供足够信息，让后续页面指南能够生成“产品锚点 + 功能清单”“定义面板 + 能力系统”“流程路径 + 证据模块”等构图关系。
-
-5. 输出 JSON
-   - 文件模式下浏览器不能直接写入磁盘，可复制 JSON 给 Codex。
-   - 如果通过本地 Node 服务打开，可尝试自动保存到 `decision_board/style_decision.json`。
-   - 点击完成审阅并保存后，会弹窗提示已保存以及下一步流程。
+Do not silently fall back to the minimal board. If V4.1 cannot be generated, tell the user clearly and pause for approval before proceeding with a fallback.

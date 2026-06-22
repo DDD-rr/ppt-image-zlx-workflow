@@ -14,6 +14,7 @@ Keep title rendering deterministic, but do not force every project to use the sa
 - Treat component type and count as part of the title grammar. If the base family uses two rectangles, every role variant should also use two rectangles; if it uses a line and dot, every role should keep a line and dot. Role variants may alter length, thickness, alpha, spacing, or scale, but must not change from line+line to line+dot, add a badge, remove a component, or swap component types unless the title proposal explicitly records why that page role needs a different grammar.
 - A cover page may place the title away from the upper-left corner when the page composition benefits from it, such as left-middle title placement beside a strong hero visual. This is a role-aware placement change, not a reason to change the whole title decoration language.
 - Do not ask GPT Image 2 to render the main title text or its decoration. Use the local overlay script.
+- If `style_decision.json` sets `title_overlay.mode` to `no-title-reserved`, do not design or overlay a visible title. Keep the body prompt's title-safe region available for manual post-production, run `scripts/add_slide_titles.ps1 -NoTitleOverlay`, save outputs into `final_image/`, and label the output set `去标题版`.
 - Prefer no decoration when a line, block, marker, or badge has no clear visual value.
 
 ## Sample Stage
