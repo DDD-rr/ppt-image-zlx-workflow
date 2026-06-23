@@ -609,6 +609,16 @@
         { id: 'large-visual', label: '主视觉渐变', summary: '封面或市场页可有更强空间氛围。' },
         { id: 'minimal', label: '极简材质', summary: '以面板、细线、阴影承载层级。' }
       ],
+      gradient_strategy: [
+        { id: 'restrained-material', label: '克制材质渐变', summary: '渐变主要用于面板、金属、纸面或玻璃材质过渡。' },
+        { id: 'atmospheric-depth', label: '空间景深渐变', summary: '渐变主要承担空间深度、场景层次和气氛。' },
+        { id: 'multi-surface', label: '多表面渐变', summary: '背景与主要承载面都允许有明确的渐变层次。' }
+      ],
+      gradient_scope: [
+        { id: 'background-only', label: '仅背景', summary: '渐变只放在大背景，不进入主要内容承载面。' },
+        { id: 'background-plus-surfaces', label: '背景+承载面', summary: '背景和主内容表面都允许有克制渐变。' },
+        { id: 'local-highlights-only', label: '仅局部高光', summary: '只在局部高光、屏幕反射或信号节点中使用。' }
+      ],
       bright_area: [
         { id: 'small-accent', label: '小面积强调', summary: '推荐，数字和结论更突出。' },
         { id: 'medium-focus', label: '中面积焦点', summary: '适合产品主视觉和案例页。' },
@@ -704,6 +714,8 @@
       palette_direction: 'deep-navy-signal-gold',
       color_saturation: 'medium',
       gradient_usage: 'local-light',
+      gradient_strategy: 'restrained-material',
+      gradient_scope: 'background-plus-surfaces',
       bright_area: 'small-accent',
       title_overlay: 'overlay-title',
       global_notes: '',
@@ -821,7 +833,7 @@
         paletteGrid.appendChild(button);
       });
       const controlMount = panel.querySelector('#globalControls');
-      ['color_saturation', 'gradient_usage', 'bright_area'].forEach(field => {
+      ['color_saturation', 'gradient_usage', 'gradient_strategy', 'gradient_scope', 'bright_area'].forEach(field => {
         controlMount.appendChild(renderMiniModule(fieldLabel(field), globalControls[field], state[field], value => { state[field] = value; renderAll(false); }));
       });
       panel.querySelector('#titleOverlayControl').appendChild(renderCompactToggle(globalControls.title_overlay, state.title_overlay, value => { state.title_overlay = value; renderAll(false); }));
@@ -886,6 +898,8 @@
         ['色系', `${paletteCategoryLabels[palette.category]} / ${palette.label}`],
         ['饱和度', labelOf(globalControls.color_saturation, state.color_saturation)],
         ['光感', labelOf(globalControls.gradient_usage, state.gradient_usage)],
+        ['渐变策略', labelOf(globalControls.gradient_strategy, state.gradient_strategy)],
+        ['渐变范围', labelOf(globalControls.gradient_scope, state.gradient_scope)],
         ['亮色面积', labelOf(globalControls.bright_area, state.bright_area)],
         ['标题输出', labelOf(globalControls.title_overlay, state.title_overlay)]
       ].forEach(([label, value]) => {
@@ -1291,7 +1305,14 @@
     }
 
     function fieldLabel(field) {
-      return { color_saturation: '饱和度', gradient_usage: '渐变/光感', bright_area: '亮色面积', title_overlay: '标题输出' }[field] || field;
+      return {
+        color_saturation: '饱和度',
+        gradient_usage: '渐变/光感',
+        gradient_strategy: '渐变策略',
+        gradient_scope: '渐变范围',
+        bright_area: '亮色面积',
+        title_overlay: '标题输出'
+      }[field] || field;
     }
 
     function labelOf(options, id) {
@@ -1315,8 +1336,14 @@
           palette_id: palette.id,
           palette_label: palette.label,
           colors: palette.colors,
+          roles: palette.roles || {},
+          source: palette.source || '',
+          external_palette: palette.external_palette || null,
+          color_system: palette.system_interpretation || null,
           color_saturation: state.color_saturation,
           gradient_usage: state.gradient_usage,
+          gradient_strategy: state.gradient_strategy,
+          gradient_scope: state.gradient_scope,
           bright_area: state.bright_area,
           notes: state.global_palette_notes
         },

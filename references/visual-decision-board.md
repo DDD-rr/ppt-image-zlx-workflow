@@ -35,6 +35,13 @@ After creating the board, tell the user prominently:
 
 Then briefly state what the user is deciding and that the workflow will stop before `Master_Template.md` / `PPT_Page_Image_Guide.md` until the decision is confirmed. Do not bury the link in a long status paragraph.
 
+When the local server is available, provide both:
+
+- the local review URL; and
+- a clickable absolute local-file link to `decision_board/index.html`.
+
+Do this by default rather than only when the user asks. Many users can open the local file link more reliably than the local server URL.
+
 ## Option Rules
 
 Keep choices few and meaningful:
@@ -79,6 +86,32 @@ Each palette direction must include:
 - `source`: the palette source and adaptation rationale.
 - `external_palette`: the external library result used for this option, including `library`, `name`, `url`, and `original_colors`.
 - `risk`: color sameness, AI-template risk, or readability risk.
+
+Each palette direction should also carry a system interpretation for downstream reuse, either directly in the option data or in a compiled derived field. At minimum, preserve:
+
+- semantic tone;
+- background family;
+- dominant hue family;
+- support colors;
+- emphasis colors;
+- neutral/material colors;
+- approximate distribution;
+- base gradient;
+- tonal ramp;
+- surface levels;
+- accent usage map;
+- gradient strategy and scope;
+- page types where the palette is likely to drift or collapse.
+
+When the board writes `style_decision.json`, keep this palette interpretation in saved project data rather than collapsing back to a palette label plus swatches. Store it under `global_palette.color_system` or an equivalent structured field so later stages can reuse the same color roles and anti-collapse guidance without re-inferring the palette from scratch.
+
+The board should expose gradient choice as a structured decision, not only as a palette side effect. At minimum, let the user confirm:
+
+- whether gradients are quiet, medium, or expressive;
+- whether gradients belong only in the background, in background plus surfaces, or only in local highlights;
+- whether the project should prefer restrained material gradients, atmospheric depth gradients, or multi-surface gradients.
+
+Do not let a project select an atmospheric or dark palette while leaving gradient behavior unspecified; that omission frequently collapses the result into a flat same-color safe output.
 
 Every palette option must call an external color library. Default to WebGradients first. Use other libraries such as Ant Design Colors, Tailwind Colors, Material, or ColorBrewer only when the page needs stricter UI/data semantics, neutral report structure, categorical data, or brand-system alignment.
 
@@ -231,6 +264,8 @@ Build candidates from the topic, audience, confirmed outline, document tone, rea
 
 Do not use generic presets such as "tech blue", "business orange", or "minimal white" unless the project gives a concrete semantic reason. If blue, cyan, or purple is used, name its role. If a non-blue direction is used, name why it fits the content instead of treating non-blue as automatically better.
 
+Do not treat palette selection as a loose mood board. The board should show the system's interpretation of the selected palette in the current project, such as the expected background role, structure/support role, emphasis role, and the likely page-role adaptations. The user still chooses only from the provided palette directions; the board's job is to make the system's interpretation visible, not to ask the user to design the palette manually.
+
 One option should usually be the responsible default. The other two should be real alternatives, not filler.
 
 ## Confirmed Decision
@@ -245,6 +280,44 @@ One option should usually be the responsible default. The other two should be re
   "page_mode": "module-structure",
   "primary_emphasis_method": "reading-priority",
   "palette_direction": "warm paper with muted accent tabs",
+  "global_palette": {
+    "palette_id": "warm-paper-muted-tabs",
+    "palette_label": "Warm Paper",
+    "colors": ["#F7F2EA", "#FFFFFF", "#243246", "#2F7EA7", "#C78D32"],
+    "color_system": {
+      "semantic_tone": "formal and calm",
+      "background_family": "warm paper white",
+      "dominant_hue_family": "paper white + restrained blue",
+      "support_colors": ["#D9E2E8"],
+      "emphasis_colors": ["#2F7EA7", "#C78D32"],
+      "neutral_material_colors": ["#243246", "#6B7785"],
+      "approximate_distribution": "72 / 16 / 8 / 4",
+      "avoid_combinations": ["full-page saturated gradient wash"],
+      "page_role_adaptation": "evidence pages reduce accent spread; summary pages may slightly strengthen highlights",
+      "anti_collapse_note": "avoid turning the page into a generic white consulting template",
+      "base_gradient": {
+        "start": "#F7F2EA",
+        "end": "#FFFFFF",
+        "direction": "vertical",
+        "role": "paper atmosphere and shallow depth"
+      },
+      "tonal_ramp_primary": ["#F7F2EA", "#E8EDF2", "#D9E2E8", "#2F7EA7"],
+      "surface_levels": {
+        "background": "warm paper base",
+        "primary_surface": "clean white raised content carrier",
+        "support_surface": "mist gray-blue secondary panel"
+      },
+      "accent_usage_map": {
+        "key_numbers": "#2F7EA7",
+        "small_markers": "#C78D32",
+        "borders": "#D9E2E8",
+        "body_text": "#243246"
+      },
+      "gradient_strategy": "restrained-material",
+      "gradient_scope": "background-plus-surfaces",
+      "forbidden_flattening_pattern": "pure white background plus one repeated blue accent on every element"
+    }
+  },
   "title_overlay": {
     "mode": "overlay-title",
     "label": "叠加标题",
@@ -259,7 +332,7 @@ One option should usually be the responsible default. The other two should be re
 }
 ```
 
-Before continuing, check that `visual_direction`, `palette_direction`, `density`, `page_treatment`, and `confirmed_at` are present. If any required field is missing, stop and ask for a corrected confirmation instead of silently guessing.
+Before continuing, check that `visual_direction`, `palette_direction`, `density`, `page_treatment`, and `confirmed_at` are present. Also check that the saved palette interpretation is still available as structured data, such as `global_palette.color_system`. If any required field is missing, stop and ask for a corrected confirmation instead of silently guessing.
 
 ## Downstream Use
 
@@ -287,6 +360,7 @@ Create the reusable board with `scripts/create-v4-review-board.mjs` after `decis
 A board is not complete unless it includes:
 
 - Global palette category and concrete palette selection.
+- Global gradient strategy and gradient scope, not only palette swatches.
 - Global color strength controls such as saturation, gradient usage, and bright-area proportion.
 - Global title-overlay mode: `overlay-title` by default, or `no-title-reserved` when the user wants title-safe images for manual post-production. No-title mode must still save outputs into `final_image/` and mark them as `去标题版`.
 - One tab for every outline slide, preserving any explicit source slide/page boundaries exactly.

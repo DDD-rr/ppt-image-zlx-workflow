@@ -84,7 +84,11 @@ function normalizePalette(item) {
     label: item.label || item.name || item.id || '未命名色系',
     summary: item.summary || item.detail || item.roles || '项目色系方向。',
     colors: asArray(item.colors).length ? item.colors : ['#06131F', '#10263A', '#2E6F95', '#D9A441', '#F4F7FA'],
-    category: item.category === 'dark' || item.category === '暗色系' ? 'dark' : (inferredLight ? 'light' : 'dark')
+    category: item.category === 'dark' || item.category === '暗色系' ? 'dark' : (inferredLight ? 'light' : 'dark'),
+    roles: item.roles || {},
+    source: item.source || '',
+    external_palette: item.external_palette || null,
+    system_interpretation: item.system_interpretation || item.color_system || null
   };
 }
 

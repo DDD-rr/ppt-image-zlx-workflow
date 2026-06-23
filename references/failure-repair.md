@@ -21,10 +21,11 @@ Use only after QA finds a high-impact failure. Preserve successful composition, 
 - Generic repeated modules: decide whether modules are main or auxiliary. Main modules need a shared system anchor, a meaningful second layer, and local rhythm. Auxiliary modules must become quieter than the primary anchor.
 - Weak visual anchor: strengthen one topic-specific object, scene, proof object, transformation, or conclusion instead of adding decorative badges or extra microcopy.
 - Color sameness: keep the selected palette family, but separate background, border, icon, heading, body text, key numbers, decoration, and signal states by brightness, saturation, opacity, scale, or material treatment.
+- Gradient weakness: do not solve by adding a random full-page gradient wash. Reassign gradient to atmosphere, depth, surface transition, or local highlight roles and keep the result topic-specific.
 - Invented evidence: remove or abstract unverifiable identifiers, marks, signatures, quotes, numbers, charts, and logos while preserving useful evidence material, layering, contrast, and framing.
 - Text fidelity loss: shorten Tier A text, split the page, or reclassify text into Tier B/C. Do not use local body-text overlay; only the main title and title decoration are added locally.
 - Real-image replacement: regenerate with the actual image as input or a shown visual reference. Stop if neither is possible.
 
 ## When Sample Review Is Waived
 
-Automatically revise and regenerate once when the page degrades into a generic template, flat same-color card grid, weak semantic background, large meaningless blank title area, missing material contrast, missing text fidelity, unclear component hierarchy, unclear visual intensity, or a tidy but visually forgettable composition without one memorable anchor.
+Automatically revise and regenerate once when the page degrades into a generic template, flat same-color card grid, weak semantic background, large meaningless blank title area, missing material contrast, missing tonal depth, weak or decorative-only gradient usage, missing text fidelity, unclear component hierarchy, unclear visual intensity, or a tidy but visually forgettable composition without one memorable anchor.

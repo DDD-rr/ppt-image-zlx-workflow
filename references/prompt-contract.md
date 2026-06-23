@@ -30,6 +30,9 @@ Every body-image prompt must include:
 - Alignment contract: one page-level content frame plus the shared edges, column widths, row heights, centerlines, or baselines that bind major zones together.
 - Main content comfort floor for dense matrices, comparison tables, architecture stacks, roadmaps, workflows, or core-function areas.
 - Reading path, depth strategy, whitespace strategy, and canvas energy plan.
+- Resolved color-system fields, not only a palette name: semantic tone, background family, dominant hue family, support colors, emphasis colors, neutral/material colors, approximate distribution, avoid combinations, and anti-collapse guidance when color materially affects the page.
+- Explicit tonal-depth contract when color is important: at least 3 brightness levels, at least 2 surface/material levels, and at least 1 local highlight behavior that is not uniformly repeated.
+- Gradient execution contract when gradients are allowed: base gradient, gradient strategy, gradient scope, and which objects or surfaces may carry gradient versus staying flat.
 - Text fidelity budget: Tier A verbatim text, Tier B compressible text, Tier C visual-only meaning.
 - Locked text and allowed extensible text.
 - Chinese text shape constraints when in-image Chinese is required: normal proportions, stable line spacing, front-facing 2D text areas, no horizontal compression, no vertical stretching, no narrow fake font, no perspective-warped body copy, no sticky strokes, and no decorative pseudo-text.
@@ -44,6 +47,8 @@ When these fields exist in `PPT_Page_Image_Guide.md`, carry them into the prompt
 - composition pattern and anti-flattening rule;
 - whether reading-first or body-text-carrier still needs a visual anchor, path, document object, product proof, or shared system instead of full-screen flat module tiling;
 - palette brief, page color role, component color roles, and visual intensity scale;
+- tonal ramp, surface levels, accent usage map, gradient strategy, and gradient scope;
+- structured color-system interpretation when it exists in `style_decision.json`, `Master_Template.md`, or `PPT_Page_Image_Guide.md`; do not reduce it back to a palette label alone;
 - title zone and first body-module boundary;
 - real-image role and actual input method;
 - compression order and auxiliary degradation rules.
@@ -54,6 +59,14 @@ When space is tight, instruct the model to remove decoration first, shrink or si
 
 Do not ask the model to move the complete body composition downward as the default title fix. Prefer local or L-shaped re-layout as defined in `references/title-safety.md`.
 
+When color is failing, repair in this order before changing the whole palette:
+
+1. strengthen tonal ramp depth;
+2. separate surface/material roles;
+3. narrow emphasis-color spread with an explicit accent usage map;
+4. assign gradient to atmosphere, surface, or highlight roles more clearly;
+5. only then consider replacing the palette direction.
+
 ## QA And Repair
 
-After generation, load `references/qa-gates.md`. If a high-impact failure appears, load `references/failure-repair.md`, revise only the failed part of the blueprint/prompt, and regenerate the page before continuing.
+After generation, load `references/qa-gates.md`. If a high-impact failure appears, load `references/failure-repair.md`, revise only the failed part of the blueprint/prompt, and regenerate the page before continuing. When the failure is color collapse, gradient weakness, or same-family flattening, also load `references/color-failure-repair.md`.
