@@ -21,6 +21,8 @@ Before creating `options.json`, preserve authoritative source page boundaries. I
 
 For each slide in `options.json`, `raw` must be the exact original source text for that slide, including headings, tables, lists, and source wording. Do not replace it with an outline summary, normalized rewrite, or shortened prompt material. Put any condensed explanation in `summary` only.
 
+For each slide in `options.json`, write `locked` as a compact array of must-preserve facts, terms, product names, branded labels, exact metrics, and other wording that should survive later prompt compression. Prefer extracting these items from the slide's `关键事实/术语/数据` section instead of inventing a second interpretation pass. Do not leave `locked` empty when the page clearly contains must-keep terms or numbers.
+
 For each slide header, keep role and summary semantically different. role is the review task for that page, such as what visual or information tradeoff the user is deciding. summary is the source-content synopsis. The V4.1 board renders both fields; duplicating the same sentence creates visible repeated copy.
 
 If the local server is unavailable, show the same choices in chat and write `style_decision.json` only from the user's explicit reply.

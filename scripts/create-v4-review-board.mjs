@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const skillRoot = path.resolve(scriptDir, '..');
 const templatePath = path.join(skillRoot, 'references', 'decision-board-v4-template.html');
+const commonOptionsPath = path.join(skillRoot, 'references', 'decision-board-v4-common-options.js');
 
 function usage() {
   console.error('Usage: node scripts/create-v4-review-board.mjs <project-or-decision-board-dir> [options-json]');
@@ -65,6 +66,35 @@ function normalizeVisualDirection(option) {
 
 function asArray(value) {
   return Array.isArray(value) ? value : [];
+}
+
+function uniqStrings(values) {
+  return Array.from(new Set(asArray(values).filter(value => typeof value === 'string' && value.trim())));
+}
+
+function cleanLockedText(value) {
+  return String(value || '')
+    .replace(/^[-*]\s*/, '')
+    .replace(/^`|`$/g, '')
+    .trim();
+}
+
+function extractLockedFromRaw(raw) {
+  const text = String(raw || '');
+  if (!text) return [];
+
+  const match = text.match(/(?:^|\n)-\s*关键事实[\/、]术语[\/、]数据[：:]\s*\n([\s\S]*?)(?=\n-\s|\n##\s|$)/);
+  if (!match) return [];
+
+  const items = match[1]
+    .split(/\r?\n/)
+    .map(line => {
+      const bullet = line.match(/^\s*-\s+(.+?)\s*$/);
+      return bullet ? cleanLockedText(bullet[1]) : '';
+    })
+    .filter(Boolean);
+
+  return uniqStrings(items);
 }
 
 function cleanId(value, fallback) {
@@ -183,7 +213,29 @@ function normalizeInfoGroup(group, index) {
   };
 }
 
-function normalizeSlide(slide, index) {
+function legacyKeysForSlide(slide, index) {
+  const fallbackId = `slide${String(index + 1).padStart(2, '0')}`;
+  return uniqStrings([slide?.id, slide?.label, slide?.title, fallbackId]).map(value => String(value).toLowerCase());
+}
+
+function indexLegacySlides(boardData) {
+  const map = new Map();
+  asArray(boardData?.slides).forEach((slide, index) => {
+    legacyKeysForSlide(slide, index).forEach(key => {
+      if (!map.has(key)) map.set(key, slide);
+    });
+  });
+  return map;
+}
+
+function findLegacySlide(legacySlides, slide, index) {
+  for (const key of legacyKeysForSlide(slide, index)) {
+    if (legacySlides.has(key)) return legacySlides.get(key);
+  }
+  return null;
+}
+
+function normalizeSlide(slide, index, legacySlide = null) {
   const title = slide.title || slide.name || `Slide ${index + 1}`;
   const sectionTitles = asArray(slide.sectionTitles || slide.section_titles || slide.required_section_titles);
   const infoGroupsRaw = asArray(slide.informationGroups || slide.information_groups);
@@ -191,6 +243,10 @@ function normalizeSlide(slide, index) {
     .map(normalizeInfoGroup);
   const role = slide.role || slide.goal || '审阅本页视觉表达、信息取舍和生成约束。';
   const summary = slide.summary || slide.description || '';
+  const currentLocked = uniqStrings(slide.locked || slide.locked_text);
+  const inheritedLocked = uniqStrings(legacySlide?.locked || legacySlide?.locked_text);
+  const derivedLocked = extractLockedFromRaw(slide.raw || slide.source || slide.content);
+  const fallbackLocked = uniqStrings([...inheritedLocked, ...derivedLocked]);
   return {
     id: slide.id || `slide${String(index + 1).padStart(2, '0')}`,
     label: slide.label || `Slide${String(index + 1).padStart(2, '0')}`,
@@ -201,7 +257,7 @@ function normalizeSlide(slide, index) {
     visualDirections: (asArray(slide.visualDirections || slide.visual_directions).length
       ? asArray(slide.visualDirections || slide.visual_directions)
       : defaultVisualDirections).map(normalizeVisualDirection),
-    locked: asArray(slide.locked || slide.locked_text),
+    locked: currentLocked.length ? currentLocked : fallbackLocked,
     sectionTitles: sectionTitles.length ? sectionTitles : informationGroups.map(group => group.label),
     defaultMode: slide.defaultMode || slide.page_mode || 'module-structure',
     defaultPrimaryEmphasisMethod: slide.defaultPrimaryEmphasisMethod || slide.primary_emphasis_method || 'reading-priority',
@@ -217,27 +273,47 @@ async function readJsonIfExists(filePath) {
   return JSON.parse(raw.replace(/^\uFEFF/, ''));
 }
 
+async function readExistingBoardData(decisionPath) {
+  const boardDataPath = path.join(decisionPath, 'board-data.json');
+  if (existsSync(boardDataPath)) {
+    try {
+      return await readJsonIfExists(boardDataPath);
+    } catch {
+      // Fall through to inline-data parsing for legacy recovery.
+    }
+  }
+
+  const inlineDataPath = path.join(decisionPath, 'board-inline-data.js');
+  if (!existsSync(inlineDataPath)) return {};
+  const raw = await readFile(inlineDataPath, 'utf8');
+  const match = raw.match(/window\.__BOARD_DATA__\s*=\s*(\{[\s\S]*\})\s*;?\s*$/);
+  if (!match) return {};
+  return JSON.parse(match[1]);
+}
+
 const options = await readJsonIfExists(optionsPath);
+const existingBoardData = await readExistingBoardData(decisionDir);
+const legacySlides = indexLegacySlides(existingBoardData);
 const projectName = options.project || options.project_name || options.title || path.basename(path.dirname(decisionDir)) || 'PPT 项目';
 const paletteSource = asArray(options.palettes || options.palette_directions || options.global_palettes);
 const palettes = completePalettes(paletteSource.length ? paletteSource : defaultPalettes);
 const slideSource = asArray(options.slides || options.pages || options.outline_pages);
 const slides = (slideSource.length ? slideSource : [normalizeSlide({ title: '待审阅页面', summary: '请在 options.json 中补充 slides。' }, 0)])
-  .map(normalizeSlide);
+  .map((slide, index) => normalizeSlide(slide, index, findLegacySlide(legacySlides, slide, index)));
 const initialActive = slides[0]?.id || 'slide01';
 const boardData = { projectName, palettes, slides, initialActive };
 
-let html = await readFile(templatePath, 'utf8');
-html = html
-  .replaceAll('{{BOARD_TITLE}}', `${projectName} PPT 视觉决策板 V4.1`)
-  .replaceAll('{{PROJECT_NAME_JSON}}', JSON.stringify(projectName))
-  .replaceAll('{{PALETTES_JSON}}', JSON.stringify(palettes))
-  .replaceAll('{{SLIDES_JSON}}', JSON.stringify(slides))
-  .replaceAll('{{INITIAL_ACTIVE_JSON}}', JSON.stringify(initialActive));
+const html = await readFile(templatePath, 'utf8');
+const commonOptionsJs = await readFile(commonOptionsPath, 'utf8');
+const inlineDataJs = `window.__BOARD_DATA__ = ${JSON.stringify(boardData)};\n`;
 
 await mkdir(decisionDir, { recursive: true });
 await writeFile(path.join(decisionDir, 'board-data.json'), JSON.stringify(boardData), 'utf8');
+await writeFile(path.join(decisionDir, 'board-inline-data.js'), inlineDataJs, 'utf8');
+await writeFile(path.join(decisionDir, 'common-options.js'), commonOptionsJs, 'utf8');
 await writeFile(path.join(decisionDir, 'index.html'), html, 'utf8');
 console.log(`V4.1 review board written: ${path.join(decisionDir, 'index.html')}`);
 console.log(`Board data written: ${path.join(decisionDir, 'board-data.json')}`);
+console.log(`Inline data written: ${path.join(decisionDir, 'board-inline-data.js')}`);
+console.log(`Common options written: ${path.join(decisionDir, 'common-options.js')}`);
 console.log(`Options source: ${existsSync(optionsPath) ? optionsPath : '(defaults)'}`);

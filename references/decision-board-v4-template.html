@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{{BOARD_TITLE}}</title>
+  <title>PPT 视觉决策板 V4.1</title>
   <style>
     :root {
       color-scheme: light;
@@ -551,7 +551,7 @@
 <body>
   <header>
     <div>
-      <h1>{{BOARD_TITLE}}</h1>
+      <h1 id="boardTitle">PPT 视觉决策板 V4.1</h1>
       <p>全局风格独立确认；Slide 审阅区只由左侧进度导航统领，点击页签会回到对应页面顶部。</p>
     </div>
     <div class="top-actions">
@@ -592,136 +592,81 @@
     </div>
   </div>
 
+  <script src="./common-options.js"></script>
   <script>
-    const PROJECT_NAME = {{PROJECT_NAME_JSON}};
-    const palettes = {{PALETTES_JSON}};
+    function loadScript(src) {
+      return new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = src;
+        script.onload = () => resolve();
+        script.onerror = () => reject(new Error(`未能加载脚本：${src}`));
+        document.head.appendChild(script);
+      });
+    }
 
-    const paletteCategoryLabels = { dark: '暗色系', light: '亮色系' };
+    async function loadBoardData() {
+      const isFileMode = window.location.protocol === 'file:';
+      if (isFileMode) {
+        try {
+          await loadScript('./board-inline-data.js');
+          const inlineData = window.__BOARD_DATA__ || null;
+          if (inlineData) return inlineData;
+        } catch (error) {}
+      } else {
+        try {
+          const response = await fetch('./board-data.json', { cache: 'no-store' });
+          if (response.ok) return await response.json();
+        } catch (error) {}
+      }
+      throw new Error('未能加载 board-data.json 或 board-inline-data.js');
+    }
 
-    const globalControls = {
-      color_saturation: [
-        { id: 'low', label: '低饱和', summary: '克制、正式、汇报感更强。' },
-        { id: 'medium', label: '中等饱和', summary: '推荐，专业和记忆点平衡。' },
-        { id: 'high-controlled', label: '高亮受控', summary: '关键页更有冲击，亮色面积严格限制。' }
-      ],
-      gradient_usage: [
-        { id: 'local-light', label: '局部光感', summary: '只在屏幕、信号线、焦点处出现。' },
-        { id: 'large-visual', label: '主视觉渐变', summary: '封面或市场页可有更强空间氛围。' },
-        { id: 'minimal', label: '极简材质', summary: '以面板、细线、阴影承载层级。' }
-      ],
-      gradient_strategy: [
-        { id: 'restrained-material', label: '克制材质渐变', summary: '渐变主要用于面板、金属、纸面或玻璃材质过渡。' },
-        { id: 'atmospheric-depth', label: '空间景深渐变', summary: '渐变主要承担空间深度、场景层次和气氛。' },
-        { id: 'multi-surface', label: '多表面渐变', summary: '背景与主要承载面都允许有明确的渐变层次。' }
-      ],
-      gradient_scope: [
-        { id: 'background-only', label: '仅背景', summary: '渐变只放在大背景，不进入主要内容承载面。' },
-        { id: 'background-plus-surfaces', label: '背景+承载面', summary: '背景和主内容表面都允许有克制渐变。' },
-        { id: 'local-highlights-only', label: '仅局部高光', summary: '只在局部高光、屏幕反射或信号节点中使用。' }
-      ],
-      bright_area: [
-        { id: 'small-accent', label: '小面积强调', summary: '推荐，数字和结论更突出。' },
-        { id: 'medium-focus', label: '中面积焦点', summary: '适合产品主视觉和案例页。' },
-        { id: 'very-low', label: '低亮面积', summary: '适合阅读优先或表格页。' }
-      ],
-      title_overlay: [
-        { id: 'overlay-title', label: '叠加标题' },
-        { id: 'no-title-reserved', label: '不叠加标题' }
-      ]
-    };
+    function applyBoardMetadata(boardData) {
+      const projectName = boardData.projectName || 'PPT 项目';
+      const title = `${projectName} PPT 视觉决策板 V4.1`;
+      document.title = title;
+      const titleNode = document.getElementById('boardTitle');
+      if (titleNode) titleNode.textContent = title;
+      const progressNode = document.getElementById('progressText');
+      if (progressNode) progressNode.textContent = `0 / ${boardData.slides.length} 页已检查`;
+    }
 
-    const commonOptions = {
-      page_mode: [
-        {
-          id: 'text-enhanced',
-          label: '正文增强型',
-          summary: '尽量保留原文，同时用结构、层级和视觉锚点提升阅读效率；避免整页只是平铺文字块。',
-          density: 'reading-first',
-          page_treatment: 'body-text-carrier',
-          visual_strength: 'supporting'
-        },
-        {
-          id: 'module-structure',
-          label: '模块结构型',
-          summary: '功能、参数、架构、流程或对比是主角；模块需要共享系统锚点或路径关系。',
-          density: 'hybrid',
-          page_treatment: 'feature-overview',
-          visual_strength: 'supporting'
-        },
-        {
-          id: 'visual-led',
-          label: '视觉主导型',
-          summary: '封面、章节页、氛围页优先，文字压缩为少量关键词。',
-          density: 'speaker-led',
-          page_treatment: 'hybrid',
-          visual_strength: 'primary'
-        }
-      ],
-      expression_mode: [
-        { id: 'realistic-scene', label: '写实场景', summary: '真实工作环境或赛事现场。' },
-        { id: 'product-cutaway', label: '产品剖面', summary: '硬件、模块、链路关系。' },
-        { id: 'evidence-page', label: '证据页', summary: '真实图或参数表优先。' }
-      ],
-      visual_strength: [
-        { id: 'background', label: '背景支撑', summary: '视觉退后，文字和结构优先。' },
-        { id: 'supporting', label: '支撑视觉', summary: '视觉解释信息，但不压过内容。' },
-        { id: 'primary', label: '主视觉级', summary: '画面锚点明确，占据页面核心。' }
-      ],
-      visual_restraint: [
-        { id: 'stable-tech', label: '稳重科技', summary: '成熟、克制、商务方案感。' },
-        { id: 'cinematic', label: '发布会感', summary: '更有冲击，适合方案宣讲。' },
-        { id: 'report', label: '报告克制', summary: '减少氛围，强化表格和证据。' }
-      ],
-      density: [
-        { id: 'speaker-led', label: '讲演优先', summary: '少文字，强主视觉。', diagram: 'hero' },
-        { id: 'hybrid', label: '混合平衡', summary: '推荐：保留关键判断，同时给主视觉足够空间。', diagram: 'hybrid' },
-        { id: 'reading-first', label: '阅读优先', summary: '更多原文、参数和表格，视觉会让位。', diagram: 'text' }
-      ],
-      page_treatment: [
-        { id: 'body-text-carrier', label: '正文承载', summary: '大段正文为主，适合资料留痕但画面感较弱。', diagram: 'text' },
-        { id: 'feature-overview', label: '模块总览', summary: '模块化扫读，适合功能/参数页。', diagram: 'matrix' },
-        { id: 'hybrid', label: '混合页', summary: '推荐：一段核心判断 + 视觉锚点 + 少量模块。', diagram: 'hybrid' }
-      ]
-    };
+    function cloneBoardData(boardData) {
+      return JSON.parse(JSON.stringify(boardData));
+    }
 
-    const weightOptions = [
-      { id: 'primary', label: '主重点', summary: '最高阅读优先级和最高文本保留，不默认等于最大面积。' },
-      { id: 'secondary', label: '次重点', summary: '完整或较完整保留。' },
-      { id: 'supporting', label: '辅助', summary: '作为证据、示意或支撑。' },
-      { id: 'light', label: '轻量', summary: '图标化、标签化或压缩表达。' }
-    ];
+    async function bootstrap() {
+      const loaded = await loadBoardData();
+      const boardData = cloneBoardData(loaded);
+      applyBoardMetadata(boardData);
 
-    const emphasisMethods = [
-      { id: 'reading-priority', label: '阅读突出', summary: '主重点最先被读到、文本保留最多，但不必占最大面积。' },
-      { id: 'area-priority', label: '面积突出', summary: '主重点占最大版面，适合矩阵、架构图或流程图。' },
-      { id: 'visual-anchor', label: '视觉锚点突出', summary: '主重点通过大图、大场景或强视觉对象建立记忆。' },
-      { id: 'path-priority', label: '路径突出', summary: '主重点通过流程、连接、因果关系表达。' }
-    ];
+      const PROJECT_NAME = boardData.projectName;
+      const palettes = boardData.palettes;
+      const decisionBoardCommonOptions = window.__DECISION_BOARD_COMMON_OPTIONS__;
+      if (!decisionBoardCommonOptions) {
+        throw new Error('未能加载 common-options.js');
+      }
+      const {
+        paletteCategoryLabels,
+        globalControls,
+        commonOptions,
+        weightOptions,
+        emphasisMethods,
+        imageTypes,
+        legacyGlobalPaletteKeys: LEGACY_GLOBAL_PALETTE_KEYS
+      } = decisionBoardCommonOptions;
 
-    const slides = {{SLIDES_JSON}};
+      const slides = boardData.slides;
 
-    const imageTypes = [
-      { id: 'main-visual', label: '主视觉', summary: '图片占核心版面，作为页面第一视觉。' },
-      { id: 'medium-anchor', label: '中等锚点', summary: '图片有存在感，但不自动成为最大主视觉。' },
-      { id: 'product-proof', label: '辅助证据/示意', summary: '保留真实感，但不抢主信息。' },
-      { id: 'atmosphere', label: '氛围参考', summary: '只用于场景气氛，不当事实证明。' },
-      { id: 'skip', label: '暂不使用', summary: '缺图时按概念页处理。' }
-    ];
-
-    const state = {
-      active: {{INITIAL_ACTIVE_JSON}},
-      palette_category: 'dark',
-      palette_direction: 'deep-navy-signal-gold',
-      color_saturation: 'medium',
-      gradient_usage: 'local-light',
-      gradient_strategy: 'restrained-material',
-      gradient_scope: 'background-plus-surfaces',
-      bright_area: 'small-accent',
-      title_overlay: 'overlay-title',
-      global_notes: '',
-      global_palette_notes: '',
-      slides: {}
-    };
+      const state = {
+        active: boardData.initialActive || slides[0]?.id || 'slide01',
+        palette_category: 'dark',
+        palette_direction: 'deep-navy-signal-gold',
+        title_overlay: 'overlay-title',
+        global_notes: '',
+        global_palette_notes: '',
+        slides: {}
+      };
 
     function initState() {
       slides.forEach(slide => {
@@ -779,7 +724,6 @@
       slideState.page_mode = mode.id;
       slideState.density = mode.density;
       slideState.page_treatment = mode.page_treatment;
-      slideState.visual_strength = mode.visual_strength;
     }
 
     function renderGlobal() {
@@ -795,10 +739,6 @@
             <div class="category-tabs" id="paletteCategoryTabs"></div>
             <div class="palette-grid" id="paletteGrid"></div>
             <textarea id="globalPaletteNotes" placeholder="全局色系补充，例如：不要满屏霓虹；蓝色只作为屏幕光和信号线。"></textarea>
-          </div>
-          <div>
-            <h3>色彩强度</h3>
-            <div class="triad-grid" id="globalControls"></div>
           </div>
           <div>
             <h3>标题叠加策略</h3>
@@ -831,10 +771,6 @@
         button.innerHTML = `<h4>${palette.label}</h4><p>${paletteCategoryLabels[palette.category]} | ${palette.summary}</p><div class="swatches">${palette.colors.map(c => `<span class="swatch" style="background:${c}"></span>`).join('')}</div>`;
         button.addEventListener('click', () => { state.palette_direction = palette.id; renderAll(false); });
         paletteGrid.appendChild(button);
-      });
-      const controlMount = panel.querySelector('#globalControls');
-      ['color_saturation', 'gradient_usage', 'gradient_strategy', 'gradient_scope', 'bright_area'].forEach(field => {
-        controlMount.appendChild(renderMiniModule(fieldLabel(field), globalControls[field], state[field], value => { state[field] = value; renderAll(false); }));
       });
       panel.querySelector('#titleOverlayControl').appendChild(renderCompactToggle(globalControls.title_overlay, state.title_overlay, value => { state.title_overlay = value; renderAll(false); }));
       const gp = panel.querySelector('#globalPaletteNotes');
@@ -896,11 +832,6 @@
       const palette = palettes.find(p => p.id === state.palette_direction);
       [
         ['色系', `${paletteCategoryLabels[palette.category]} / ${palette.label}`],
-        ['饱和度', labelOf(globalControls.color_saturation, state.color_saturation)],
-        ['光感', labelOf(globalControls.gradient_usage, state.gradient_usage)],
-        ['渐变策略', labelOf(globalControls.gradient_strategy, state.gradient_strategy)],
-        ['渐变范围', labelOf(globalControls.gradient_scope, state.gradient_scope)],
-        ['亮色面积', labelOf(globalControls.bright_area, state.bright_area)],
         ['标题输出', labelOf(globalControls.title_overlay, state.title_overlay)]
       ].forEach(([label, value]) => {
         const item = el('li');
@@ -941,17 +872,7 @@
     }
 
     function coreDesignBlock(slide) {
-      const s = state.slides[slide.id];
-      const wrap = el('div', 'content-group');
-      wrap.innerHTML = `<div class="group-head"><h3>页面核心设计</h3><span class="hint">先选页面表达类型，再分配信息组权重</span></div>`;
-      const coreNote = el('div', 'supplement');
-      coreNote.innerHTML = '<h4>页面核心设计补充说明</h4>';
-      const note = document.createElement('textarea');
-      note.placeholder = '写影响整页取舍的总要求，例如：主信息组完整保留，辅助信息压缩为标签；真实图只做证据，不抢主信息。';
-      note.value = s.page_notes;
-      note.addEventListener('input', () => { s.page_notes = note.value; updateOutput(false); });
-      coreNote.appendChild(note);
-      wrap.appendChild(coreNote);
+      const wrap = document.createDocumentFragment();
       wrap.appendChild(pageModeBlock(slide));
       wrap.appendChild(emphasisMethodBlock(slide));
       wrap.appendChild(infoWeightBlock(slide));
@@ -962,7 +883,7 @@
     function pageModeBlock(slide) {
       const s = state.slides[slide.id];
       const wrap = el('div', 'content-group');
-      wrap.innerHTML = `<div class="group-head"><h3>页面表达类型</h3><span class="hint">合并信息保留量 + 版式组织方式</span></div>`;
+      wrap.innerHTML = `<div class="group-head"><h3>页面表达类型</h3><span class="hint">决定这一页是偏阅读说明、模块总览，还是强主张主视觉；它负责整页组织，不负责“重点放大在哪”。</span></div>`;
       const grid = el('div', 'mode-grid');
       commonOptions.page_mode.forEach(mode => {
         const button = el('button', 'mode-card' + (s.page_mode === mode.id ? ' selected' : ''));
@@ -973,7 +894,7 @@
           <div class="mode-meta">
             <span>信息：${labelOf(commonOptions.density, mode.density)}</span>
             <span>版式：${labelOf(commonOptions.page_treatment, mode.page_treatment)}</span>
-            <span>视觉：${labelOf(commonOptions.visual_strength, mode.visual_strength)}</span>
+            <span>${mode.changeHint || '变化：会同步推荐信息保留量与版式组织'}</span>
           </div>
         `;
         button.addEventListener('click', () => { applyPageMode(s, mode.id); renderAll(false); });
@@ -1305,14 +1226,7 @@
     }
 
     function fieldLabel(field) {
-      return {
-        color_saturation: '饱和度',
-        gradient_usage: '渐变/光感',
-        gradient_strategy: '渐变策略',
-        gradient_scope: '渐变范围',
-        bright_area: '亮色面积',
-        title_overlay: '标题输出'
-      }[field] || field;
+      return { title_overlay: '标题输出' }[field] || field;
     }
 
     function labelOf(options, id) {
@@ -1340,11 +1254,6 @@
           source: palette.source || '',
           external_palette: palette.external_palette || null,
           color_system: palette.system_interpretation || null,
-          color_saturation: state.color_saturation,
-          gradient_usage: state.gradient_usage,
-          gradient_strategy: state.gradient_strategy,
-          gradient_scope: state.gradient_scope,
-          bright_area: state.bright_area,
           notes: state.global_palette_notes
         },
         title_overlay: {
@@ -1359,6 +1268,18 @@
         global_notes: state.global_notes,
         confirmed_at: new Date().toISOString()
       };
+    }
+
+    function removeLegacyPaletteFields(decision) {
+      if (!decision || !decision.global_palette) return decision;
+      LEGACY_GLOBAL_PALETTE_KEYS.forEach(key => delete decision.global_palette[key]);
+      return decision;
+    }
+
+    function migrateLegacyDecision(decision) {
+      if (!decision || typeof decision !== 'object') return null;
+      const migrated = JSON.parse(JSON.stringify(decision));
+      return removeLegacyPaletteFields(migrated);
     }
 
     function updateOutput(show) {
@@ -1408,11 +1329,27 @@
       updateOutput(false);
     }
 
-    initState();
-    renderAll(false);
-    document.getElementById('copyJson').addEventListener('click', copyJson);
-    document.getElementById('saveJson').addEventListener('click', saveJson);
-    document.getElementById('closeModal').addEventListener('click', () => document.getElementById('savedModal').classList.remove('active'));
+      initState();
+      try {
+        const saved = localStorage.getItem('ppt_visual_decision_v4_1');
+        if (saved) {
+          const parsed = migrateLegacyDecision(JSON.parse(saved));
+          if (parsed) {
+            localStorage.setItem('ppt_visual_decision_v4_1', JSON.stringify(parsed, null, 2));
+          }
+        }
+      } catch (error) {}
+      renderAll(false);
+      document.getElementById('copyJson').addEventListener('click', copyJson);
+      document.getElementById('saveJson').addEventListener('click', saveJson);
+      document.getElementById('closeModal').addEventListener('click', () => document.getElementById('savedModal').classList.remove('active'));
+    }
+
+    bootstrap().catch(error => {
+      document.getElementById('saveStatus').textContent = '加载失败';
+      document.getElementById('modalText').textContent = error.message || '决策板加载失败';
+      document.getElementById('savedModal').classList.add('active');
+    });
   </script>
 </body>
 </html>
