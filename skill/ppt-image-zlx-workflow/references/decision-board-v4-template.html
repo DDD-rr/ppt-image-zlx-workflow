@@ -1,0 +1,1357 @@
+﻿<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PPT 视觉决策板 V4.1</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f3f0e9;
+      --paper: #fffdf8;
+      --paper-2: #f0e7db;
+      --ink: #201c18;
+      --muted: #6a6258;
+      --line: #d6ccbf;
+      --accent: #c8642b;
+      --accent-soft: #fff1e6;
+      --accent-2: #1d6b78;
+      --dark: #29241f;
+      --ok: #28765b;
+      --warn: #9a4d24;
+      font-family: "Segoe UI", "Microsoft YaHei", Arial, sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--ink); }
+    button, input, textarea { font: inherit; }
+    button {
+      border: 0;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: transform .14s, box-shadow .14s, background .14s, border-color .14s;
+    }
+    button:hover { transform: translateY(-1px); box-shadow: 0 8px 18px rgba(45, 36, 27, .12); }
+    button:active { transform: translateY(0); box-shadow: none; }
+    h1, h2, h3, h4 { letter-spacing: 0; }
+    h1 { margin: 0 0 4px; font-size: 26px; line-height: 1.18; }
+    h2 {
+      margin: 0 0 14px;
+      font-size: 24px;
+      line-height: 1.2;
+      color: var(--ink);
+    }
+    h3 { margin: 0 0 10px; font-size: 19px; line-height: 1.25; }
+    h4 { margin: 0 0 6px; font-size: 14px; line-height: 1.25; }
+    p { margin: 5px 0; color: var(--muted); line-height: 1.48; font-size: 13px; }
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 18px;
+      align-items: center;
+      padding: 14px 22px;
+      background: rgba(243, 240, 233, .94);
+      backdrop-filter: blur(14px);
+      border-bottom: 1px solid var(--line);
+    }
+    .top-actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      min-height: 34px;
+      padding: 6px 10px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: var(--paper);
+      color: var(--muted);
+      font-size: 13px;
+      white-space: nowrap;
+    }
+    .primary { background: var(--accent); color: white; padding: 10px 14px; font-weight: 800; }
+    .secondary { background: var(--paper-2); color: var(--ink); padding: 10px 14px; font-weight: 800; }
+    .page { max-width: 1480px; margin: 0 auto; padding: 18px; }
+    .panel {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--paper);
+      box-shadow: 0 12px 26px rgba(45, 36, 27, .05);
+      padding: 22px;
+    }
+    .section-title {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 14px;
+      padding-bottom: 12px;
+      margin-bottom: 14px;
+      border-bottom: 2px solid var(--dark);
+    }
+    .section-title h2 { margin: 0; }
+    .global-title h2 {
+      margin-top: 2px;
+      font-size: clamp(30px, 2.5vw, 42px);
+      line-height: 1.06;
+      letter-spacing: -0.03em;
+      font-weight: 950;
+    }
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      min-height: 26px;
+      padding: 3px 8px;
+      border-radius: 999px;
+      background: var(--dark);
+      color: #fff8ef;
+      font-size: 12px;
+      font-weight: 800;
+    }
+    .global-grid { display: grid; gap: 14px; }
+    .palette-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+      gap: 12px;
+    }
+    .category-tabs {
+      display: flex;
+      gap: 10px;
+      margin: 8px 0 14px;
+      flex-wrap: wrap;
+    }
+    .category-tab {
+      min-height: 42px;
+      padding: 9px 16px;
+      background: #eee7dd;
+      color: var(--ink);
+      font-weight: 900;
+    }
+    .category-tab.selected {
+      background: var(--accent);
+      color: white;
+      box-shadow: 0 8px 18px rgba(200, 100, 43, .18);
+    }
+    .triad-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+    }
+    .mini-module {
+      padding: 14px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fffaf1;
+    }
+    .mini-module h3 { font-size: 15px; margin-bottom: 9px; }
+    .choice-row { display: grid; gap: 7px; }
+    .choice {
+      width: 100%;
+      min-height: 42px;
+      padding: 8px 10px;
+      border: 1px solid var(--line);
+      background: #f6eee3;
+      color: var(--ink);
+      text-align: left;
+    }
+    .choice.selected {
+      border-color: var(--accent);
+      background: var(--accent-soft);
+      box-shadow: 0 0 0 2px rgba(200, 100, 43, .14);
+    }
+    .choice strong { display: block; font-size: 13px; }
+    .choice span { display: block; margin-top: 2px; color: var(--muted); font-size: 12px; line-height: 1.35; }
+    .card-option {
+      min-height: 118px;
+      padding: 12px;
+      border: 1px solid var(--line);
+      background: #fffaf1;
+      color: var(--ink);
+      text-align: left;
+    }
+    .card-option.selected {
+      border-color: var(--accent);
+      background: var(--accent-soft);
+      box-shadow: 0 0 0 2px rgba(200, 100, 43, .14);
+    }
+    .swatches { display: flex; gap: 6px; margin: 8px 0; }
+    .swatch { width: 24px; height: 24px; border-radius: 50%; border: 1px solid rgba(0,0,0,.14); }
+    textarea, input[type="text"] {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fffaf1;
+      color: var(--ink);
+      padding: 8px 10px;
+    }
+    textarea {
+      min-height: 38px;
+      height: 38px;
+      line-height: 1.35;
+      resize: vertical;
+      overflow: auto;
+      margin-top: 12px;
+    }
+    .workspace {
+      display: grid;
+      grid-template-columns: 230px minmax(0, 1fr);
+      gap: 16px;
+      margin-top: 16px;
+      align-items: start;
+    }
+    .side {
+      position: sticky;
+      top: 86px;
+      max-height: calc(100vh - 104px);
+      overflow: auto;
+      display: grid;
+      gap: 12px;
+    }
+    .side .panel { padding: 16px; }
+    .progress {
+      height: 8px;
+      border-radius: 999px;
+      overflow: hidden;
+      background: #e2d8cc;
+      margin: 10px 0 12px;
+    }
+    .progress span { display: block; height: 100%; width: 0%; background: var(--accent); }
+    .nav-button {
+      width: 100%;
+      display: grid;
+      grid-template-columns: 32px 1fr 10px;
+      align-items: center;
+      gap: 9px;
+      min-height: 44px;
+      margin: 6px 0;
+      padding: 8px;
+      background: transparent;
+      border: 1px solid transparent;
+      color: var(--ink);
+      text-align: left;
+    }
+    .nav-button.active { background: var(--accent-soft); border-color: rgba(200, 100, 43, .45); }
+    .nav-index {
+      width: 32px;
+      height: 32px;
+      display: grid;
+      place-items: center;
+      border-radius: 7px;
+      background: var(--dark);
+      color: white;
+      font-size: 12px;
+      font-weight: 900;
+    }
+    .nav-title { font-weight: 900; font-size: 14px; }
+    .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--warn); }
+    .dot.ok { background: var(--ok); }
+    .slide-panel { scroll-margin-top: 92px; }
+    .slide-hero {
+      padding: 18px;
+      margin-bottom: 12px;
+      border-radius: 8px;
+      background: linear-gradient(135deg, #2c261f, #4b3326);
+      color: white;
+    }
+    .slide-hero h2 { color: white; font-size: 28px; margin: 0 0 6px; }
+    .slide-hero p { color: rgba(255, 248, 239, .78); }
+    .content-group {
+      padding: 22px 0;
+      border-top: 1px solid #e4dacf;
+    }
+    .content-group:first-of-type { border-top: 0; padding-top: 0; }
+    .group-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 12px;
+      margin-bottom: 10px;
+    }
+    .hint { color: var(--muted); font-size: 12px; }
+    .decision-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+      gap: 12px;
+    }
+    .mode-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+    }
+    .mode-card {
+      min-height: 158px;
+      padding: 14px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fffaf1;
+      color: var(--ink);
+      text-align: left;
+    }
+    .mode-card.selected {
+      border-color: var(--accent);
+      background: var(--accent-soft);
+      box-shadow: 0 0 0 2px rgba(200, 100, 43, .14);
+    }
+    .mode-meta {
+      display: grid;
+      gap: 6px;
+      margin-top: 10px;
+      padding-top: 10px;
+      border-top: 1px solid rgba(214, 204, 191, .78);
+    }
+    .mode-meta span,
+    .weight-summary span {
+      display: inline-flex;
+      align-items: center;
+      width: fit-content;
+      min-height: 22px;
+      padding: 3px 7px;
+      border-radius: 999px;
+      background: rgba(29, 107, 120, .1);
+      color: #245865;
+      font-size: 12px;
+      font-weight: 800;
+    }
+    .weight-table {
+      display: grid;
+      gap: 8px;
+      margin-top: 12px;
+    }
+    .weight-row {
+      display: grid;
+      grid-template-columns: minmax(110px, 1fr) 2.4fr;
+      gap: 12px;
+      align-items: center;
+      padding: 10px;
+      border: 1px solid #eadfd2;
+      border-radius: 8px;
+      background: rgba(255, 250, 241, .72);
+    }
+    .weight-name {
+      font-size: 14px;
+      font-weight: 900;
+      color: var(--ink);
+    }
+    .weight-options {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 7px;
+    }
+    .weight-option {
+      min-height: 36px;
+      padding: 7px 8px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #f5efe7;
+      color: var(--ink);
+      font-size: 12px;
+      font-weight: 900;
+      text-align: center;
+      box-shadow: none;
+    }
+    .weight-option:hover { transform: none; box-shadow: none; }
+    .weight-option.selected {
+      border-color: var(--accent);
+      background: var(--accent-soft);
+      color: #111;
+    }
+    .weight-summary {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 10px;
+    }
+    .visual-card {
+      padding: 12px;
+      min-height: 178px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fffaf1;
+      color: var(--ink);
+      text-align: left;
+    }
+    .visual-card.selected {
+      border-color: var(--accent);
+      background: var(--accent-soft);
+      box-shadow: 0 0 0 2px rgba(200, 100, 43, .14);
+    }
+    .diagram {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      margin-bottom: 12px;
+      border: 1px solid rgba(0,0,0,.12);
+      border-radius: 7px;
+      background: linear-gradient(135deg, #091422, #1a2b3d);
+      overflow: hidden;
+    }
+    .diagram.light { background: linear-gradient(135deg, #f8fafc, #dae6ee); }
+    .diagram span { position: absolute; border-radius: 4px; background: rgba(66, 143, 170, .78); border: 1px solid rgba(255,255,255,.34); }
+    .diagram .screen { left: 8%; top: 14%; width: 84%; height: 30%; background: repeating-linear-gradient(90deg, rgba(66,143,170,.9) 0 18%, rgba(255,255,255,.18) 18% 20%); }
+    .diagram .console { left: 24%; top: 62%; width: 52%; height: 18%; transform: perspective(130px) rotateX(12deg); background: #d5a24a; }
+    .diagram .hero { left: 8%; top: 22%; width: 42%; height: 56%; }
+    .diagram .a { left: 56%; top: 22%; width: 32%; height: 13%; }
+    .diagram .b { left: 56%; top: 43%; width: 32%; height: 13%; }
+    .diagram .c { left: 56%; top: 64%; width: 32%; height: 13%; }
+    .diagram .wide1 { left: 8%; top: 20%; width: 84%; height: 15%; }
+    .diagram .wide2 { left: 8%; top: 44%; width: 84%; height: 15%; }
+    .diagram .wide3 { left: 8%; top: 68%; width: 84%; height: 15%; }
+    .diagram .matrix { left: 8%; top: 20%; width: 84%; height: 58%; background: repeating-linear-gradient(90deg, rgba(66,143,170,.82) 0 22%, rgba(255,255,255,.18) 22% 24%); }
+    .diagram .node1 { left: 11%; top: 30%; width: 20%; height: 34%; border-radius: 50%; }
+    .diagram .node2 { left: 40%; top: 30%; width: 20%; height: 34%; border-radius: 50%; }
+    .diagram .node3 { left: 69%; top: 30%; width: 20%; height: 34%; border-radius: 50%; }
+    .diagram .line { left: 27%; top: 46%; width: 46%; height: 6%; background: #d5a24a; }
+    .review-note {
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 400;
+    }
+    .question-card {
+      padding: 20px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: rgba(255, 250, 241, .72);
+      margin-top: 12px;
+    }
+    .question-options-inline {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 12px;
+    }
+    .radio-choice {
+      display: inline-flex;
+      align-items: center;
+      min-height: 46px;
+      padding: 10px 14px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #f5efe7;
+      color: var(--ink);
+      text-align: left;
+      box-shadow: none;
+    }
+    .radio-choice:hover { transform: none; box-shadow: none; }
+    .radio-choice.selected { border-color: var(--accent); background: var(--accent-soft); color: #111; }
+    .asset-zone {
+      border: 1px dashed #bdae9e;
+      border-radius: 8px;
+      background: rgba(255,255,255,.46);
+      padding: 16px;
+      margin-bottom: 14px;
+    }
+    .asset-zone.drag {
+      border-color: var(--accent);
+      background: #fff5eb;
+      box-shadow: 0 0 0 2px rgba(200,100,43,.12);
+    }
+    .asset-paste-target {
+      min-height: 58px;
+      display: grid;
+      place-items: center;
+      margin-top: 12px;
+      border: 1px dashed #d2c3b2;
+      border-radius: 8px;
+      background: #fffaf1;
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .asset-paste-target:focus,
+    .asset-paste-target.drag {
+      outline: 3px solid rgba(200,100,43,.18);
+      border-color: var(--accent);
+      background: var(--accent-soft);
+    }
+    .asset-top {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 10px;
+      align-items: center;
+    }
+    .asset-records { color: var(--ok); font-size: 12px; margin-top: 7px; }
+    .asset-type-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+      gap: 8px;
+      margin-top: 12px;
+    }
+    .chips { display: flex; flex-wrap: wrap; gap: 7px; }
+    .compact-toggle {
+      display: inline-flex;
+      gap: 6px;
+      padding: 4px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: #f6eee3;
+    }
+    .toggle-option {
+      min-height: 32px;
+      padding: 6px 12px;
+      border-radius: 999px;
+      background: transparent;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 900;
+      box-shadow: none;
+    }
+    .toggle-option:hover { transform: none; box-shadow: none; }
+    .toggle-option.selected { background: var(--accent); color: white; }
+    .chip {
+      min-height: 28px;
+      padding: 5px 9px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: #f2eadf;
+      color: var(--muted);
+      font-size: 12px;
+      box-shadow: none;
+    }
+    .chip:hover { transform: none; box-shadow: none; }
+    .chip.selected { background: #2e4f5d; border-color: #2e4f5d; color: white; }
+    .inline-add { display: grid; grid-template-columns: 1fr auto; gap: 8px; margin-top: 12px; }
+    .subsection {
+      margin-top: 18px;
+      padding-top: 16px;
+      border-top: 1px solid #eadfd2;
+    }
+    .subsection:first-child {
+      margin-top: 0;
+      padding-top: 0;
+      border-top: 0;
+    }
+    .supplement {
+      margin-top: 16px;
+    }
+    .risk-list { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+    .risk-list li { color: var(--muted); font-size: 13px; line-height: 1.42; }
+    .risk { color: var(--warn); font-weight: 900; }
+    .ok { color: var(--ok); font-weight: 900; }
+    .output { display: none; }
+    .modal {
+      position: fixed;
+      inset: 0;
+      z-index: 40;
+      display: none;
+      place-items: center;
+      padding: 20px;
+      background: rgba(22, 18, 14, .42);
+    }
+    .modal.active { display: grid; }
+    .modal-card { width: min(560px, 100%); padding: 22px; border-radius: 8px; background: var(--paper); border: 1px solid var(--line); }
+    @media (max-width: 1180px) {
+      .workspace { grid-template-columns: 1fr; }
+      .side { position: static; max-height: none; }
+      .triad-grid { grid-template-columns: 1fr; }
+      .mode-grid { grid-template-columns: 1fr; }
+      .weight-row { grid-template-columns: 1fr; }
+      .weight-options { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      header { position: static; grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div>
+      <h1 id="boardTitle">PPT 视觉决策板 V4.1</h1>
+      <p>全局风格独立确认；Slide 审阅区只由左侧进度导航统领，点击页签会回到对应页面顶部。</p>
+    </div>
+    <div class="top-actions">
+      <span class="status-pill" id="saveStatus">未保存</span>
+      <button class="secondary" id="copyJson">复制 JSON</button>
+      <button class="primary" id="saveJson">完成审阅并保存</button>
+    </div>
+  </header>
+
+  <div class="page">
+    <section class="panel" id="globalPanel"></section>
+
+    <section class="workspace">
+      <aside class="side">
+        <section class="panel">
+          <h3>审阅进度</h3>
+          <div class="progress"><span id="progressBar"></span></div>
+          <p id="progressText">0 / 6 页已检查</p>
+          <div id="slideNav"></div>
+        </section>
+        <section class="panel">
+          <h3>全局摘要</h3>
+          <ul class="risk-list" id="globalSummary"></ul>
+        </section>
+      </aside>
+
+      <main id="slidePanel" class="slide-panel"></main>
+    </section>
+  </div>
+
+  <textarea class="output" id="decisionOutput" spellcheck="false"></textarea>
+
+  <div class="modal" id="savedModal">
+    <div class="modal-card">
+      <h2>审阅意见已保存</h2>
+      <p id="modalText">接下来可以生成 Master_Template.md 与 PPT_Page_Image_Guide.md。</p>
+      <button class="primary" id="closeModal">知道了</button>
+    </div>
+  </div>
+
+  <script src="./common-options.js"></script>
+  <script>
+    function loadScript(src) {
+      return new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = src;
+        script.onload = () => resolve();
+        script.onerror = () => reject(new Error(`未能加载脚本：${src}`));
+        document.head.appendChild(script);
+      });
+    }
+
+    async function loadBoardData() {
+      const isFileMode = window.location.protocol === 'file:';
+      if (isFileMode) {
+        try {
+          await loadScript('./board-inline-data.js');
+          const inlineData = window.__BOARD_DATA__ || null;
+          if (inlineData) return inlineData;
+        } catch (error) {}
+      } else {
+        try {
+          const response = await fetch('./board-data.json', { cache: 'no-store' });
+          if (response.ok) return await response.json();
+        } catch (error) {}
+      }
+      throw new Error('未能加载 board-data.json 或 board-inline-data.js');
+    }
+
+    function applyBoardMetadata(boardData) {
+      const projectName = boardData.projectName || 'PPT 项目';
+      const title = `${projectName} PPT 视觉决策板 V4.1`;
+      document.title = title;
+      const titleNode = document.getElementById('boardTitle');
+      if (titleNode) titleNode.textContent = title;
+      const progressNode = document.getElementById('progressText');
+      if (progressNode) progressNode.textContent = `0 / ${boardData.slides.length} 页已检查`;
+    }
+
+    function cloneBoardData(boardData) {
+      return JSON.parse(JSON.stringify(boardData));
+    }
+
+    async function bootstrap() {
+      const loaded = await loadBoardData();
+      const boardData = cloneBoardData(loaded);
+      applyBoardMetadata(boardData);
+
+      const PROJECT_NAME = boardData.projectName;
+      const palettes = boardData.palettes;
+      const decisionBoardCommonOptions = window.__DECISION_BOARD_COMMON_OPTIONS__;
+      if (!decisionBoardCommonOptions) {
+        throw new Error('未能加载 common-options.js');
+      }
+      const {
+        paletteCategoryLabels,
+        globalControls,
+        commonOptions,
+        weightOptions,
+        emphasisMethods,
+        imageTypes,
+        legacyGlobalPaletteKeys: LEGACY_GLOBAL_PALETTE_KEYS
+      } = decisionBoardCommonOptions;
+
+      const slides = boardData.slides;
+
+      const state = {
+        active: boardData.initialActive || slides[0]?.id || 'slide01',
+        palette_category: 'dark',
+        palette_direction: 'deep-navy-signal-gold',
+        title_overlay: 'overlay-title',
+        global_notes: '',
+        global_palette_notes: '',
+        slides: {}
+      };
+
+    function initState() {
+      slides.forEach(slide => {
+        const mode = commonOptions.page_mode.find(item => item.id === (slide.defaultMode || 'module-structure')) || commonOptions.page_mode[1];
+        const groupWeights = Object.fromEntries(getInformationGroups(slide).map(group => [group.id, group.defaultWeight || 'secondary']));
+        state.slides[slide.id] = {
+          title: slide.title,
+          page_mode: mode.id,
+          primary_emphasis_method: slide.defaultPrimaryEmphasisMethod || 'reading-priority',
+          visual_direction: slide.visualDirections[0].id,
+          expression_mode: 'realistic-scene',
+          visual_strength: mode.visual_strength,
+          visual_restraint: 'cinematic',
+          density: mode.density,
+          page_treatment: mode.page_treatment,
+          information_groups: getInformationGroups(slide),
+          group_weights: groupWeights,
+          checked: false,
+          locked_text: [...slide.locked],
+          custom_locked_text: [],
+          section_title_candidates: [...slide.sectionTitles],
+          required_section_titles: [...slide.sectionTitles],
+          review_answers: Object.fromEntries(slide.questions.map(q => [q.id, q.choices[0]])),
+          real_images: Object.fromEntries(slide.assets.map(a => [a.id, []])),
+          real_image_types: Object.fromEntries(slide.assets.map(a => [a.id, 'skip'])),
+          visual_direction_notes: '',
+          density_notes: '',
+          page_treatment_notes: '',
+          design_notes: '',
+          section_structure_notes: '',
+          real_image_notes: '',
+          page_notes: ''
+        };
+      });
+    }
+
+    function el(tag, className, text) {
+      const node = document.createElement(tag);
+      if (className) node.className = className;
+      if (text !== undefined) node.textContent = text;
+      return node;
+    }
+
+    function getInformationGroups(slide) {
+      if (slide.informationGroups && slide.informationGroups.length) return slide.informationGroups;
+      return slide.sectionTitles.map((title, index) => ({
+        id: 'section_' + index,
+        label: title,
+        defaultWeight: index === 0 ? 'primary' : 'secondary'
+      }));
+    }
+
+    function applyPageMode(slideState, modeId) {
+      const mode = commonOptions.page_mode.find(item => item.id === modeId) || commonOptions.page_mode[1];
+      slideState.page_mode = mode.id;
+      slideState.density = mode.density;
+      slideState.page_treatment = mode.page_treatment;
+    }
+
+    function renderGlobal() {
+      const panel = document.getElementById('globalPanel');
+      panel.innerHTML = `
+        <div class="section-title global-title">
+          <div><span class="eyebrow">GLOBAL</span><h2>全局风格</h2></div>
+          <span class="hint">先定全局，Slide 区只做逐页表达</span>
+        </div>
+        <div class="global-grid">
+          <div>
+            <h3>色系方向</h3>
+            <div class="category-tabs" id="paletteCategoryTabs"></div>
+            <div class="palette-grid" id="paletteGrid"></div>
+            <textarea id="globalPaletteNotes" placeholder="全局色系补充，例如：不要满屏霓虹；蓝色只作为屏幕光和信号线。"></textarea>
+          </div>
+          <div>
+            <h3>标题叠加策略</h3>
+            <p>控制是否生成每页标题；不叠加时仍保留标题区域。</p>
+            <div id="titleOverlayControl"></div>
+          </div>
+          <div>
+            <h3>全局补充</h3>
+            <textarea id="globalNotes" placeholder="跨页要求，例如：案例页没有真实图时不要伪造；整体更像产品发布方案。"></textarea>
+          </div>
+        </div>
+      `;
+      const categoryTabs = panel.querySelector('#paletteCategoryTabs');
+      Object.entries(paletteCategoryLabels).forEach(([id, label]) => {
+        const tab = el('button', 'category-tab' + (state.palette_category === id ? ' selected' : ''), label);
+        tab.type = 'button';
+        tab.addEventListener('click', () => {
+          state.palette_category = id;
+          if (!palettes.some(palette => palette.category === id && palette.id === state.palette_direction)) {
+            state.palette_direction = palettes.find(palette => palette.category === id).id;
+          }
+          renderAll(false);
+        });
+        categoryTabs.appendChild(tab);
+      });
+      const paletteGrid = panel.querySelector('#paletteGrid');
+      palettes.filter(palette => palette.category === state.palette_category).forEach(palette => {
+        const button = el('button', 'card-option' + (state.palette_direction === palette.id ? ' selected' : ''));
+        button.type = 'button';
+        button.innerHTML = `<h4>${palette.label}</h4><p>${paletteCategoryLabels[palette.category]} | ${palette.summary}</p><div class="swatches">${palette.colors.map(c => `<span class="swatch" style="background:${c}"></span>`).join('')}</div>`;
+        button.addEventListener('click', () => { state.palette_direction = palette.id; renderAll(false); });
+        paletteGrid.appendChild(button);
+      });
+      panel.querySelector('#titleOverlayControl').appendChild(renderCompactToggle(globalControls.title_overlay, state.title_overlay, value => { state.title_overlay = value; renderAll(false); }));
+      const gp = panel.querySelector('#globalPaletteNotes');
+      gp.value = state.global_palette_notes;
+      gp.addEventListener('input', () => { state.global_palette_notes = gp.value; updateOutput(false); });
+      const gn = panel.querySelector('#globalNotes');
+      gn.value = state.global_notes;
+      gn.addEventListener('input', () => { state.global_notes = gn.value; updateOutput(false); });
+    }
+
+    function renderMiniModule(title, options, selected, onPick) {
+      const wrap = el('div', 'mini-module');
+      wrap.appendChild(el('h3', '', title));
+      const row = el('div', 'choice-row');
+      options.forEach(option => {
+        const button = el('button', 'choice' + (selected === option.id ? ' selected' : ''));
+        button.type = 'button';
+        button.innerHTML = `<strong>${option.label}</strong><span>${option.summary}</span>`;
+        button.addEventListener('click', () => onPick(option.id));
+        row.appendChild(button);
+      });
+      wrap.appendChild(row);
+      return wrap;
+    }
+
+    function renderCompactToggle(options, selected, onPick) {
+      const wrap = el('div', 'compact-toggle');
+      options.forEach(option => {
+        const button = el('button', 'toggle-option' + (selected === option.id ? ' selected' : ''), option.label);
+        button.type = 'button';
+        button.addEventListener('click', () => onPick(option.id));
+        wrap.appendChild(button);
+      });
+      return wrap;
+    }
+
+    function renderNav() {
+      const nav = document.getElementById('slideNav');
+      nav.innerHTML = '';
+      slides.forEach((slide, index) => {
+        const s = state.slides[slide.id];
+        const button = el('button', 'nav-button' + (state.active === slide.id ? ' active' : ''));
+        button.type = 'button';
+        button.innerHTML = `<span class="nav-index">${String(index + 1).padStart(2, '0')}</span><span class="nav-title">${slide.title}</span><span class="dot ${s.checked ? 'ok' : ''}"></span>`;
+        button.addEventListener('click', () => {
+          state.active = slide.id;
+          renderAll(true);
+        });
+        nav.appendChild(button);
+      });
+      const done = slides.filter(slide => state.slides[slide.id].checked).length;
+      document.getElementById('progressBar').style.width = Math.round(done / slides.length * 100) + '%';
+      document.getElementById('progressText').textContent = done + ' / ' + slides.length + ' 页已检查';
+    }
+
+    function renderGlobalSummary() {
+      const list = document.getElementById('globalSummary');
+      list.innerHTML = '';
+      const palette = palettes.find(p => p.id === state.palette_direction);
+      [
+        ['色系', `${paletteCategoryLabels[palette.category]} / ${palette.label}`],
+        ['标题输出', labelOf(globalControls.title_overlay, state.title_overlay)]
+      ].forEach(([label, value]) => {
+        const item = el('li');
+        item.innerHTML = `<strong>${label}</strong>：${value}`;
+        list.appendChild(item);
+      });
+    }
+
+    function renderSlide(scrollToTop) {
+      const slide = slides.find(item => item.id === state.active);
+      const s = state.slides[slide.id];
+      const panel = document.getElementById('slidePanel');
+      panel.innerHTML = `
+        <section class="panel slide-hero">
+          <span class="eyebrow">${slide.label}</span>
+          <h2>${slide.title}</h2>
+          <p>${slide.role}</p>
+          <p>${slide.summary}</p>
+        </section>
+      `;
+      const body = el('section', 'panel');
+      body.innerHTML = `<div class="section-title"><div><span class="eyebrow">PAGE REVIEW</span><h2>${slide.label} 页面审阅</h2></div><span class="hint">核心设计、图片、问题、锁定文本全部在本页完成</span></div>`;
+      body.appendChild(rawBlock(slide));
+      body.appendChild(coreDesignBlock(slide));
+      body.appendChild(realImageBlock(slide));
+      body.appendChild(reviewQuestionBlock(slide));
+      body.appendChild(advancedBlock(slide));
+      body.appendChild(lockBlock(slide));
+      body.appendChild(quickActions(slide));
+      panel.appendChild(body);
+      if (scrollToTop) panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    function rawBlock(slide) {
+      const wrap = el('div', 'content-group');
+      wrap.innerHTML = `<div class="group-head"><h3>本页原始材料</h3><span class="hint">使用源文档该页原文，不用摘要替代</span></div><textarea readonly style="height:160px">${slide.raw}</textarea>`;
+      return wrap;
+    }
+
+    function coreDesignBlock(slide) {
+      const wrap = document.createDocumentFragment();
+      wrap.appendChild(pageModeBlock(slide));
+      wrap.appendChild(emphasisMethodBlock(slide));
+      wrap.appendChild(infoWeightBlock(slide));
+      wrap.appendChild(visualOptionBlock(slide, 'visual_direction', slide.visualDirections, '画面方案', 'visual_direction_notes'));
+      return wrap;
+    }
+
+    function pageModeBlock(slide) {
+      const s = state.slides[slide.id];
+      const wrap = el('div', 'content-group');
+      wrap.innerHTML = `<div class="group-head"><h3>页面表达类型</h3><span class="hint">决定这一页是偏阅读说明、模块总览，还是强主张主视觉；它负责整页组织，不负责“重点放大在哪”。</span></div>`;
+      const grid = el('div', 'mode-grid');
+      commonOptions.page_mode.forEach(mode => {
+        const button = el('button', 'mode-card' + (s.page_mode === mode.id ? ' selected' : ''));
+        button.type = 'button';
+        button.innerHTML = `
+          <h4>${mode.label}</h4>
+          <p>${mode.summary}</p>
+          <div class="mode-meta">
+            <span>信息：${labelOf(commonOptions.density, mode.density)}</span>
+            <span>版式：${labelOf(commonOptions.page_treatment, mode.page_treatment)}</span>
+            <span>${mode.changeHint || '变化：会同步推荐信息保留量与版式组织'}</span>
+          </div>
+        `;
+        button.addEventListener('click', () => { applyPageMode(s, mode.id); renderAll(false); });
+        grid.appendChild(button);
+      });
+      wrap.appendChild(grid);
+      const summary = el('div', 'weight-summary');
+      summary.innerHTML = `
+        <span>当前信息保留量：${labelOf(commonOptions.density, s.density)}</span>
+        <span>当前版式组织：${labelOf(commonOptions.page_treatment, s.page_treatment)}</span>
+      `;
+      wrap.appendChild(summary);
+      return wrap;
+    }
+
+    function emphasisMethodBlock(slide) {
+      const s = state.slides[slide.id];
+      const wrap = el('div', 'content-group');
+      wrap.innerHTML = `<div class="group-head"><h3>主重点表达方式</h3><span class="hint">重点不等于面积最大</span></div>`;
+      const grid = el('div', 'decision-grid');
+      emphasisMethods.forEach(option => {
+        const button = el('button', 'choice' + (s.primary_emphasis_method === option.id ? ' selected' : ''));
+        button.type = 'button';
+        button.innerHTML = `<strong>${option.label}</strong><span>${option.summary}</span>`;
+        button.addEventListener('click', () => { s.primary_emphasis_method = option.id; renderAll(false); });
+        grid.appendChild(button);
+      });
+      wrap.appendChild(grid);
+      const hint = el('p', 'hint', '例如 Slide02 可选“阅读突出”：核心功能是最高阅读优先级，产品图作为中等锚点或辅助证据，避免满屏均分模块；阅读优先也要有视觉锚点、路径或共享系统，不把整页做成平均卡片墙。');
+      wrap.appendChild(hint);
+      return wrap;
+    }
+
+    function infoWeightBlock(slide) {
+      const s = state.slides[slide.id];
+      const groups = s.information_groups || getInformationGroups(slide);
+      const wrap = el('div', 'content-group');
+      wrap.innerHTML = `<div class="group-head"><h3>信息组权重</h3><span class="hint">告诉生成器谁是主角，谁只做示意</span></div>`;
+      const table = el('div', 'weight-table');
+      groups.forEach(group => {
+        const row = el('div', 'weight-row');
+        row.appendChild(el('div', 'weight-name', group.label));
+        const options = el('div', 'weight-options');
+        weightOptions.forEach(option => {
+          const button = el('button', 'weight-option' + (s.group_weights[group.id] === option.id ? ' selected' : ''), option.label);
+          button.type = 'button';
+          button.title = option.summary;
+          button.addEventListener('click', () => { s.group_weights[group.id] = option.id; renderAll(false); });
+          options.appendChild(button);
+        });
+        row.appendChild(options);
+        table.appendChild(row);
+      });
+      wrap.appendChild(table);
+      const note = document.createElement('textarea');
+      note.placeholder = '信息组权重补充，一行即可。例如：核心功能保留更多文本，产品形态只用三张真实图做产品证据。';
+      note.value = s.section_structure_notes || '';
+      note.addEventListener('input', () => { s.section_structure_notes = note.value; updateOutput(false); });
+      wrap.appendChild(note);
+      return wrap;
+    }
+
+    function visualOptionBlock(slide, field, options, title, noteField) {
+      const s = state.slides[slide.id];
+      const wrap = el('div', 'content-group');
+      wrap.innerHTML = `<div class="group-head"><h3>${title}</h3><span class="hint">${labelOf(options, s[field])}</span></div>`;
+      const grid = el('div', 'decision-grid');
+      options.forEach(option => {
+        const button = el('button', 'visual-card' + (s[field] === option.id ? ' selected' : ''));
+        button.type = 'button';
+        button.innerHTML = `${diagram(option.diagram || option.id)}<h4>${option.label}</h4><p>${option.summary}</p>`;
+        button.addEventListener('click', () => { s[field] = option.id; renderAll(false); });
+        grid.appendChild(button);
+      });
+      wrap.appendChild(grid);
+      const note = document.createElement('textarea');
+      note.placeholder = `${title}补充说明，例如：这个选择在本页如何落地，哪些内容需要突出或压低。`;
+      note.value = s[noteField] || '';
+      note.addEventListener('input', () => { s[noteField] = note.value; updateOutput(false); });
+      wrap.appendChild(note);
+      return wrap;
+    }
+
+    function simpleOptionBlock(slide, field, options, title, noteField) {
+      const s = state.slides[slide.id];
+      const wrap = el('div', 'content-group');
+      wrap.innerHTML = `<div class="group-head"><h3>${title}</h3><span class="hint">${labelOf(options, s[field])}</span></div>`;
+      const grid = el('div', 'triad-grid');
+      options.forEach(option => grid.appendChild(choiceButton(option, s[field], value => { s[field] = value; renderAll(false); })));
+      wrap.appendChild(grid);
+      const note = document.createElement('textarea');
+      note.placeholder = `${title}补充说明，一行即可。`;
+      note.value = s[noteField] || '';
+      note.addEventListener('input', () => { s[noteField] = note.value; updateOutput(false); });
+      wrap.appendChild(note);
+      return wrap;
+    }
+
+    function choiceButton(option, selected, onPick) {
+      const button = el('button', 'choice' + (selected === option.id ? ' selected' : ''));
+      button.type = 'button';
+      button.innerHTML = `<strong>${option.label}</strong><span>${option.summary}</span>`;
+      button.addEventListener('click', () => onPick(option.id));
+      return button;
+    }
+
+    function diagram(type) {
+      const diagramType = normalizeDiagramType(type);
+      const light = diagramType === 'text' ? ' light' : '';
+      const shapes = {
+        broadcast: '<span class="screen"></span><span class="console"></span>',
+        hero: '<span class="hero"></span><span class="a"></span><span class="b"></span><span class="c"></span>',
+        hybrid: '<span class="hero"></span><span class="a"></span><span class="b"></span><span class="c"></span>',
+        text: '<span class="wide1"></span><span class="wide2"></span><span class="wide3"></span>',
+        matrix: '<span class="matrix"></span>',
+        'body-text-carrier': '<span class="wide1"></span><span class="wide2"></span><span class="wide3"></span>',
+        'feature-overview': '<span class="matrix"></span>',
+        nodes: '<span class="node1"></span><span class="node2"></span><span class="node3"></span><span class="line"></span>',
+        split: '<span class="hero"></span><span class="a"></span><span class="b"></span><span class="c"></span>',
+        map: '<span class="node1"></span><span class="node2"></span><span class="node3"></span><span class="line"></span>'
+      }[diagramType] || '<span class="hero"></span><span class="a"></span><span class="b"></span><span class="c"></span>';
+      return `<div class="diagram${light}">${shapes}</div>`;
+    }
+
+    function normalizeDiagramType(type) {
+      const text = String(type || '').toLowerCase();
+      if (/broadcast|control-room|转播|指挥|监看|控制台/.test(text)) return 'broadcast';
+      if (/architecture|system|hardware|nodes|架构|系统|硬件|链路|模块|能力层/.test(text)) return 'nodes';
+      if (/report|brief|proof|evidence|executive|汇报|报告|证据|表格|正文|阅读/.test(text)) return 'text';
+      if (/matrix|compare|comparison|竞品|对比|参数/.test(text)) return 'matrix';
+      if (/map|gap|distribution|地图|缺口|分布/.test(text)) return 'map';
+      if (/scene|hero|visual|场景|主视觉|现场/.test(text)) return 'hero';
+      return type || 'hybrid';
+    }
+
+    function realImageBlock(slide) {
+      const s = state.slides[slide.id];
+      const wrap = el('div', 'content-group');
+      wrap.innerHTML = `<div class="group-head"><h3>真实图片策略</h3><span class="hint">默认展开，支持选择、拖拽和粘贴多个图片</span></div>`;
+      slide.assets.forEach(asset => {
+        const zone = el('div', 'asset-zone');
+        zone.tabIndex = 0;
+        zone.innerHTML = `<div class="asset-top"><div><h4>${asset.label}</h4><p>${asset.detail}</p><p class="hint">缺失时跳过真实图片，不生成伪真实证据。</p></div></div>`;
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.multiple = true;
+        input.accept = 'image/*';
+        input.addEventListener('change', () => addFiles(slide.id, asset.id, input.files));
+        zone.querySelector('.asset-top').appendChild(input);
+        zone.addEventListener('dragover', event => { event.preventDefault(); zone.classList.add('drag'); });
+        zone.addEventListener('dragleave', () => zone.classList.remove('drag'));
+        zone.addEventListener('drop', event => {
+          event.preventDefault();
+          zone.classList.remove('drag');
+          addFiles(slide.id, asset.id, event.dataTransfer.files);
+        });
+        zone.addEventListener('paste', event => {
+          const files = Array.from(event.clipboardData?.files || []).filter(file => file.type.startsWith('image/'));
+          if (!files.length) return;
+          event.preventDefault();
+          addFiles(slide.id, asset.id, files);
+        });
+        const pasteTarget = el('div', 'asset-paste-target', '点击这里后直接粘贴图片，也可拖拽多张图片到此区域');
+        pasteTarget.tabIndex = 0;
+        pasteTarget.addEventListener('paste', event => {
+          const files = Array.from(event.clipboardData?.files || []).filter(file => file.type.startsWith('image/'));
+          if (!files.length) return;
+          event.preventDefault();
+          addFiles(slide.id, asset.id, files);
+        });
+        pasteTarget.addEventListener('dragover', event => { event.preventDefault(); pasteTarget.classList.add('drag'); });
+        pasteTarget.addEventListener('dragleave', () => pasteTarget.classList.remove('drag'));
+        pasteTarget.addEventListener('drop', event => {
+          event.preventDefault();
+          pasteTarget.classList.remove('drag');
+          addFiles(slide.id, asset.id, event.dataTransfer.files);
+        });
+        zone.appendChild(pasteTarget);
+        const records = el('div', 'asset-records', recordsText(s.real_images[asset.id]));
+        zone.appendChild(records);
+        zone.appendChild(el('h4', '', '图片用途'));
+        const grid = el('div', 'asset-type-grid');
+        const roleOptions = (asset.roleOptions && asset.roleOptions.length ? asset.roleOptions : imageTypes);
+        roleOptions.forEach(type => grid.appendChild(choiceButton(type, s.real_image_types[asset.id], value => { s.real_image_types[asset.id] = value; renderAll(false); })));
+        zone.appendChild(grid);
+        wrap.appendChild(zone);
+      });
+      const note = document.createElement('textarea');
+      note.placeholder = '真实图片补充说明，一行即可。';
+      note.value = s.real_image_notes;
+      note.addEventListener('input', () => { s.real_image_notes = note.value; updateOutput(false); });
+      wrap.appendChild(note);
+      return wrap;
+    }
+
+    function addFiles(slideId, assetId, fileList) {
+      const files = Array.from(fileList || []).filter(file => !file.type || file.type.startsWith('image/'));
+      if (!files.length) return;
+      const records = files.map(file => ({ name: file.name || 'pasted-image', size: file.size || 0, type: file.type || 'image/unknown', lastModified: file.lastModified || Date.now() }));
+      state.slides[slideId].real_images[assetId] = [...(state.slides[slideId].real_images[assetId] || []), ...records];
+      renderAll(false);
+    }
+
+    function recordsText(records) {
+      return records && records.length ? '已记录：' + records.map(file => file.name).join('、') : '尚未选择文件；可点击槽位后直接粘贴多个图片。';
+    }
+
+    function reviewQuestionBlock(slide) {
+      const s = state.slides[slide.id];
+      const wrap = el('div', 'content-group');
+      wrap.innerHTML = `<div class="group-head"><h3>待审阅问题</h3><span class="review-note">只保留会改变生成结果的问题</span></div>`;
+      slide.questions.forEach(q => {
+        const list = el('div', 'question-card');
+        list.appendChild(el('h3', '', q.label));
+        const optionLine = el('div', 'question-options-inline');
+        q.choices.forEach(choice => {
+          const button = el('button', 'radio-choice' + (s.review_answers[q.id] === choice ? ' selected' : ''));
+          button.type = 'button';
+          button.innerHTML = `<strong>${choice}</strong>`;
+          button.addEventListener('click', () => { s.review_answers[q.id] = choice; renderAll(false); });
+          optionLine.appendChild(button);
+        });
+        list.appendChild(optionLine);
+        wrap.appendChild(list);
+      });
+      return wrap;
+    }
+
+    function advancedBlock(slide) {
+      const s = state.slides[slide.id];
+      const wrap = el('div', 'content-group');
+      wrap.innerHTML = `<div class="group-head"><h3>高级视觉设置</h3><span class="hint">默认展开，一行完成三组设置</span></div>`;
+      const grid = el('div', 'triad-grid');
+      grid.appendChild(renderMiniModule('表达方式', commonOptions.expression_mode, s.expression_mode, value => { s.expression_mode = value; renderAll(false); }));
+      grid.appendChild(renderMiniModule('呈现力度', commonOptions.visual_strength, s.visual_strength, value => { s.visual_strength = value; renderAll(false); }));
+      grid.appendChild(renderMiniModule('视觉克制等级', commonOptions.visual_restraint, s.visual_restraint, value => { s.visual_restraint = value; renderAll(false); }));
+      wrap.appendChild(grid);
+      const note = document.createElement('textarea');
+      note.placeholder = '高级视觉补充说明，一行即可。';
+      note.value = s.design_notes;
+      note.addEventListener('input', () => { s.design_notes = note.value; updateOutput(false); });
+      wrap.appendChild(note);
+      return wrap;
+    }
+
+    function lockBlock(slide) {
+      const s = state.slides[slide.id];
+      const wrap = el('div', 'content-group');
+      wrap.innerHTML = `<div class="group-head"><h3>必保小标题与锁定文本</h3><span class="hint">${s.required_section_titles.length} 个小标题 · ${s.locked_text.length} 个锁定文本</span></div>`;
+      const titleSection = el('div', 'subsection');
+      titleSection.appendChild(el('h4', '', '必保信息小标题'));
+      const titleChips = el('div', 'chips');
+      s.section_title_candidates.forEach(title => titleChips.appendChild(chip(title, s.required_section_titles.includes(title), () => {
+        s.required_section_titles = s.required_section_titles.includes(title) ? s.required_section_titles.filter(item => item !== title) : [...s.required_section_titles, title];
+        renderAll(false);
+      })));
+      titleSection.appendChild(titleChips);
+      wrap.appendChild(titleSection);
+      const lockSection = el('div', 'subsection');
+      lockSection.appendChild(el('h4', '', '锁定文本'));
+      const textChips = el('div', 'chips');
+      [...slide.locked, ...s.custom_locked_text].forEach(text => textChips.appendChild(chip(text, s.locked_text.includes(text), () => {
+        s.locked_text = s.locked_text.includes(text) ? s.locked_text.filter(item => item !== text) : [...s.locked_text, text];
+        renderAll(false);
+      })));
+      lockSection.appendChild(textChips);
+      const add = el('div', 'inline-add');
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.placeholder = '新增锁定文本';
+      const btn = el('button', 'primary', '新增');
+      btn.type = 'button';
+      btn.addEventListener('click', () => {
+        const value = input.value.trim();
+        if (!value) return;
+        if (!s.custom_locked_text.includes(value)) s.custom_locked_text.push(value);
+        if (!s.locked_text.includes(value)) s.locked_text.push(value);
+        input.value = '';
+        renderAll(false);
+      });
+      add.appendChild(input);
+      add.appendChild(btn);
+      lockSection.appendChild(add);
+      wrap.appendChild(lockSection);
+      return wrap;
+    }
+
+    function chip(text, selected, onClick) {
+      const button = el('button', 'chip' + (selected ? ' selected' : ''), text);
+      button.type = 'button';
+      button.addEventListener('click', onClick);
+      return button;
+    }
+
+    function quickActions(slide) {
+      const s = state.slides[slide.id];
+      const wrap = el('div', 'content-group');
+      wrap.innerHTML = `<div class="group-head"><h3>快速操作</h3><span class="hint">套用不会覆盖锁定文本和图片记录</span></div>`;
+      const grid = el('div', 'triad-grid');
+      [
+        { label: s.checked ? '本页已检查' : '标记本页已检查', fn: () => { s.checked = true; renderAll(false); } },
+        { label: '套用到产品页 02-03', fn: () => applyTo(['slide02','slide03'], slide.id) },
+        { label: '套用到对比页 04-05', fn: () => applyTo(['slide04','slide05'], slide.id) }
+      ].forEach(item => {
+        const btn = el('button', 'secondary', item.label);
+        btn.type = 'button';
+        btn.addEventListener('click', item.fn);
+        grid.appendChild(btn);
+      });
+      wrap.appendChild(grid);
+      return wrap;
+    }
+
+    function applyTo(ids, sourceId) {
+      const src = state.slides[sourceId];
+      ids.forEach(id => {
+        if (!state.slides[id]) return;
+        Object.assign(state.slides[id], {
+          page_mode: src.page_mode,
+          primary_emphasis_method: src.primary_emphasis_method,
+          expression_mode: src.expression_mode,
+          visual_strength: src.visual_strength,
+          visual_restraint: src.visual_restraint,
+          density: src.density,
+          page_treatment: src.page_treatment
+        });
+      });
+      renderAll(false);
+    }
+
+    function fieldLabel(field) {
+      return { title_overlay: '标题输出' }[field] || field;
+    }
+
+    function labelOf(options, id) {
+      return options.find(option => option.id === id)?.label || id;
+    }
+
+    function currentDecision() {
+      const palette = palettes.find(p => p.id === state.palette_direction);
+      const first = state.slides.slide01;
+      return {
+        schema_version: 'visual_decision_board_v4_1',
+        project: PROJECT_NAME,
+        visual_direction: first.visual_direction,
+        visual_strength: first.visual_strength,
+        palette_direction: state.palette_direction,
+        density: first.density,
+        page_treatment: first.page_treatment,
+        real_image_policy: 'skip_when_missing',
+        global_palette: {
+          category: paletteCategoryLabels[palette.category],
+          palette_id: palette.id,
+          palette_label: palette.label,
+          colors: palette.colors,
+          roles: palette.roles || {},
+          source: palette.source || '',
+          external_palette: palette.external_palette || null,
+          color_system: palette.system_interpretation || null,
+          notes: state.global_palette_notes
+        },
+        title_overlay: {
+          mode: state.title_overlay,
+          label: labelOf(globalControls.title_overlay, state.title_overlay),
+          output_dir: 'final_image',
+          note: state.title_overlay === 'no-title-reserved'
+            ? '去标题版：不叠加主标题，但主体图必须保留标题安全区，最终图片仍保存到 final_image。'
+            : '叠加标题版：生成主体图后使用本地标题样式叠加主标题。'
+        },
+        slides: state.slides,
+        global_notes: state.global_notes,
+        confirmed_at: new Date().toISOString()
+      };
+    }
+
+    function removeLegacyPaletteFields(decision) {
+      if (!decision || !decision.global_palette) return decision;
+      LEGACY_GLOBAL_PALETTE_KEYS.forEach(key => delete decision.global_palette[key]);
+      return decision;
+    }
+
+    function migrateLegacyDecision(decision) {
+      if (!decision || typeof decision !== 'object') return null;
+      const migrated = JSON.parse(JSON.stringify(decision));
+      return removeLegacyPaletteFields(migrated);
+    }
+
+    function updateOutput(show) {
+      const output = document.getElementById('decisionOutput');
+      output.value = JSON.stringify(currentDecision(), null, 2);
+      output.style.display = show ? 'block' : 'none';
+    }
+
+    async function copyJson() {
+      updateOutput(true);
+      try {
+        await navigator.clipboard.writeText(document.getElementById('decisionOutput').value);
+        document.getElementById('saveStatus').textContent = 'JSON 已复制';
+      } catch (error) {
+        document.getElementById('saveStatus').textContent = '请手动复制 JSON';
+      }
+      updateOutput(false);
+    }
+
+    async function saveJson() {
+      updateOutput(true);
+      try {
+        const res = await fetch('/api/decision', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: document.getElementById('decisionOutput').value
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || '保存失败');
+        document.getElementById('saveStatus').textContent = '已保存';
+        document.getElementById('modalText').textContent = '已保存：' + data.path;
+        document.getElementById('savedModal').classList.add('active');
+      } catch (error) {
+        localStorage.setItem('ppt_visual_decision_v4_1', document.getElementById('decisionOutput').value);
+        document.getElementById('saveStatus').textContent = '文件模式：请复制 JSON';
+        document.getElementById('modalText').textContent = '浏览器无法直接写入文件。请复制 JSON 给 Codex，或通过本地服务打开。';
+        document.getElementById('savedModal').classList.add('active');
+      }
+      updateOutput(false);
+    }
+
+    function renderAll(scrollSlide) {
+      renderGlobal();
+      renderNav();
+      renderGlobalSummary();
+      renderSlide(scrollSlide);
+      updateOutput(false);
+    }
+
+      initState();
+      try {
+        const saved = localStorage.getItem('ppt_visual_decision_v4_1');
+        if (saved) {
+          const parsed = migrateLegacyDecision(JSON.parse(saved));
+          if (parsed) {
+            localStorage.setItem('ppt_visual_decision_v4_1', JSON.stringify(parsed, null, 2));
+          }
+        }
+      } catch (error) {}
+      renderAll(false);
+      document.getElementById('copyJson').addEventListener('click', copyJson);
+      document.getElementById('saveJson').addEventListener('click', saveJson);
+      document.getElementById('closeModal').addEventListener('click', () => document.getElementById('savedModal').classList.remove('active'));
+    }
+
+    bootstrap().catch(error => {
+      document.getElementById('saveStatus').textContent = '加载失败';
+      document.getElementById('modalText').textContent = error.message || '决策板加载失败';
+      document.getElementById('savedModal').classList.add('active');
+    });
+  </script>
+</body>
+</html>
+
+

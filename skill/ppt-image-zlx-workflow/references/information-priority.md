@@ -1,0 +1,63 @@
+# Information Priority
+
+Use when the decision board, page guide, prompt, or QA mentions `page_mode`, `information_groups`, `group_weights`, `primary_emphasis_method`, `required_section_titles`, dense modules, or anti-flattening.
+
+## Core Meaning
+
+- `group_weights.primary` means information or reading priority by default. It does not mean largest area unless `primary_emphasis_method` is `area-priority`.
+- `reading-priority`: the primary group is read first, keeps the most text fidelity, and has the clearest hierarchy.
+- `area-priority`: the primary group owns the largest main region and should receive enough space.
+- `visual-anchor`: the primary group is remembered through a strong object, scene, proof, or transformation.
+- `path-priority`: the primary group is expressed through process, connection, cause-effect, or system path.
+
+## Page Guide Mapping
+
+Translate board decisions into:
+
+- reading order;
+- text fidelity budget;
+- visual-anchor size and role;
+- area allocation;
+- auxiliary-content degradation;
+- required section labels;
+- composition relationship rather than only module count.
+
+If the selected emphasis method is reading, visual-anchor, or path priority, do not convert the page into a full-canvas grid of equal cards. Use a richer relationship such as product anchor + function list, definition panel + capability system, central path + evidence modules, or visual anchor + reading panel.
+
+For `text-enhanced`, `reading-first`, and `body-text-carrier` pages, preserve the source modules and readable text, but still require a controlled composition relationship. Suitable restrained structures include a document/proof object with side annotations, a definition panel tied to a capability console, a product anchor with compact function clusters, a staged comparison surface, or a reading panel with a quiet semantic background. Do not overcorrect into a decorative poster; the visual richness should clarify the material, not compete with it.
+
+## Repeated Module Role Gate
+
+Use when a page has three to six peer modules.
+
+- Decide whether the modules carry the main message or only support another stronger anchor.
+- Main modules need a shared system anchor such as a stage, map, cockpit, hub, wall, path, platform, timeline, or scene.
+- Main modules usually need a second information layer: direction, state, role, input/output, risk, phase, evidence type, or conclusion.
+- Auxiliary modules must stay visibly quieter than the primary anchor in size, brightness, depth, glow, and detail.
+- After mentally blurring text, main modules should still show why they belong together; auxiliary modules should still read as support.
+
+## Required Section Titles
+
+When `required_section_titles` exists, treat the titles as information-structure requirements. Preserve them as visible section labels or equivalent group headings, especially on reading-first, body-text-carrier, and hybrid pages.
+
+## Prompt Requirements
+
+Include:
+
+- `page_mode`, `information_groups`, `group_weights`, and `primary_emphasis_method` when available;
+- explicit statement that primary means reading/information priority unless `area-priority` is selected;
+- composition pattern and object identity for each information group;
+- module role gate result when three to six peer modules appear;
+- text fidelity tiers and required section labels;
+- compression order when space is tight.
+
+## QA Signals
+
+Reject outputs where:
+
+- primary information becomes only the largest rectangle while reading order or text fidelity weakens;
+- required first-level information groups disappear silently;
+- modules are tidy but generic boxes, icons, and text without object/material identity;
+- main modules form only a flat equal-card grid;
+- auxiliary modules become a second hero;
+- required section titles are omitted.

@@ -18,6 +18,7 @@ Read `Pattern Selection`, then only the chosen pattern. Adapt labels, evidence, 
 - Use one large real screenshot, UI cockpit, device mockup, or solution scene.
 - Place a compact support group on the left and a large hero visual on the right.
 - Use one value statement and three to four compact proof points.
+- Establish a topic-specific world with a low-contrast semantic background, such as the deployment environment, user setting, material context, or spatial extension. Keep it quiet behind the title and stronger near the hero.
 - Keep the hero within right and bottom safe margins.
 - Avoid generic stock photos and flat split-screen layouts.
 
@@ -26,18 +27,19 @@ Read `Pattern Selection`, then only the chosen pattern. Adapt labels, evidence, 
 - Use one large screenshot plus two to four supporting panels or capability modules.
 - Organize screenshots with a shared perspective grid or boundary.
 - Keep capability labels inside parent modules.
+- Keep the semantic background restrained. Use it for continuity and depth, while the screenshot remains the evidence and primary focus.
 - Avoid tiny screenshots, flat equal-weight card grids, and floating tags.
 
 ## Evidence Roadmap
 
-- Use three to five document cards, report sheets, plaques, or source panels on a clear roadmap.
+- Use three to five topic-appropriate evidence objects or source panels on a clear roadmap.
 - Align evidence cards to a baseline or centerline.
 - Align an optional takeaway strip to the roadmap bounds.
-- Treat the evidence as topic-specific objects, not generic information cards. For policy pages, prefer official-document sheets with a clear material contrast such as paper-white inner pages inside restrained dark frames.
+- Treat evidence as topic-specific objects, not generic information cards. Select the relevant branch from `references/evidence-scenarios.md` only when needed.
 - Use a three-layer composition where useful: foreground evidence objects, midground roadmap line, and low-contrast topic context in the background.
-- Give the background a semantic role. For education policy pages, allow restrained campus, institutional, document, or library silhouettes when they reinforce the topic without competing with the evidence.
+- Give the background a semantic role related to the evidence source without competing with it.
 - Use one restrained supporting direction label per evidence object when it improves the reading path.
-- Avoid inconsistent card sizes and dense official text.
+- Avoid inconsistent card sizes and dense microcopy.
 - Avoid flat same-color card grids, generic dark tiles, background-only gradients, and decorative textures with no topic meaning.
 
 ## Audit Cockpit
@@ -78,8 +80,12 @@ Read `Pattern Selection`, then only the chosen pattern. Adapt labels, evidence, 
 ## Common Corrections
 
 - Flat cards -> add one meaningful visual focus and organize supporting modules around it.
+- Three to six peer modules -> run the role gate first. Main modules should become a visual system with shared anchor, second layer, and local rhythm. Auxiliary modules should remain light support and must not become a second stage.
 - Empty top area -> move body content upward while preserving title clearance.
-- Crowded title area -> move strong subjects down or right; soften only non-critical header atmosphere.
+- Quiet but lifeless title area -> add low-contrast topic-specific atmosphere without adding readable content or strong edges.
+- Generic gradient or grid background -> replace or supplement it with restrained semantic context appropriate to the page role.
+- Tidy but forgettable page -> strengthen one memorable visual anchor instead of adding more decorative modules.
+- Crowded title area -> locally re-layout first: shrink or merge low-priority modules, tighten internal gaps, and re-balance the grid around the primary anchor. Move individual strong subjects down or right only when needed. Avoid translating the whole composition downward.
 - Floating modules -> define content bounds and shared alignment edges.
 - Weak dark theme -> add restrained local light, depth, and material contrast.
 - Busy whitespace -> remove decorative micro-elements before reducing spacing.
