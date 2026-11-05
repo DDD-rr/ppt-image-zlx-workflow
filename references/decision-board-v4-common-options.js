@@ -1,4 +1,4 @@
-window.__DECISION_BOARD_COMMON_OPTIONS__ = {
+﻿window.__DECISION_BOARD_COMMON_OPTIONS__ = {
   paletteCategoryLabels: { dark: '暗色系', light: '亮色系' },
   globalControls: {
     title_overlay: [
@@ -51,6 +51,21 @@ window.__DECISION_BOARD_COMMON_OPTIONS__ = {
       { id: 'cinematic', label: '发布会感', summary: '更有冲击，适合方案宣讲。' },
       { id: 'report', label: '报告克制', summary: '减少氛围，强化表格和证据。' }
     ],
+    visual_expressiveness: [
+      { id: 'restrained-professional', label: '克制专业', summary: '信息清晰和可信感优先；适合正式评审、技术审阅、证据页、参数表和高信任场景。' },
+      { id: 'polished-enhanced', label: '精致增强', summary: '推荐默认：在清晰阅读基础上增强材质、场景深度、对象承载和视觉记忆点；不靠堆框线。' },
+      { id: 'high-impact', label: '高表现力', summary: '更强冲击和记忆点；通过空间、对象、路径、材质或语义装饰提升，而不是更多卡片。' }
+    ],
+    expressive_mechanism: [
+      { id: 'scene-depth', label: '场景纵深', summary: '用前中后景和真实环境增强主题氛围。' },
+      { id: 'object-metaphor', label: '对象隐喻', summary: '用设备、文件、地图、屏幕等主题对象承载信息。' },
+      { id: 'narrative-path', label: '叙事路径', summary: '用路径表达因果、流程、输入输出或转化。' },
+      { id: 'contrast-stage', label: '对比舞台', summary: '用空间对比表达旧新、缺口方案、竞品自研等差异。' },
+      { id: 'evidence-wall', label: '证据墙', summary: '用资料、样本、截图或证据位组织事实；不得伪造证据。' },
+      { id: 'system-cockpit', label: '系统座舱', summary: '用一个系统表面或操作环境承载多个模块。' },
+      { id: 'material-editorial', label: '材质编辑', summary: '用纸面、玻璃、金属、屏幕、批注和索引建立层级。' },
+      { id: 'hero-detail', label: '局部细节', summary: '放大一个有意义细节形成记忆点，但不抢阅读顺序。' }
+    ],
     density: [
       { id: 'speaker-led', label: '讲演优先', summary: '少文字，强主视觉。', diagram: 'hero' },
       { id: 'hybrid', label: '混合平衡', summary: '推荐：保留关键判断，同时给主视觉足够空间。', diagram: 'hybrid' },
@@ -63,15 +78,15 @@ window.__DECISION_BOARD_COMMON_OPTIONS__ = {
     ]
   },
   weightOptions: [
-    { id: 'primary', label: '主重点', summary: '最高阅读优先级和最高文本保留，不默认等于最大面积。' },
+    { id: 'primary', label: '主重点', summary: '最高强调和文本保留；不默认等于最大面积，也不改变原文顺序。' },
     { id: 'secondary', label: '次重点', summary: '完整或较完整保留。' },
     { id: 'supporting', label: '辅助', summary: '作为证据、示意或支撑。' },
     { id: 'light', label: '轻量', summary: '图标化、标签化或压缩表达。' }
   ],
   emphasisMethods: [
-    { id: 'reading-priority', label: '阅读突出', summary: '主重点最先被读到、文本保留最多，但不必占最大面积。' },
-    { id: 'area-priority', label: '面积突出', summary: '主重点占最大版面，适合矩阵、架构图或流程图。' },
-    { id: 'visual-anchor', label: '视觉锚点突出', summary: '主重点通过大图、大场景或强视觉对象建立记忆。' },
+    { id: 'reading-priority', label: '阅读突出', summary: '主重点在原文顺序中层级最清楚、文本保留最多；不自动前置。' },
+    { id: 'area-priority', label: '面积突出', summary: '主重点获得最大或最舒展版面；适合矩阵、架构图或流程图，但不自动改顺序。' },
+    { id: 'visual-anchor', label: '视觉锚点突出', summary: '主重点通过强对象或场景建立记忆；不自动前置、不自动改变大纲顺序。' },
     { id: 'path-priority', label: '路径突出', summary: '主重点通过流程、连接、因果关系表达。' }
   ],
   imageTypes: [
@@ -89,3 +104,6 @@ window.__DECISION_BOARD_COMMON_OPTIONS__ = {
     'bright_area'
   ]
 };
+
+
+

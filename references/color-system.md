@@ -14,6 +14,7 @@ Use when deciding project palette, writing page guides, or prompting pages where
 - Treat gradient as part of the color system, not as optional decoration added at the end. Decide where gradient carries atmosphere, spatial depth, surface material change, or local highlight logic before prompt generation.
 - Prefer low-cost structured reuse over repeated free-form color analysis. Infer the color system once, then pass compact structured fields downstream into `Master_Template.md`, `PPT_Page_Image_Guide.md`, prompts, and QA.
 - Adapt the same color system by page role. Hardware, control-room, dark-scene, reading-first, architecture, evidence, and atmosphere-led pages should not all use the same hue balance even when they share one project palette.
+- Every page should preserve the selected palette as a role system, not just as a loose mood. Page-level proportions may vary, but the shared background family, primary accent, secondary/depth accent, neutral/material colors, and text/readability roles should remain visible unless a documented page exception says otherwise.
 - Add an anti-collapse correction when the chosen palette is likely to drift into a generic safe output, especially for dark hardware, control-room, dashboard, or night-scene pages. Preserve the selected palette family instead of letting the output collapse into default black-blue-gray.
 - Never treat `palette_direction` as sufficient downstream color input by itself. Before image generation, resolve it into a reusable color-role contract and carry that contract forward instead of repeating only the palette label.
 
@@ -29,6 +30,7 @@ Record these fields in `Master_Template.md` and summarize them in `PPT_Page_Imag
 - material colors for panels, outlines, shadows, translucent layers, evidence objects, and local highlights;
 - gradient strategy, such as restrained material gradient, atmospheric depth gradient, or multi-surface gradient, plus where it is allowed to appear;
 - page-role variation across cover, content, evidence, architecture, process, and closing pages;
+- per-page role distribution for the selected color system, such as background / primary accent / secondary-depth accent / neutral text, so pages do not collapse into all-blue, all-purple, all-warm, or another single-role output;
 - project-specific color combinations to avoid.
 
 Also preserve a compact system interpretation that downstream stages can reuse without rethinking the palette in prose:
@@ -134,3 +136,4 @@ Reject outputs where:
 - color simplification removes required information modules instead of improving their shells.
 - the selected palette has collapsed into a generic cold-blue or black-blue-gray safe output that no longer reflects the chosen palette family;
 - page-role adaptation is missing, such as hardware/evidence pages swallowing the intended emphasis color completely or reading-first pages losing tonal separation needed for readability.
+- a page drops one of the confirmed palette roles entirely, such as a blue-purple system becoming nearly all purple on one page and nearly all blue on another, without a documented role-based reason.

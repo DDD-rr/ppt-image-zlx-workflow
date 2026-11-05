@@ -1,4 +1,4 @@
-import { readFile, writeFile, mkdir } from 'node:fs/promises';
+﻿import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -159,6 +159,32 @@ function normalizeQuestion(question) {
   };
 }
 
+function deriveCreativeExtensionLevel(visualExpressiveness) {
+  return {
+    'restrained-professional': 'strict-source',
+    'polished-enhanced': 'semantic-extended',
+    'high-impact': 'expressive-metaphor'
+  }[visualExpressiveness || 'polished-enhanced'] || 'semantic-extended';
+}
+
+function deriveExpressiveMechanism(slide, visualExpressiveness) {
+  const text = [
+    slide.title,
+    slide.role,
+    slide.summary,
+    slide.raw,
+    slide.source,
+    slide.content,
+    ...asArray(slide.sectionTitles || slide.section_titles)
+  ].filter(Boolean).join(' ');
+  if (/证据|数据|截图|参数|样本|对比|指标|表格|评测|验证/.test(text)) return 'evidence-wall';
+  if (/流程|路径|链路|阶段|步骤|输入|输出|转化|闭环/.test(text)) return 'narrative-path';
+  if (/系统|平台|控制|调度|座舱|监控|界面|后台/.test(text)) return 'system-cockpit';
+  if (/差异|竞品|对照|缺口|前后|传统|自研|升级/.test(text)) return 'contrast-stage';
+  if (/产品|设备|硬件|终端|模块|镜头|屏幕|引擎|算法/.test(text)) return visualExpressiveness === 'high-impact' ? 'hero-detail' : 'object-metaphor';
+  return visualExpressiveness === 'restrained-professional' ? 'material-editorial' : 'scene-depth';
+}
+
 const defaultImageRoleOptions = [
   { id: 'main-visual', label: '主视觉', summary: '图片占核心版面，作为页面第一视觉。' },
   { id: 'medium-anchor', label: '中等锚点', summary: '图片有存在感，但不自动成为最大主视觉。' },
@@ -247,6 +273,7 @@ function normalizeSlide(slide, index, legacySlide = null) {
   const inheritedLocked = uniqStrings(legacySlide?.locked || legacySlide?.locked_text);
   const derivedLocked = extractLockedFromRaw(slide.raw || slide.source || slide.content);
   const fallbackLocked = uniqStrings([...inheritedLocked, ...derivedLocked]);
+  const defaultVisualExpressiveness = slide.defaultVisualExpressiveness || slide.visual_expressiveness || null;
   return {
     id: slide.id || `slide${String(index + 1).padStart(2, '0')}`,
     label: slide.label || `Slide${String(index + 1).padStart(2, '0')}`,
@@ -261,6 +288,8 @@ function normalizeSlide(slide, index, legacySlide = null) {
     sectionTitles: sectionTitles.length ? sectionTitles : informationGroups.map(group => group.label),
     defaultMode: slide.defaultMode || slide.page_mode || 'module-structure',
     defaultPrimaryEmphasisMethod: slide.defaultPrimaryEmphasisMethod || slide.primary_emphasis_method || 'reading-priority',
+    defaultExpressiveMechanism: slide.defaultExpressiveMechanism || slide.expressive_mechanism || deriveExpressiveMechanism(slide, defaultVisualExpressiveness || 'polished-enhanced'),
+    defaultVisualExpressiveness,
     informationGroups,
     questions: asArray(slide.questions || slide.review_questions).map(normalizeQuestion),
     assets: asArray(slide.assets || slide.real_images || slide.real_image_items).map(normalizeAsset)
@@ -301,7 +330,9 @@ const slideSource = asArray(options.slides || options.pages || options.outline_p
 const slides = (slideSource.length ? slideSource : [normalizeSlide({ title: '待审阅页面', summary: '请在 options.json 中补充 slides。' }, 0)])
   .map((slide, index) => normalizeSlide(slide, index, findLegacySlide(legacySlides, slide, index)));
 const initialActive = slides[0]?.id || 'slide01';
-const boardData = { projectName, palettes, slides, initialActive };
+const defaultVisualExpressiveness = options.visual_expressiveness || options.defaultVisualExpressiveness || slides[0]?.defaultVisualExpressiveness || 'polished-enhanced';
+const defaultCreativeExtensionLevel = options.creative_extension_level || options.defaultCreativeExtensionLevel || deriveCreativeExtensionLevel(defaultVisualExpressiveness);
+const boardData = { projectName, palettes, slides, initialActive, defaultCreativeExtensionLevel };
 
 const html = await readFile(templatePath, 'utf8');
 const commonOptionsJs = await readFile(commonOptionsPath, 'utf8');
@@ -317,3 +348,4 @@ console.log(`Board data written: ${path.join(decisionDir, 'board-data.json')}`);
 console.log(`Inline data written: ${path.join(decisionDir, 'board-inline-data.js')}`);
 console.log(`Common options written: ${path.join(decisionDir, 'common-options.js')}`);
 console.log(`Options source: ${existsSync(optionsPath) ? optionsPath : '(defaults)'}`);
+

@@ -143,6 +143,13 @@
       background: #fffaf1;
     }
     .mini-module h3 { font-size: 15px; margin-bottom: 9px; }
+    .wide-choice-module {
+      margin-top: 10px;
+    }
+    .wide-choice-module .choice-row {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      align-items: stretch;
+    }
     .choice-row { display: grid; gap: 7px; }
     .choice {
       width: 100%;
@@ -541,6 +548,7 @@
       .workspace { grid-template-columns: 1fr; }
       .side { position: static; max-height: none; }
       .triad-grid { grid-template-columns: 1fr; }
+      .wide-choice-module .choice-row { grid-template-columns: 1fr; }
       .mode-grid { grid-template-columns: 1fr; }
       .weight-row { grid-template-columns: 1fr; }
       .weight-options { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -622,7 +630,9 @@
     }
 
     function applyBoardMetadata(boardData) {
-      const projectName = boardData.projectName || 'PPT 项目';
+      const projectName = typeof boardData.projectName === 'string'
+        ? boardData.projectName
+        : (boardData.projectName?.title || boardData.projectName?.name || 'PPT 项目');
       const title = `${projectName} PPT 视觉决策板 V4.1`;
       document.title = title;
       const titleNode = document.getElementById('boardTitle');
@@ -640,7 +650,9 @@
       const boardData = cloneBoardData(loaded);
       applyBoardMetadata(boardData);
 
-      const PROJECT_NAME = boardData.projectName;
+      const PROJECT_NAME = typeof boardData.projectName === 'string'
+        ? boardData.projectName
+        : (boardData.projectName?.title || boardData.projectName?.name || 'PPT 项目');
       const palettes = boardData.palettes;
       const decisionBoardCommonOptions = window.__DECISION_BOARD_COMMON_OPTIONS__;
       if (!decisionBoardCommonOptions) {
@@ -680,6 +692,8 @@
           expression_mode: 'realistic-scene',
           visual_strength: mode.visual_strength,
           visual_restraint: 'cinematic',
+          visual_expressiveness: slide.defaultVisualExpressiveness || 'polished-enhanced',
+          expressive_mechanism: slide.defaultExpressiveMechanism || deriveExpressiveMechanism(slide, slide.defaultVisualExpressiveness || 'polished-enhanced'),
           density: mode.density,
           page_treatment: mode.page_treatment,
           information_groups: getInformationGroups(slide),
@@ -724,6 +738,24 @@
       slideState.page_mode = mode.id;
       slideState.density = mode.density;
       slideState.page_treatment = mode.page_treatment;
+    }
+
+    function deriveCreativeExtensionLevel(visualExpressiveness) {
+      return {
+        'restrained-professional': 'strict-source',
+        'polished-enhanced': 'semantic-extended',
+        'high-impact': 'expressive-metaphor'
+      }[visualExpressiveness || 'polished-enhanced'] || 'semantic-extended';
+    }
+
+    function deriveExpressiveMechanism(slide, visualExpressiveness) {
+      const text = [slide.title, slide.role, slide.summary, slide.raw, ...(slide.sectionTitles || [])].join(' ');
+      if (/证据|数据|截图|参数|样本|对比|指标|表格|评测|验证/.test(text)) return 'evidence-wall';
+      if (/流程|路径|链路|阶段|步骤|输入|输出|转化|闭环/.test(text)) return 'narrative-path';
+      if (/系统|平台|控制|调度|座舱|监控|界面|后台/.test(text)) return 'system-cockpit';
+      if (/差异|竞品|对照|缺口|前后|传统|自研|升级/.test(text)) return 'contrast-stage';
+      if (/产品|设备|硬件|终端|模块|镜头|屏幕|引擎|算法/.test(text)) return visualExpressiveness === 'high-impact' ? 'hero-detail' : 'object-metaphor';
+      return visualExpressiveness === 'restrained-professional' ? 'material-editorial' : 'scene-depth';
     }
 
     function renderGlobal() {
@@ -832,7 +864,8 @@
       const palette = palettes.find(p => p.id === state.palette_direction);
       [
         ['色系', `${paletteCategoryLabels[palette.category]} / ${palette.label}`],
-        ['标题输出', labelOf(globalControls.title_overlay, state.title_overlay)]
+        ['标题输出', labelOf(globalControls.title_overlay, state.title_overlay)],
+        ['表现力度', labelOf(commonOptions.visual_expressiveness, state.slides[state.active]?.visual_expressiveness || 'polished-enhanced')]
       ].forEach(([label, value]) => {
         const item = el('li');
         item.innerHTML = `<strong>${label}</strong>：${value}`;
@@ -923,7 +956,7 @@
         grid.appendChild(button);
       });
       wrap.appendChild(grid);
-      const hint = el('p', 'hint', '例如 Slide02 可选“阅读突出”：核心功能是最高阅读优先级，产品图作为中等锚点或辅助证据，避免满屏均分模块；阅读优先也要有视觉锚点、路径或共享系统，不把整页做成平均卡片墙。');
+      const hint = el('p', 'hint', '主重点不会自动改变原文顺序。例如 Slide02 的模块仍按“产品定义 → 应用场景 → 核心功能”呈现；若核心功能是主重点，只增强其层级、保真、面积或视觉锚点，不默认前置。');
       wrap.appendChild(hint);
       return wrap;
     }
@@ -1126,12 +1159,19 @@
     function advancedBlock(slide) {
       const s = state.slides[slide.id];
       const wrap = el('div', 'content-group');
-      wrap.innerHTML = `<div class="group-head"><h3>高级视觉设置</h3><span class="hint">默认展开，一行完成三组设置</span></div>`;
+      wrap.innerHTML = `<div class="group-head"><h3>高级视觉设置</h3><span class="hint">默认展开，上方三组设置；视觉表现力度单独横向选择</span></div>`;
       const grid = el('div', 'triad-grid');
       grid.appendChild(renderMiniModule('表达方式', commonOptions.expression_mode, s.expression_mode, value => { s.expression_mode = value; renderAll(false); }));
       grid.appendChild(renderMiniModule('呈现力度', commonOptions.visual_strength, s.visual_strength, value => { s.visual_strength = value; renderAll(false); }));
       grid.appendChild(renderMiniModule('视觉克制等级', commonOptions.visual_restraint, s.visual_restraint, value => { s.visual_restraint = value; renderAll(false); }));
       wrap.appendChild(grid);
+      const expressiveness = renderMiniModule('视觉表现力度', commonOptions.visual_expressiveness, s.visual_expressiveness || 'polished-enhanced', value => {
+        s.visual_expressiveness = value;
+        s.expressive_mechanism = deriveExpressiveMechanism(slide, value);
+        renderAll(false);
+      });
+      expressiveness.classList.add('wide-choice-module');
+      wrap.appendChild(expressiveness);
       const note = document.createElement('textarea');
       note.placeholder = '高级视觉补充说明，一行即可。';
       note.value = s.design_notes;
@@ -1196,8 +1236,8 @@
       const grid = el('div', 'triad-grid');
       [
         { label: s.checked ? '本页已检查' : '标记本页已检查', fn: () => { s.checked = true; renderAll(false); } },
-        { label: '套用到产品页 02-03', fn: () => applyTo(['slide02','slide03'], slide.id) },
-        { label: '套用到对比页 04-05', fn: () => applyTo(['slide04','slide05'], slide.id) }
+        { label: '套用到产品页 02-03', fn: () => applyTo(['slide02','slide03','slide_02','slide_03'], slide.id) },
+        { label: '套用到对比页 04-05', fn: () => applyTo(['slide04','slide05','slide_04','slide_05'], slide.id) }
       ].forEach(item => {
         const btn = el('button', 'secondary', item.label);
         btn.type = 'button';
@@ -1218,6 +1258,8 @@
           expression_mode: src.expression_mode,
           visual_strength: src.visual_strength,
           visual_restraint: src.visual_restraint,
+          visual_expressiveness: src.visual_expressiveness,
+          expressive_mechanism: deriveExpressiveMechanism({ ...state.slides[id], ...slides.find(slide => slide.id === id) }, src.visual_expressiveness),
           density: src.density,
           page_treatment: src.page_treatment
         });
@@ -1234,14 +1276,16 @@
     }
 
     function currentDecision() {
-      const palette = palettes.find(p => p.id === state.palette_direction);
-      const first = state.slides.slide01;
+      const palette = palettes.find(p => p.id === state.palette_direction) || palettes[0];
+      const firstSlideId = slides[0]?.id || Object.keys(state.slides)[0];
+      const first = state.slides[firstSlideId] || {};
       return {
         schema_version: 'visual_decision_board_v4_1',
         project: PROJECT_NAME,
         visual_direction: first.visual_direction,
         visual_strength: first.visual_strength,
         palette_direction: state.palette_direction,
+        creative_extension_level: deriveCreativeExtensionLevel(first.visual_expressiveness),
         density: first.density,
         page_treatment: first.page_treatment,
         real_image_policy: 'skip_when_missing',
@@ -1353,5 +1397,7 @@
   </script>
 </body>
 </html>
+
+
 
 

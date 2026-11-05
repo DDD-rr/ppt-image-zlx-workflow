@@ -54,12 +54,16 @@ Keep choices few and meaningful:
 - Density choices: `speaker-led`, `reading-first`, `hybrid`.
 - Page treatment choices: `body-text-carrier`, `feature-overview`, `hybrid`.
 - Visual strength choices default to `primary`, `supporting`, and `reading-first`; the board should preselect `primary` unless `recommended_default.visual_strength` says otherwise.
+- Add a global `visual_expressiveness` choice with exactly three options: `restrained-professional`（克制专业）, `polished-enhanced`（精致增强，recommended default）, and `high-impact`（高表现力）. This controls visual richness, material depth, decorative signal lines, glow, dimensionality, and scene drama; it must not weaken source fidelity, real-image truthfulness, title safety, or required text. Treat this as a visual craft budget, not permission to change source/module reading order or to add more card borders.
+- Allow per-slide override only when the page role clearly differs from the global level. For example, a table/evidence page may step down to `restrained-professional`, while a cover, market-opportunity, launch, sales-roadshow, or hero-value page may step up to `high-impact`.
+- Do not expose `creative_extension_level` as a default user-facing choice. Derive it from `visual_expressiveness`: `restrained-professional` -> `strict-source`, `polished-enhanced` -> `semantic-extended`, and `high-impact` -> `expressive-metaphor`. Save the derived field for downstream compatibility, but do not ask the user to choose it unless they explicitly request advanced creative approval.
+- Do not ask users to choose per-slide expressive mechanisms by default. Auto-recommend each page's internal `expressive_mechanism` from the source content and selected `visual_expressiveness`, using mechanisms such as `scene-depth`, `object-metaphor`, `narrative-path`, `contrast-stage`, `evidence-wall`, `system-cockpit`, `material-editorial`, or `hero-detail`. Users may override only when the visual direction, creative boundary, or narrative order materially changes.
 - Page mode choices should be offered when the enhanced per-slide board is used: `text-enhanced`（正文增强型）, `module-structure`（模块结构型）, and `visual-led`（视觉主导型）. Page mode may auto-populate `density`, `page_treatment`, and default `visual_strength`, but the saved JSON must still include those downstream-compatible fields.
 - Prefer a small set of visual focus tags plus a free-form intent field over adding many near-duplicate visual-direction options. Useful focus tags include medium product anchor, auxiliary product proof, function list, scene atmosphere, process architecture, and data evidence.
 - Add `primary_emphasis_method` to avoid treating the selected main information group as a pure area-size command. The default options are:
-  - `reading-priority`: 主重点最先读到、文本保留最多，但不必占最大面积。
-  - `area-priority`: 主重点占最大版面，适合矩阵、架构图或流程图。
-  - `visual-anchor`: 主重点通过大图、大场景或强视觉对象建立记忆。
+  - `reading-priority`: 主重点在原文/大纲顺序中的位置保持不变，但拥有最清晰层级、最高文本保真和最强阅读提示；不必占最大面积，也不自动前置。
+  - `area-priority`: 主重点在原文/大纲顺序关系中获得最大或最舒展版面，适合矩阵、架构图或流程图；仍不得无授权改变模块顺序。
+  - `visual-anchor`: 主重点通过大图、大场景或强视觉对象建立记忆；不自动前置到左上第一阅读位，不自动改变大纲顺序，不自动成为最大面积。
   - `path-priority`: 主重点通过流程、连接、因果或系统路径表达。
 - If the board collects per-page `information_groups` and `group_weights`, make clear that `primary` means reading priority / information priority by default, not necessarily the largest rectangle. Use `primary_emphasis_method` to decide whether the priority becomes area, reading order, visual anchor, or path.
 
@@ -170,6 +174,8 @@ The board should let the user assign each group one of four weights:
 - `light`: compress into icons, tags, brief labels, or background semantics.
 
 Do not equate `primary` with the largest area unless `primary_emphasis_method` is `area-priority`. A `reading-priority` primary group may be smaller than a product image but must have the strongest reading path, best text fidelity, and most complete information. A `visual-anchor` supporting image can be medium sized when it improves memorability without becoming the main message.
+
+Preserve `source_order` separately from `group_weights`. The first-level information groups should be saved and rendered in the outline/source order by default. `primary`, `secondary`, `supporting`, and `light` change emphasis and degradation order only; they do not reorder modules. If a user wants the visual reading order to differ from source order, collect an explicit narrative-reorder decision and record it in project data.
 
 When saving JSON, include:
 
@@ -334,7 +340,7 @@ One option should usually be the responsible default. The other two should be re
 }
 ```
 
-Before continuing, check that `visual_direction`, `palette_direction`, `density`, `page_treatment`, and `confirmed_at` are present. Also check that the saved palette interpretation is still available as structured data, such as `global_palette.color_system`. If any required field is missing, stop and ask for a corrected confirmation instead of silently guessing.
+Before continuing, check that `visual_direction`, `palette_direction`, `density`, `page_treatment`, and `confirmed_at` are present. Also check that the saved palette interpretation is still available as structured data, such as `global_palette.color_system`. If `visual_expressiveness` is absent in an older decision file, default to `polished-enhanced` and record that assumption before prompting. If any other required field is missing, stop and ask for a corrected confirmation instead of silently guessing.
 
 ## Downstream Use
 
@@ -347,7 +353,7 @@ In `PPT_Page_Image_Guide.md`, translate:
 - `title_overlay.mode` into finalization behavior. For `overlay-title`, create and apply `title_style.json`. For `no-title-reserved`, keep a clear title-safe region in every body prompt, run `scripts/add_slide_titles.ps1 -NoTitleOverlay`, save the outputs under `final_image/`, and label the set `去标题版`.
 - `page_mode` into the first-pass page type, while still preserving explicit `density` and `page_treatment` as the downstream compatibility fields.
 - `information_groups`, `group_weights`, and `primary_emphasis_method` into reading order, text fidelity, area allocation, visual anchor size, and auxiliary-content degradation. Do not translate `primary` into "largest area" unless `primary_emphasis_method` is `area-priority`.
-- `visual_strength`, `visual_focus`, and `section_notes.visual_intent` into the page's primary visual anchor, auxiliary-content degradation, and module-vs-text tradeoff.
+- `visual_strength`, `visual_expressiveness`, `creative_extension_level`, `expressive_mechanism`, `visual_focus`, and `section_notes.visual_intent` into the page's primary visual anchor, material richness, semantic decoration allowance, auxiliary-content degradation, module-vs-text tradeoff, and explicit creative boundary. High expressiveness should choose content-driven mechanisms such as scene depth, object metaphor, narrative path, contrast stage, evidence wall, system cockpit, material editorial treatment, or hero detail; it must not be implemented only as more glowing boxes.
 - `required_section_titles` into visible page section labels and QA checks.
 - `real_image_policy: "skip_when_missing"` into real-image intake decisions; do not substitute missing real images with fake-real evidence.
 
@@ -364,6 +370,7 @@ A board is not complete unless it includes:
 - Global palette category and concrete palette selection.
 - Global gradient strategy and gradient scope, not only palette swatches.
 - Global color strength controls such as saturation, gradient usage, and bright-area proportion.
+- Global visual expressiveness control with three levels: restrained professional, polished enhanced, and high impact; save it as `visual_expressiveness`.
 - Global title-overlay mode: `overlay-title` by default, or `no-title-reserved` when the user wants title-safe images for manual post-production. No-title mode must still save outputs into `final_image/` and mark them as `去标题版`.
 - One tab for every outline slide, preserving any explicit source slide/page boundaries exactly.
 - Per-slide raw source text for review.
@@ -380,3 +387,4 @@ Do not silently fall back to the minimal standard board. If the enhanced board c
 ## Cost Control Notes
 
 Visual Decision Board generation can become expensive mainly because it loads several long references, creates verbose per-slide JSON, embeds raw source text, and may generate a large HTML file. To control cost: do not print full reference files or full generated JSON back into the chat; inspect only targeted snippets after writing files; keep `options.json` concise except for required exact slide raw text; and avoid regenerating the board repeatedly for cosmetic changes.
+

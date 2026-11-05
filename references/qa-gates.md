@@ -1,4 +1,4 @@
-# QA Gates
+﻿# QA Gates
 
 Use after generating a body image and again after the title overlay. Run both compliance and visual QA. Passing compliance alone is not a visual approval.
 
@@ -22,12 +22,15 @@ Check each body image and final overlaid image:
 
 - The page has a clear primary visual system, reading path, and meaningful depth.
 - The page has one memorable visual anchor. Reject pages that are tidy but visually forgettable.
-- The selected primary emphasis method is respected. For `reading-priority`, reject pages that merely make the primary group the largest area while weakening reading order, text fidelity, or visual hierarchy. For `area-priority`, check that the main region has enough area. For `visual-anchor`, check that the anchor is memorable. For `path-priority`, check that the path, connectors, and grouping are clear.
+- The primary visual anchor carries the page's main argument, not only the topic atmosphere. Reject pages where a control room, device, dashboard, city, data tunnel, or other relevant scene becomes the strongest subject while the actual argument, gap, comparison, demand, product definition, or evidence chain remains a set of detached labels.
+- The page's information relationship is visible. Reject pages that do not make the confirmed relationship legible, such as cause-effect, contrast gap, supply-demand pressure, system hierarchy, capability decomposition, evidence chain, process path, or comparison matrix.
+- For market, demand, strategy, opportunity, and problem pages, reject scene-dominant outputs where atmosphere outranks the business logic. A relevant environment may support the message, but the gap, pressure, chain, contrast, or opportunity window must be the S/A-level visual system.
+- The selected primary emphasis method is respected. For `reading-priority`, reject pages that merely make the primary group the largest area while weakening reading order, text fidelity, or visual hierarchy. For `area-priority`, check that the main region has enough area. For `visual-anchor`, check that the anchor is memorable without automatically taking the upper-left first reading position or changing source order. For `path-priority`, check that the path, connectors, and grouping are clear.
 - Information priority is not the same as area priority. Reject pages where `group_weights.primary` was translated into a crude full-canvas block or equal-card grid when the decision called for reading priority, visual-anchor priority, or path priority.
-- Information appears as semantic visual objects rather than generic PPT components. Reject pages where the main information groups are only boxes, icons, and text without object or material identity.
+- Information appears as semantic visual objects rather than generic PPT components. Reject pages where the main information groups are only boxes, icons, and text without object, path, scene, or material identity.
 - If three to six repeated modules appear, their visual treatment must match their role. Reject pages where main modules are under-designed into a plain row/grid, and reject pages where auxiliary modules are over-designed into a competing visual stage.
 - Main repeated modules must form a shared visual system rather than a plain row or grid. Reject main-module pages where the modules lack a shared stage, path, cockpit, map, platform, wall, hub, or other system anchor.
-- Reject full-screen, flat, evenly weighted module tiling when the intended page should have a product anchor + function list, definition panel + capability console, path diagram, evidence stage, or other composition relationship.
+- Reject full-screen, flat, evenly weighted module tiling when the intended page should have a product anchor + function list, definition panel + capability console, path diagram, evidence stage, or other composition relationship. High expressiveness must not be accepted when it only adds more borders, glow, badges, particles, or generic grid lines.
 - Main repeated modules should include a meaningful second layer when the main row feels thin: direction, state, role, input/output, phase, risk, result, evidence type, or conclusion. Reject second layers that are only decorative labels, badges, or filler.
 - Main repeated modules should show local rhythm inside shared grammar. Reject pages where each main module has identical size, icon strength, border strength, material depth, and visual priority unless the page intentionally uses a strict matrix and has another strong anchor.
 - Auxiliary repeated modules should remain subordinate to the primary anchor. Reject auxiliary tags, proof points, cover benefits, or side notes that use independent podiums, large badges, strong glow, heavy 3D bases, or equal-or-greater visual weight than the main object.
@@ -38,6 +41,11 @@ Check each body image and final overlaid image:
 - Major visual zones share a clear layout relationship. Reject pages where auxiliary information, legends, callouts, side modules, secondary panels, evidence groups, process notes, or summary strips appear placed only to fill space rather than aligned to the primary content system.
 - If a page uses a timeline, dates, node markers, connectors, and related cards or objects form clear one-to-one groups. Reject timelines where nodes hover ambiguously or the viewer must infer which content belongs to which date.
 - The visual translation is topic-specific. Reject a page that could keep the same visual design after swapping in an unrelated topic.
+- Run a relationship replaceability test: after hiding or changing the text, the composition should still suggest the same kind of argument. Reject outputs that remain plausible for any generic technology, platform, AI, broadcast, finance, or consulting topic.
+- Reject decorative connectors that do not encode an actual relationship. A line, orbit, arrow, glow path, or flow should explain sequence, dependency, contrast, pressure, input/output, or evidence-to-conclusion; otherwise it is decoration and should not be accepted as information design.
+- For `polished-enhanced` and `high-impact`, reject pages whose expressive mechanism is unclear. At least one content-driven mechanism such as scene depth, object metaphor, narrative path, contrast stage, evidence wall, system cockpit, material editorial treatment, or hero detail should be visible.
+- Reject decoration that cannot explain its semantic role. Signal lines should show connection or flow; empty spaces should show gaps or capacity; glow should indicate screen light, signal, focus, or energy; material layers should clarify hierarchy.
+- Reject creative extensions that invent facts, evidence, logos, customers, statistics, quotes, screenshots, or real-world proof not supplied by the source.
 - If a preferred reference was used, the result borrows principles rather than copying motifs. Reject pages where the most memorable visual shape, scene, metaphor, or decorative language appears lifted from the reference while only the text changed.
 - Material contrast and semantic background support the message. Reject same-color card grids, generic gradient-only backgrounds, and decorative texture without topic meaning.
 - Reject pages where the dominant palette is visible only as one broad background tone plus one repeated accent tone, with no meaningful third brightness step.
@@ -73,6 +81,7 @@ Check each body image and final overlaid image:
 - Bottom conclusions are closure, not second titles. Reject pages where the bottom conclusion uses title-like scale, brightness, or glow and becomes the first or second thing the viewer reads before the primary content.
 - Foreground, midground, and background have a clear relationship when the page role benefits from spatial depth.
 - Blur or mentally hide the body text: the remaining image should still suggest the topic through its scene, proof object, or visual system.
+- Blur or mentally hide the body text: the remaining image should also suggest the page's information relationship, not only the industry setting. If the result is merely "a nice technology scene", regenerate with a stronger visual argument grammar.
 - For main repeated-module pages, the blur test must still show why the modules belong together. If the result is only several neat rectangles, regenerate with a stronger shared system anchor or second layer.
 - For auxiliary repeated-module pages, the blur test should still show one dominant primary anchor with quiet support. If the auxiliary group reads as a second hero, reduce its weight.
 - Modules align, supporting elements belong to clear groups, and important objects respect safe bounds.
@@ -85,3 +94,4 @@ Check each body image and final overlaid image:
 - Do not accept a page merely because it is clean, aligned, and compliant. Reject over-corrected pages that become flat, repetitive, oversized, or template-like after detail removal.
 
 If a high-impact item fails, load `references/failure-repair.md`, revise the prompt, and regenerate that page before continuing.
+

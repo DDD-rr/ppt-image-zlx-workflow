@@ -20,7 +20,7 @@ Add-Type -AssemblyName System.Drawing
 $bodyPath = Join-Path $ProjectDir $BodyDir
 $outPath = Join-Path $ProjectDir $OutputDir
 New-Item -ItemType Directory -Path $outPath -Force | Out-Null
-$noTitleLabel = [string]::Concat([char]21435, [char]26631, [char]39064, [char]29256)
+$noTitleLabel = -join @([char]21435, [char]26631, [char]39064, [char]29256)
 
 if ($NoTitleOverlay) {
   $notePath = Join-Path $outPath "title_overlay_note.txt"
