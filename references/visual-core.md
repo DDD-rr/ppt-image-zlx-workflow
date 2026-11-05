@@ -1,4 +1,4 @@
-﻿# Visual Core
+# Visual Core
 
 Use when creating the project master template and page guide. This file defines visual quality and layout principles. Load specialized rule packages for color, information priority, real images, and title safety instead of repeating their full rules here.
 
@@ -87,7 +87,7 @@ High expressiveness must be visible through space, objects, material, narrative,
 - Lock facts, dates, sources, product names, policy names, titles, and user-required wording.
 - Allow concise supporting explanations only when they improve visual clarity without inventing facts.
 - Readability does not require generic white rectangles. Preserve chosen object material while achieving contrast through type scale, spacing, local highlight, panel lighting, or tonal separation.
-- Split text into fidelity tiers before image generation. Keep Tier A short enough to render reliably with GPT Image 2.
+- Split text into fidelity tiers before image generation. Keep Tier A short enough to render reliably with the official conversational image-generation tool.
 - For body-text carrier pages, body copy should look like readable body copy: medium text scale, stable line spacing, adequate column width, and front-facing 2D layout.
 - Image-generated Chinese text is risky when long, dense, small, narrow, or perspective-warped. Reduce line density and use short front-facing text areas.
 - Use charts only when real data exists. Do not invent data panels, KPI values, axes, trends, logos, or watermarks.

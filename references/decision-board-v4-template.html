@@ -1,4 +1,4 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="zh-CN">
 <head>
   <meta charset="utf-8">
@@ -544,6 +544,9 @@
     }
     .modal.active { display: grid; }
     .modal-card { width: min(560px, 100%); padding: 22px; border-radius: 8px; background: var(--paper); border: 1px solid var(--line); }
+    .asset-record { display:flex; align-items:center; gap:10px; margin:8px 0; flex-wrap:wrap; }
+    .asset-record img { width:64px; height:48px; object-fit:cover; border-radius:4px; }
+    button:focus-visible, input:focus-visible, textarea:focus-visible { outline:3px solid #1c74cf; outline-offset:2px; }
     @media (max-width: 1180px) {
       .workspace { grid-template-columns: 1fr; }
       .side { position: static; max-height: none; }
@@ -563,8 +566,8 @@
       <p>全局风格独立确认；Slide 审阅区只由左侧进度导航统领，点击页签会回到对应页面顶部。</p>
     </div>
     <div class="top-actions">
-      <span class="status-pill" id="saveStatus">未保存</span>
-      <button class="secondary" id="copyJson">复制 JSON</button>
+      <span class="status-pill" id="saveStatus" role="status" aria-live="polite">未保存</span>
+      <button class="secondary" id="copyJson" hidden>复制 JSON</button>
       <button class="primary" id="saveJson">完成审阅并保存</button>
     </div>
   </header>
@@ -592,9 +595,9 @@
 
   <textarea class="output" id="decisionOutput" spellcheck="false"></textarea>
 
-  <div class="modal" id="savedModal">
+  <div class="modal" id="savedModal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
     <div class="modal-card">
-      <h2>审阅意见已保存</h2>
+      <h2 id="modalTitle">审阅状态</h2>
       <p id="modalText">接下来可以生成 Master_Template.md 与 PPT_Page_Image_Guide.md。</p>
       <button class="primary" id="closeModal">知道了</button>
     </div>
@@ -847,6 +850,8 @@
         const button = el('button', 'nav-button' + (state.active === slide.id ? ' active' : ''));
         button.type = 'button';
         button.innerHTML = `<span class="nav-index">${String(index + 1).padStart(2, '0')}</span><span class="nav-title">${slide.title}</span><span class="dot ${s.checked ? 'ok' : ''}"></span>`;
+        button.setAttribute('aria-label', `${slide.title}，${s.checked ? '已检查' : '待检查'}`);
+        button.title = s.checked ? '已检查' : '待检查';
         button.addEventListener('click', () => {
           state.active = slide.id;
           renderAll(true);
@@ -885,6 +890,11 @@
           <p>${slide.summary}</p>
         </section>
       `;
+      const topCheck = el('button', 'primary', s.checked ? '已检查（点击撤销）' : '标记本页已检查');
+      topCheck.type = 'button';
+      topCheck.setAttribute('aria-pressed', String(s.checked));
+      topCheck.addEventListener('click', () => { toggleChecked(s); renderAll(false); });
+      panel.firstElementChild.appendChild(topCheck);
       const body = el('section', 'panel');
       body.innerHTML = `<div class="section-title"><div><span class="eyebrow">PAGE REVIEW</span><h2>${slide.label} 页面审阅</h2></div><span class="hint">核心设计、图片、问题、锁定文本全部在本页完成</span></div>`;
       body.appendChild(rawBlock(slide));
@@ -1029,6 +1039,7 @@
     function choiceButton(option, selected, onPick) {
       const button = el('button', 'choice' + (selected === option.id ? ' selected' : ''));
       button.type = 'button';
+      button.setAttribute('aria-pressed', String(selected === option.id));
       button.innerHTML = `<strong>${option.label}</strong><span>${option.summary}</span>`;
       button.addEventListener('click', () => onPick(option.id));
       return button;
@@ -1106,12 +1117,23 @@
           addFiles(slide.id, asset.id, event.dataTransfer.files);
         });
         zone.appendChild(pasteTarget);
-        const records = el('div', 'asset-records', recordsText(s.real_images[asset.id]));
+        const records = el('div', 'asset-records');
+        const items = s.real_images[asset.id];
+        if (!items.length) records.textContent = '尚未选择图片。';
+        items.forEach((record, index) => {
+          const row = el('div', 'asset-record');
+          const img = document.createElement('img'); img.src = './' + record.path; img.alt = record.name;
+          row.appendChild(img); row.appendChild(el('span', '', record.name + '（已保存）'));
+          const remove = el('button', 'secondary', '移除'); remove.type = 'button';
+          remove.setAttribute('aria-label', '移除 ' + record.name);
+          remove.addEventListener('click', () => { items.splice(index, 1); renderAll(false); });
+          row.appendChild(remove); records.appendChild(row);
+        });
         zone.appendChild(records);
         zone.appendChild(el('h4', '', '图片用途'));
         const grid = el('div', 'asset-type-grid');
         const roleOptions = (asset.roleOptions && asset.roleOptions.length ? asset.roleOptions : imageTypes);
-        roleOptions.forEach(type => grid.appendChild(choiceButton(type, s.real_image_types[asset.id], value => { s.real_image_types[asset.id] = value; renderAll(false); })));
+        roleOptions.forEach(type => grid.appendChild(choiceButton(type, s.real_image_types[asset.id], value => { s.real_image_types[asset.id] = value; s.real_image_role_explicit ||= {}; s.real_image_role_explicit[asset.id] = true; renderAll(false); })));
         zone.appendChild(grid);
         wrap.appendChild(zone);
       });
@@ -1123,12 +1145,28 @@
       return wrap;
     }
 
-    function addFiles(slideId, assetId, fileList) {
+    let pendingUploads = 0;
+    async function addFiles(slideId, assetId, fileList) {
       const files = Array.from(fileList || []).filter(file => !file.type || file.type.startsWith('image/'));
       if (!files.length) return;
-      const records = files.map(file => ({ name: file.name || 'pasted-image', size: file.size || 0, type: file.type || 'image/unknown', lastModified: file.lastModified || Date.now() }));
-      state.slides[slideId].real_images[assetId] = [...(state.slides[slideId].real_images[assetId] || []), ...records];
-      renderAll(false);
+      pendingUploads++;
+      document.getElementById('saveStatus').textContent = '图片正在保存…';
+      try {
+        for (const file of files) {
+          const dataUrl = await new Promise((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(reader.result); reader.onerror = reject; reader.readAsDataURL(file); });
+          const response = await fetch('/api/upload', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: file.name, type: file.type, data: dataUrl.split(',')[1] }) });
+          const record = await response.json();
+          if (!response.ok) throw new Error(record.error || '上传失败');
+          state.slides[slideId].real_images[assetId].push(record);
+          const target = state.slides[slideId];
+          if (!target.real_image_role_explicit?.[assetId] && target.real_image_types[assetId] === 'skip') {
+            const asset = slides.find(item => item.id === slideId)?.assets.find(item => item.id === assetId);
+            const role = (asset?.roleOptions || imageTypes).find(item => item.id === 'evidence-schematic' || item.id === 'product-proof');
+            if (role) target.real_image_types[assetId] = role.id;
+          }
+        }
+      } catch (error) { alert('图片未保存：' + error.message + '。请通过本地服务打开网页后重试。'); }
+      finally { pendingUploads--; renderAll(false); }
     }
 
     function recordsText(records) {
@@ -1229,15 +1267,20 @@
       return button;
     }
 
+    let bulkUndo = null;
     function quickActions(slide) {
       const s = state.slides[slide.id];
       const wrap = el('div', 'content-group');
       wrap.innerHTML = `<div class="group-head"><h3>快速操作</h3><span class="hint">套用不会覆盖锁定文本和图片记录</span></div>`;
       const grid = el('div', 'triad-grid');
       [
-        { label: s.checked ? '本页已检查' : '标记本页已检查', fn: () => { s.checked = true; renderAll(false); } },
-        { label: '套用到产品页 02-03', fn: () => applyTo(['slide02','slide03','slide_02','slide_03'], slide.id) },
-        { label: '套用到对比页 04-05', fn: () => applyTo(['slide04','slide05','slide_04','slide_05'], slide.id) }
+        { label: s.checked ? '撤销本页已检查' : '标记本页已检查', fn: () => { toggleChecked(s); renderAll(false); } },
+        { label: '套用到选中的页面', fn: () => {
+          const ids = Array.from(wrap.querySelectorAll('input[name="bulk-page"]:checked')).map(input => input.value);
+          if (!ids.length) { alert('请先选择目标页面。'); return; }
+          if (confirm(`将页面表达、重点、视觉设置与密度应用到 ${ids.length} 页；不覆盖图片、锁定文字和备注。继续吗？`)) applyTo(ids, slide.id);
+        } },
+        { label: '撤销上次套用', fn: () => { if (!bulkUndo) return; Object.entries(bulkUndo).forEach(([id, value]) => { state.slides[id] = value; }); bulkUndo = null; renderAll(false); } }
       ].forEach(item => {
         const btn = el('button', 'secondary', item.label);
         btn.type = 'button';
@@ -1245,14 +1288,28 @@
         grid.appendChild(btn);
       });
       wrap.appendChild(grid);
+      const targets = el('div', 'asset-records');
+      slides.filter(item => item.id !== slide.id).forEach(item => {
+        const label = document.createElement('label'); label.style.marginRight = '12px';
+        const input = document.createElement('input'); input.type = 'checkbox'; input.name = 'bulk-page'; input.value = item.id;
+        label.append(input, document.createTextNode(' ' + item.title)); targets.appendChild(label);
+      });
+      wrap.appendChild(targets);
+      const next = el('button', 'secondary', '下一页'); next.type = 'button';
+      const nextIndex = slides.findIndex(item => item.id === slide.id) + 1;
+      next.disabled = nextIndex >= slides.length;
+      next.addEventListener('click', () => { state.active = slides[nextIndex].id; renderAll(true); });
+      wrap.appendChild(next);
       return wrap;
     }
 
     function applyTo(ids, sourceId) {
       const src = state.slides[sourceId];
+      bulkUndo = Object.fromEntries(ids.filter(id => state.slides[id]).map(id => [id, structuredClone(state.slides[id])]));
       ids.forEach(id => {
         if (!state.slides[id]) return;
         Object.assign(state.slides[id], {
+          checked: false,
           page_mode: src.page_mode,
           primary_emphasis_method: src.primary_emphasis_method,
           expression_mode: src.expression_mode,
@@ -1326,8 +1383,40 @@
       return removeLegacyPaletteFields(migrated);
     }
 
+    let draftTimer;
+    let draftQueue = Promise.resolve();
+    let draftReady = false;
+    function reviewSignature(slideState) {
+      const { checked, _checked_signature, ...content } = slideState;
+      return JSON.stringify(content);
+    }
+    function toggleChecked(slideState) {
+      slideState.checked = !slideState.checked;
+      slideState._checked_signature = slideState.checked ? reviewSignature(slideState) : null;
+    }
+    function queueDraft() {
+      if (!draftReady) return;
+      let reviewChanged = false;
+      for (const slide of slides) {
+        const s = state.slides[slide.id];
+        if (s.checked && s._checked_signature && s._checked_signature !== reviewSignature(s)) { s.checked = false; reviewChanged = true; }
+      }
+      if (reviewChanged) renderNav();
+      clearTimeout(draftTimer);
+      document.getElementById('saveStatus').textContent = '草稿待保存…';
+      draftTimer = setTimeout(() => {
+        const snapshot = JSON.stringify(state);
+        draftQueue = draftQueue.catch(() => {}).then(async () => {
+          const response = await fetch('/api/draft', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: snapshot });
+          if (!response.ok) throw new Error('保存失败');
+          const result = await response.json();
+          document.getElementById('saveStatus').textContent = '草稿已保存 ' + new Date(result.savedAt).toLocaleTimeString();
+        }).catch(() => { document.getElementById('saveStatus').textContent = '草稿保存失败，请检查连接'; });
+      }, 600);
+    }
     function updateOutput(show) {
       const output = document.getElementById('decisionOutput');
+      queueDraft();
       output.value = JSON.stringify(currentDecision(), null, 2);
       output.style.display = show ? 'block' : 'none';
     }
@@ -1344,6 +1433,13 @@
     }
 
     async function saveJson() {
+      if (pendingUploads) { alert('图片正在保存，请稍候再提交。'); return; }
+      const unchecked = slides.filter(slide => !state.slides[slide.id].checked).length;
+      const checkedCount = slides.length - unchecked;
+      if (!checkedCount) { alert("请至少标记一页已检查后再提交；只有已检查的页面会进入生成。"); return; }
+      if (!confirm(`共 ${slides.length} 页：已检查 ${checkedCount} 页，未检查 ${unchecked} 页。此次仅生成已检查的 ${checkedCount} 页；其他页面不会生成。确认提交吗？`)) return;
+      const skipped = slides.filter(slide => Object.entries(state.slides[slide.id].real_images).some(([id, images]) => images.length && state.slides[slide.id].real_image_types[id] === 'skip')).length;
+      if (skipped && !confirm(`有 ${skipped} 页已上传图片，但图片用途为“暂不使用”。仍然提交吗？`)) return;
       updateOutput(true);
       try {
         const res = await fetch('/api/decision', {
@@ -1354,12 +1450,15 @@
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || '保存失败');
         document.getElementById('saveStatus').textContent = '已保存';
-        document.getElementById('modalText').textContent = '已保存：' + data.path;
+        document.getElementById('modalTitle').textContent = '审阅已提交';
+        document.getElementById('modalText').textContent = '你的选择和图片已保存。可以回到 Codex，继续生成页面方案。';
         document.getElementById('savedModal').classList.add('active');
+        document.getElementById('closeModal').focus();
       } catch (error) {
         localStorage.setItem('ppt_visual_decision_v4_1', document.getElementById('decisionOutput').value);
-        document.getElementById('saveStatus').textContent = '文件模式：请复制 JSON';
-        document.getElementById('modalText').textContent = '浏览器无法直接写入文件。请复制 JSON 给 Codex，或通过本地服务打开。';
+        document.getElementById('saveStatus').textContent = '提交未完成';
+        document.getElementById('modalTitle').textContent = '提交未完成';
+        document.getElementById('modalText').textContent = '未能提交，请告知 Codex 检查审阅服务，或在会话中确认。';
         document.getElementById('savedModal').classList.add('active');
       }
       updateOutput(false);
@@ -1375,6 +1474,16 @@
 
       initState();
       try {
+        const response = await fetch('/api/draft');
+        const draft = await response.json();
+        if (draft.state && draft.state.slides) {
+          for (const key of ['active', 'palette_category', 'palette_direction', 'title_overlay', 'global_notes', 'global_palette_notes']) if (draft.state[key] !== undefined) state[key] = draft.state[key];
+          for (const slide of slides) if (draft.state.slides[slide.id]) Object.assign(state.slides[slide.id], draft.state.slides[slide.id]);
+          if (!state.slides[state.active]) state.active = slides[0].id;
+          document.getElementById('saveStatus').textContent = '已恢复未提交的草稿';
+        } else if (draft.stale) document.getElementById('saveStatus').textContent = '页面已变化，旧草稿未恢复';
+      } catch { document.getElementById('saveStatus').textContent = '草稿恢复不可用'; }
+      try {
         const saved = localStorage.getItem('ppt_visual_decision_v4_1');
         if (saved) {
           const parsed = migrateLegacyDecision(JSON.parse(saved));
@@ -1384,9 +1493,10 @@
         }
       } catch (error) {}
       renderAll(false);
+      draftReady = true;
       document.getElementById('copyJson').addEventListener('click', copyJson);
       document.getElementById('saveJson').addEventListener('click', saveJson);
-      document.getElementById('closeModal').addEventListener('click', () => document.getElementById('savedModal').classList.remove('active'));
+      document.getElementById('closeModal').addEventListener('click', () => { document.getElementById('savedModal').classList.remove('active'); document.getElementById('saveJson').focus(); });
     }
 
     bootstrap().catch(error => {

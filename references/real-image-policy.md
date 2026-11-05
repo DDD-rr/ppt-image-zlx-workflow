@@ -8,7 +8,7 @@ For each supplied image:
 
 1. Resolve the actual file and verify readability.
 2. Assign a dominance role: `main-visual`, `medium-anchor`, `evidence-schematic`, `atmosphere`, or `skip`.
-3. Prefer direct GPT Image 2 image input.
+3. Prefer direct image input to the official conversational image-generation tool.
 4. If direct input is unavailable, show the image in conversation and explicitly reference the shown image.
 5. Stop if neither method is possible.
 

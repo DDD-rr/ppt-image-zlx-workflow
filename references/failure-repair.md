@@ -6,7 +6,7 @@ Use only after QA finds a high-impact failure. Preserve successful composition, 
 
 1. Name the failed gate: title collision, major-zone drift, cramped main content, weak visual anchor, generic modules, invented evidence, text fidelity loss, color sameness, or real-image replacement.
 2. Rewrite only the failed part of the page blueprint and prompt.
-3. Regenerate the body image with GPT Image 2.
+3. Regenerate the body image with the official conversational image-generation tool.
 4. Overlay the title again with `scripts/add_slide_titles.ps1`.
 5. Re-run `references/qa-gates.md` on the body image and final image.
 

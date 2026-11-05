@@ -1,6 +1,6 @@
-﻿# Prompt Contract
+# Prompt Contract
 
-Use before generating each GPT Image 2 body image. This file defines the core prompt skeleton. Load only the conditional rule packages that apply to the current page.
+Use before generating each generated body image. This file defines the core prompt skeleton. Load only the conditional rule packages that apply to the current page.
 
 ## Conditional Packages
 
@@ -92,7 +92,7 @@ If the page has a market, opportunity, demand, problem, or strategy role, do not
 
 Run a replaceability test before generation: if the same composition could work after swapping in an unrelated technology topic, the prompt is too generic. Add page-specific structure, visual logic, or evidence carriers before generating.
 
-Limit in-image text for relationship-heavy pages. Prefer one to three section labels, three to six keywords, and one or two key metrics. Convert long explanations into spatial relationships, attached annotations, or later editable text. Do not ask GPT Image 2 to typeset a full paragraph unless the page is explicitly a body-text carrier.
+Limit in-image text for relationship-heavy pages. Prefer one to three section labels, three to six keywords, and one or two key metrics. Convert long explanations into spatial relationships, attached annotations, or later editable text. Do not ask the image-generation tool to typeset a full paragraph unless the page is explicitly a body-text carrier.
 ## Space And Repair Bias
 
 When space is tight, adapt compression to `visual_expressiveness`. For `restrained-professional`, remove decoration first. For `polished-enhanced` and `high-impact`, remove meaningless decoration first but preserve meaningful scene depth, signal lines, material contrast, and topic-specific atmosphere when they support the selected expressiveness. Then shrink or simplify auxiliary images, reduce application/scenario tags, shorten secondary explanatory copy, and only then adjust the main content layout. Never remove required main items or compress the main matrix/table until auxiliary content has already been degraded.

@@ -1,4 +1,4 @@
-﻿# Visual Decision Board
+# Visual Decision Board
 
 Use before creating `Master_Template.md` and `PPT_Page_Image_Guide.md` when the project visual direction is not already locked.
 
@@ -212,7 +212,7 @@ Also create real-image slots when the source implies that such evidence may exis
 
 The board must make this default visible to the user: if a real-image slot is not supplemented with an actual uploaded or resolved image, image generation will skip real-image input for that slot and must not create fake-real replacement evidence. Save this policy as `real_image_policy: "skip_when_missing"` in `style_decision.json`.
 
-Each real-image slot must support multiple images. The board should let the user paste images into the slot, drag and drop images, or browse and select multiple files. When opened through the local Node service, uploaded images are saved under `decision_board/uploads/<slot>/` and recorded in `real_image_answers`. In file mode, the board can preview images and include unsaved file records in JSON, but it cannot write image files to disk.
+Each real-image slot must support multiple images. The board should let the user paste images into the slot, drag and drop images, or browse and select multiple files. When opened through the V4 local Node service, uploaded images are saved under `decision_board/uploads/` and their relative paths are recorded in each slide real_images entry. In file mode, the board can preview images and include unsaved file records in JSON, but it cannot write image files to disk.
 
 Use this shape:
 
@@ -388,3 +388,8 @@ Do not silently fall back to the minimal standard board. If the enhanced board c
 
 Visual Decision Board generation can become expensive mainly because it loads several long references, creates verbose per-slide JSON, embeds raw source text, and may generate a large HTML file. To control cost: do not print full reference files or full generated JSON back into the chat; inspect only targeted snippets after writing files; keep `options.json` concise except for required exact slide raw text; and avoid regenerating the board repeatedly for cosmetic changes.
 
+
+
+## Automatic review handoff
+
+Run `node scripts/review-board-control.mjs start <project-path>` after creating the board. The service is checked and the review page opens automatically. The user submits once; uploaded images and the decision are saved in the project. Use `wait` or `status` to detect the current session submission, read it directly, then `stop` the service. Never ask for pasted JSON. If the turn ends, check status on the next user message. If unavailable, offer equivalent chat confirmation. File mode is preview-only and cannot automatically save submissions or images.

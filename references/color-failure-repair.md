@@ -7,7 +7,7 @@ Use only after QA finds color collapse, same-family flattening, weak tonal depth
 1. Name the specific color failure: tonal-depth collapse, surface-level collapse, emphasis-color spread, decorative-only gradient, or generic dark-safe-output collapse.
 2. Keep the existing palette family unless it is clearly the wrong semantic fit.
 3. Rewrite only the color-execution part of the blueprint and prompt.
-4. Regenerate the body image with GPT Image 2.
+4. Regenerate the body image with the official conversational image-generation tool.
 5. Re-run `references/qa-gates.md` on the body image and final image.
 
 ## Common Color Repairs
