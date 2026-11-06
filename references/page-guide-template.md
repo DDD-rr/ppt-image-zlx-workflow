@@ -1,5 +1,7 @@
 # PPT_Page_Image_Guide
 
+Before writing page guides, record confirmed `content_handling` (`strict` or `interpret`). For strict sources, list and carry the entire required on-page source text verbatim into each page prompt and check it in the resulting image; do not treat the example keyword limits below as permission to omit text. For interpret sources, map summaries and visual ideas back to source meaning and keep names, numbers, qualifications, and locked wording. If the decision is missing, ask the user before continuing. The choice is independent of visual creativity.
+
 项目：
 来源大纲：
 整体风格：

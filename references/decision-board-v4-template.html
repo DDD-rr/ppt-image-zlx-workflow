@@ -678,6 +678,7 @@
         palette_category: 'dark',
         palette_direction: 'deep-navy-signal-gold',
         title_overlay: 'overlay-title',
+        content_handling: null,
         global_notes: '',
         global_palette_notes: '',
         slides: {}
@@ -776,6 +777,11 @@
             <textarea id="globalPaletteNotes" placeholder="全局色系补充，例如：不要满屏霓虹；蓝色只作为屏幕光和信号线。"></textarea>
           </div>
           <div>
+            <h3>原始内容处理方式 <span class="hint">必选</span></h3>
+            <p>选择本次材料应如何处理；视觉创意可以在两种方式下灵活发挥。</p>
+            <div id="contentHandlingControl"></div>
+          </div>
+          <div>
             <h3>标题叠加策略</h3>
             <p>控制是否生成每页标题；不叠加时仍保留标题区域。</p>
             <div id="titleOverlayControl"></div>
@@ -808,6 +814,8 @@
         paletteGrid.appendChild(button);
       });
       panel.querySelector('#titleOverlayControl').appendChild(renderCompactToggle(globalControls.title_overlay, state.title_overlay, value => { state.title_overlay = value; renderAll(false); }));
+      const contentControl = panel.querySelector('#contentHandlingControl');
+      globalControls.content_handling.forEach(option => contentControl.appendChild(choiceButton(option, state.content_handling, value => { state.content_handling = value; renderAll(false); })));
       const gp = panel.querySelector('#globalPaletteNotes');
       gp.value = state.global_palette_notes;
       gp.addEventListener('input', () => { state.global_palette_notes = gp.value; updateOutput(false); });
@@ -869,6 +877,7 @@
       const palette = palettes.find(p => p.id === state.palette_direction);
       [
         ['色系', `${paletteCategoryLabels[palette.category]} / ${palette.label}`],
+        ['内容处理', state.content_handling ? labelOf(globalControls.content_handling, state.content_handling) : '待选择'],
         ['标题输出', labelOf(globalControls.title_overlay, state.title_overlay)],
         ['表现力度', labelOf(commonOptions.visual_expressiveness, state.slides[state.active]?.visual_expressiveness || 'polished-enhanced')]
       ].forEach(([label, value]) => {
@@ -1338,6 +1347,7 @@
       const first = state.slides[firstSlideId] || {};
       return {
         schema_version: 'visual_decision_board_v4_1',
+        content_handling: state.content_handling,
         project: PROJECT_NAME,
         visual_direction: first.visual_direction,
         visual_strength: first.visual_strength,
@@ -1434,6 +1444,7 @@
 
     async function saveJson() {
       if (pendingUploads) { alert('图片正在保存，请稍候再提交。'); return; }
+      if (!state.content_handling) { alert('请先在全局设置中选择原始内容处理方式。'); document.getElementById('globalPanel').scrollIntoView({ behavior: 'smooth' }); return; }
       const unchecked = slides.filter(slide => !state.slides[slide.id].checked).length;
       const checkedCount = slides.length - unchecked;
       if (!checkedCount) { alert("请至少标记一页已检查后再提交；只有已检查的页面会进入生成。"); return; }
@@ -1477,7 +1488,7 @@
         const response = await fetch('/api/draft');
         const draft = await response.json();
         if (draft.state && draft.state.slides) {
-          for (const key of ['active', 'palette_category', 'palette_direction', 'title_overlay', 'global_notes', 'global_palette_notes']) if (draft.state[key] !== undefined) state[key] = draft.state[key];
+          for (const key of ['active', 'palette_category', 'palette_direction', 'title_overlay', 'content_handling', 'global_notes', 'global_palette_notes']) if (draft.state[key] !== undefined) state[key] = draft.state[key];
           for (const slide of slides) if (draft.state.slides[slide.id]) Object.assign(state.slides[slide.id], draft.state.slides[slide.id]);
           if (!state.slides[state.active]) state.active = slides[0].id;
           document.getElementById('saveStatus').textContent = '已恢复未提交的草稿';

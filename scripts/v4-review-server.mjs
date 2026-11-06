@@ -15,6 +15,7 @@ const draftPath = path.join(root, 'review-draft.json');
 const readyPath = path.join(root, '.review-server.json');
 const session = randomUUID();
 const boardHash = createHash('sha256').update(await readFile(path.join(root, 'board-data.json'))).digest('hex');
+const requiresContentHandling = (await readFile(path.join(root, 'index.html'), 'utf8')).includes('id="contentHandlingControl"');
 
 const mimeTypes = {
   '.html': 'text/html; charset=utf-8',
@@ -95,6 +96,9 @@ createServer(async (req, res) => {
           const decision = JSON.parse(body || '{}');
           if (!decision.visual_direction || !decision.palette_direction || !decision.density || !decision.page_treatment) {
             return json(res, 400, { error: '缺少必填审阅字段。' });
+          }
+          if ((requiresContentHandling || decision.content_handling != null) && !['strict', 'interpret'].includes(decision.content_handling)) {
+            return json(res, 400, { error: '请先选择原始内容处理方式。' });
           }
           if (createHash('sha256').update(await readFile(path.join(root, 'board-data.json'))).digest('hex') !== boardHash) return json(res, 409, { error: '决策板数据已更改，请重新打开审阅页面。' });
           decision._review_session = session;

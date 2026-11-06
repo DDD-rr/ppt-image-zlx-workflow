@@ -1,5 +1,11 @@
 # Visual Core
 
+## Semantic discovery, not length-based mapping
+
+Understand what each passage means and what the audience must understand before choosing imagery. A long definition can suggest a scene, object, operational process, or system; a brief point can suggest an icon, texture, background, miniature scene, or other relevant mechanism. These are starting possibilities, not rules that map text length to a particular form. Invent a page-specific visual argument from meaning, relationships, audience, and material; avoid generic icons or decoration without a semantic role. Under `content_handling=strict`, such visuals supplement all required original text and never replace it; under `interpret`, visual abstraction may carry suitable meaning while preserving facts and qualifiers. This content choice is independent of the `strict-source` visual-extension enum.
+
+Before choosing a layout, identify the page's concrete actors or objects, what changes between them, and the result the audience should remember. Let the visual show that transformation where possible: a source event can feed a process and produce a visible outcome; distinct claims can become distinct but connected evidence or system objects. Choose the carrier independently for each information group rather than giving every group the same icon-and-card treatment. Unify those carriers through one reading path, shared scene, material system, or alignment logic. A large scene should explain the page's meaning, not merely decorate text placed below it.
+
 Use when creating the project master template and page guide. This file defines visual quality and layout principles. Load specialized rule packages for color, information priority, real images, and title safety instead of repeating their full rules here.
 
 ## Related Rule Packages

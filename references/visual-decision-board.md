@@ -46,6 +46,9 @@ Do this by default rather than only when the user asks. Many users can open the 
 
 ## Option Rules
 
+- Include one global required `content_handling` control: `strict`（严格保留原文）or `interpret`（理解后提炼）. Neither is preselected: the user explicitly chooses at the board. Preserve this field in `style_decision.json`, draft save/restore and global summary. If a legacy board or chat fallback lacks it, ask the user and save the choice before downstream processing. Do not infer content handling from `creative_extension_level` or `visual_expressiveness`.
+- `strict` preserves all required source content and wording on the page; visuals supplement it and all generic compression guidance yields. Report material text-fitting or rendering failures instead of silently omitting text. `interpret` permits source-grounded abstraction while preserving facts, qualifiers, locked terms, and explicit page boundaries. Both allow content-driven visual creativity, with no invented evidence.
+
 Keep choices few and meaningful:
 
 - Exactly three visual directions by default.

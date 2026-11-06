@@ -1,5 +1,9 @@
 # Prompt Contract
 
+## Content handling takes precedence over generic text budgets
+
+Read the confirmed `content_handling` from the decision board. For `strict`, include every required source passage verbatim in the prompt and require it visibly on the final image; retain exact wording, numbers, units, and qualifications. Do not apply Tier B/C compression, keyword limits, page-weight degradation, or replace text with icons. Preserve page boundaries and the chosen title mode. If it cannot fit or cannot be reproduced faithfully, report the specific limitation and ask for a user-directed resolution. For `interpret`, derive visuals from the meaning of each passage and allow source-grounded summaries while retaining locked wording, factual claims, qualifiers, and source order. Do not confuse either mode with `strict-source`, which controls the visual creative extension only.
+
 Use before generating each generated body image. This file defines the core prompt skeleton. Load only the conditional rule packages that apply to the current page.
 
 ## Conditional Packages
@@ -25,6 +29,7 @@ Every body-image prompt must include:
 - Primary visual focus and one memorable visual anchor.
 - Thesis-bound visual anchor: the primary visual anchor must carry the page's main argument, not only the topic atmosphere. For example, a market page should anchor the gap/opportunity/pressure relationship; a product definition page should anchor the capability structure; a comparison page should anchor the difference matrix.
 - Visual translation: topic-specific objects, material contrast, foreground/midground/background plan, and semantic background role.
+- Semantic staging: name the concrete source event, subject, or object; show how it connects to the page's process, comparison, or claim; and specify the observable outcome. Give different information groups carriers suited to their own meaning while tying them to one visual path. Keep those carriers visually subordinate or dominant according to the confirmed group weights.
 - Visual argument chain: for business judgment, market, demand, strategy, or opportunity pages, state the sequence of logic nodes and the exact visual grammar that links them, such as barrier -> gap -> demand -> opportunity. Do not rely on a relevant scene alone to imply the argument.
 - Information-bearing visual objects with object/material identity, not generic boxes/cards/modules alone.
 - Information budget: primary visual system, supporting module count, optional closure or flow system.
@@ -92,7 +97,7 @@ If the page has a market, opportunity, demand, problem, or strategy role, do not
 
 Run a replaceability test before generation: if the same composition could work after swapping in an unrelated technology topic, the prompt is too generic. Add page-specific structure, visual logic, or evidence carriers before generating.
 
-Limit in-image text for relationship-heavy pages. Prefer one to three section labels, three to six keywords, and one or two key metrics. Convert long explanations into spatial relationships, attached annotations, or later editable text. Do not ask the image-generation tool to typeset a full paragraph unless the page is explicitly a body-text carrier.
+In `interpret` mode, limit in-image text for relationship-heavy pages when the source meaning survives: prefer one to three section labels, three to six keywords, and one or two key metrics. Convert suitable explanations into spatial relationships or attached annotations. In `strict` mode, required original passages remain visible in full even on a relationship-heavy page; reserve readable, front-facing text areas and report any text the image tool fails to reproduce accurately.
 ## Space And Repair Bias
 
 When space is tight, adapt compression to `visual_expressiveness`. For `restrained-professional`, remove decoration first. For `polished-enhanced` and `high-impact`, remove meaningless decoration first but preserve meaningful scene depth, signal lines, material contrast, and topic-specific atmosphere when they support the selected expressiveness. Then shrink or simplify auxiliary images, reduce application/scenario tags, shorten secondary explanatory copy, and only then adjust the main content layout. Never remove required main items or compress the main matrix/table until auxiliary content has already been degraded.

@@ -1,6 +1,10 @@
 ﻿window.__DECISION_BOARD_COMMON_OPTIONS__ = {
   paletteCategoryLabels: { dark: '暗色系', light: '亮色系' },
   globalControls: {
+    content_handling: [
+      { id: 'strict', label: '严格保留原文', summary: '材料已甄别：保留全部原文内容及限定，不擅自改写、删减或用图替代。' },
+      { id: 'interpret', label: '理解后提炼', summary: '材料需要整理：可理解、归纳和视觉化，保留关键事实、限定和来源含义。' }
+    ],
     title_overlay: [
       { id: 'overlay-title', label: '叠加标题' },
       { id: 'no-title-reserved', label: '不叠加标题' }
