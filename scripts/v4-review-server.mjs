@@ -1,4 +1,4 @@
-﻿import { createServer } from 'node:http';
+import { createServer } from 'node:http';
 import { readFile, writeFile, mkdir, rename } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
@@ -14,7 +14,8 @@ const port = Number((firstArg && isPort(firstArg) ? firstArg : secondArg) ?? 417
 const decisionPath = path.join(root, 'style_decision.json');
 const draftPath = path.join(root, 'review-draft.json');
 const readyPath = path.join(root, '.review-server.json');
-const session = randomUUID();
+const sessionOverride = process.env.PPT_IMAGE_REVIEW_SESSION || '';
+const session = /^[\da-f]{8}-(?:[\da-f]{4}-){3}[\da-f]{12}$/i.test(sessionOverride) ? sessionOverride : randomUUID();
 const boardDataPath = path.join(root, 'board-data.json');
 const optionsPath = path.join(root, 'options.json');
 const projectRoot = path.resolve(root, '..');
@@ -124,7 +125,7 @@ async function syncPageIntoBoard(slideId, raw) {
   const boardData = await readJson(boardDataPath);
   const page = boardData.slides?.find(item => item.id === slideId);
   if (!page) throw new Error(`决策板中找不到页面 ${slideId}。`);
-  page.raw = raw;
+  if (page.raw !== raw) page.guidePromptRebuildPending = true;
   await writeAtomic(boardDataPath, JSON.stringify(boardData));
   await writeAtomic(path.join(root, 'board-inline-data.js'), `window.__BOARD_DATA__ = ${JSON.stringify(boardData)};\n`);
 
@@ -219,7 +220,8 @@ createServer(async (req, res) => {
       const raw = pageRaw(markdown, number);
       if (page.raw !== raw) await syncPageIntoBoard(input.slideId, raw);
       else boardHash = await currentBoardHash();
-      return json(res, 200, { raw, pageHash: hashText(raw), boardHash, outOfSyncIds: await sourceOutOfSyncIds(), name: boardData.sourceDocument.name || path.basename(filePath) });
+      const guidePromptRebuildPending = page.guidePromptRebuildPending || page.raw !== raw;
+      return json(res, 200, { raw, pageHash: hashText(raw), boardHash, guidePromptRebuildPending, outOfSyncIds: await sourceOutOfSyncIds(), name: boardData.sourceDocument.name || path.basename(filePath) });
     }
     if (req.method === 'POST' && url.pathname === '/api/source/save') {
       const input = await readRequestJson(req, 512 * 1024);
@@ -235,12 +237,13 @@ createServer(async (req, res) => {
       await writeAtomic(filePath, updatedMarkdown);
       const savedRaw = pageRaw(updatedMarkdown, number);
       await syncPageIntoBoard(input.slideId, savedRaw);
-      return json(res, 200, { raw: savedRaw, pageHash: hashText(savedRaw), boardHash, name: boardData.sourceDocument.name || path.basename(filePath) });
+      const guidePromptRebuildPending = page.guidePromptRebuildPending || page.raw !== savedRaw;
+      return json(res, 200, { raw: savedRaw, pageHash: hashText(savedRaw), boardHash, guidePromptRebuildPending, name: boardData.sourceDocument.name || path.basename(filePath) });
     }
     if (req.method === 'POST' && url.pathname === '/api/source/open-location') {
       const boardData = await readJson(boardDataPath);
       const filePath = resolveProjectFile(boardData.sourceDocument?.path);
-      const child = spawn('explorer.exe', [`/select,${filePath}`], { detached: true, stdio: 'ignore', windowsHide: true });
+      const child = spawn('explorer.exe', [`/select,${filePath}`], { detached: true, stdio: 'ignore' });
       await new Promise((resolve, reject) => { child.once('spawn', resolve); child.once('error', reject); });
       child.unref();
       return json(res, 200, { ok: true, path: filePath, directory: path.dirname(filePath), name: boardData.sourceDocument.name || path.basename(filePath) });

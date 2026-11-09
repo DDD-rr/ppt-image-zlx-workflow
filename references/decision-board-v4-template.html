@@ -1202,6 +1202,7 @@
       if (!sourceDocumentAvailable) setStatus('请通过本地审阅服务打开决策板，启用源文档同步。', 'error');
       else if (rawDirty.has(slide.id)) setStatus(sourceFeedback[slide.id] || '有未保存更改：点击“保存”写回决策版本文档。', 'dirty');
       else if (sourcePage && sourcePage.raw !== slide.raw) setStatus('决策版本中的本页材料有更新，点击“更新”同步到决策板。', 'dirty');
+      else if (slide.guidePromptRebuildPending) setStatus('原文已更新，待重建本页指南与提示词；确认生成本页时将按最新原文和已确认决策重建。请先重新检查本页。', 'dirty');
       else setStatus(sourceFeedback[slide.id] || '原始材料按 Markdown 保存；预览和编辑内容均对应决策版本。');
 
       editor.addEventListener('input', () => {
@@ -1227,6 +1228,7 @@
           const data = await postJson('/api/source/refresh', { slideId: slide.id });
           const latestResponse = await fetch('/api/source-document', { cache: 'no-store' });
           if (latestResponse.ok) Object.assign(sourcePages, (await latestResponse.json()).pages || {});
+          slide.guidePromptRebuildPending = slide.guidePromptRebuildPending || data.guidePromptRebuildPending;
           slide.raw = data.raw;
           state.raw_materials[slide.id] = data.raw;
           sourcePages[slide.id] = { raw: data.raw, pageHash: data.pageHash, outOfSync: false };
@@ -1251,11 +1253,12 @@
           });
           const latestResponse = await fetch('/api/source-document', { cache: 'no-store' });
           if (latestResponse.ok) Object.assign(sourcePages, (await latestResponse.json()).pages || {});
+          slide.guidePromptRebuildPending = slide.guidePromptRebuildPending || data.guidePromptRebuildPending;
           slide.raw = data.raw;
           state.raw_materials[slide.id] = data.raw;
           sourcePages[slide.id] = { raw: data.raw, pageHash: data.pageHash, outOfSync: false };
           rawDirty.delete(slide.id);
-          sourceFeedback[slide.id] = '已保存到决策版本文档；请重新检查本页。';
+          sourceFeedback[slide.id] = '原文已保存并标记为待重建；确认生成本页时，将按最新原文和已确认决策重建指南与提示词。请先重新检查本页。';
           const slideState = state.slides[slide.id];
           slideState.checked = false; slideState._checked_signature = null;
           renderAll(false);
@@ -1268,7 +1271,7 @@
         locationButton.disabled = true;
         try {
           const data = await postJson('/api/source/open-location', {});
-          setStatus(`已打开文件位置：${data.name}`);
+          setStatus(`已请求资源管理器定位：${data.name}（${data.directory}）`);
         } catch (error) { setStatus(error.message, 'error'); }
         finally { locationButton.disabled = false; }
       });

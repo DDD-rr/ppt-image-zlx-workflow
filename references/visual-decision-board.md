@@ -25,6 +25,10 @@ Before creating the board, create a project-local Markdown decision version of t
 
 The raw-material panel is a visually distinct module above the page-choice controls. Show the linked decision-version filename and provide three icon-plus-label actions at the upper right, ordered `打开文件位置`, `更新`, `保存`. Open the containing folder with the decision-version file selected; Update reads the current page section from the decision version into the board; Save writes board edits back to that section. Keep Save primary, Update secondary, and file location tertiary. Put the small sync hint at the upper right beside the preview/edit tabs. Remove the redundant separator above the raw-material module. Include a formatted Markdown preview and an edit mode; make both views generously sized and vertically resizable. Do not allow review submission while raw text is unsaved, because downstream generation must not silently use stale material. Detect concurrent edits before saving and ask the user to update before overwriting. A page material change invalidates that page's checked state.
 
+After saving a material edit, every later generation must re-extract that page from the current decision-version file and rebuild any stale page guide or prompt. The current `raw` text is authoritative over summaries and lock labels derived from an earlier version; retain a conflicting lock only if the user explicitly reaffirms it after the edit.
+
+Saving edited raw material marks that page's guide and prompt as pending rebuild; it does not rebuild them immediately. The board should display this status persistently. Rebuild the guide and prompt from the latest saved raw text and confirmed decisions when generation of that page is confirmed, then clear its guidePromptRebuildPending marker only after both artifacts are rewritten and verified.
+
 For each slide in `options.json`, write `locked` as a compact array of must-preserve facts, terms, product names, branded labels, exact metrics, and other wording that should survive later prompt compression. Prefer extracting these items from the slide's `关键事实/术语/数据` section instead of inventing a second interpretation pass. Do not leave `locked` empty when the page clearly contains must-keep terms or numbers.
 
 For each slide header, keep role and summary semantically different. role is the review task for that page, such as what visual or information tradeoff the user is deciding. summary is the source-content synopsis. The V4.1 board renders both fields; duplicating the same sentence creates visible repeated copy.
@@ -173,14 +177,12 @@ The board should let the user assign each group one of four weights:
 
 - `primary`: main information priority; preserve more text and make it the clearest reading target.
 - `secondary`: preserve enough detail but keep below the primary group.
-- `graphic`: prioritize icons, logos, diagrams, or integration into the main visual; retain only short identification labels and avoid explanatory paragraphs.
-- `hidden`: exclude the information group from this slide's generated content, even if it remains in stale group data or source text. This choice does not alter the source document.
+- `supporting`: use as proof, context, anchor, or schematic support.
+- `light`: compress into icons, tags, brief labels, or background semantics.
 
 Do not equate `primary` with the largest area unless `primary_emphasis_method` is `area-priority`. A `reading-priority` primary group may be smaller than a product image but must have the strongest reading path, best text fidelity, and most complete information. A `visual-anchor` supporting image can be medium sized when it improves memorability without becoming the main message.
 
-For `graphic`, use semantic visual forms as the information carrier and limit text to concise labels. For `hidden`, add the group to `excluded_information_groups`, remove its label from `required_section_titles`, and exclude its associated source and locked content from the generated page. The exclusion applies only to this slide output; it never edits the original or decision-version source.
-
-Preserve `source_order` separately from `group_weights`. The first-level information groups should be saved and rendered in the outline/source order by default. `primary`, `secondary`, and `graphic` change presentation priority only; `hidden` excludes a group from this slide output. None of these settings reorder the remaining modules. If a user wants the visual reading order to differ from source order, collect an explicit narrative-reorder decision and record it in project data.
+Preserve `source_order` separately from `group_weights`. The first-level information groups should be saved and rendered in the outline/source order by default. `primary`, `secondary`, `supporting`, and `light` change emphasis and degradation order only; they do not reorder modules. If a user wants the visual reading order to differ from source order, collect an explicit narrative-reorder decision and record it in project data.
 
 When saving JSON, include:
 
@@ -190,17 +192,12 @@ When saving JSON, include:
   "primary_emphasis_method": "reading-priority",
   "information_groups": [
     { "id": "core_features", "label": "核心功能" },
-    { "id": "product_shape", "label": "产品形态" },
-    { "id": "legacy_notes", "label": "已删减内容" }
+    { "id": "product_shape", "label": "产品形态" }
   ],
   "group_weights": {
     "core_features": "primary",
-    "product_shape": "graphic",
-    "legacy_notes": "hidden"
-  },
-  "excluded_information_groups": [
-    { "id": "legacy_notes", "label": "已删减内容" }
-  ]
+    "product_shape": "supporting"
+  }
 }
 ```
 
@@ -211,7 +208,7 @@ When a page needs visible first-level information group labels such as `产品�
 Downstream prompts and QA must treat `required_section_titles` as information-structure requirements:
 
 - They should appear as section labels or equivalent visible group headings.
-- They should not be silently dropped when content is modularized, unless their information group is explicitly set to `hidden`.
+- They should not be silently dropped when content is modularized.
 - Reading-first and body-text-carrier pages should preserve these titles by default.
 
 ## Real Images
@@ -362,7 +359,7 @@ In `PPT_Page_Image_Guide.md`, translate:
 - `page_treatment` into page type, content blueprint, and module priorities.
 - `title_overlay.mode` into finalization behavior. For `overlay-title`, create and apply `title_style.json`. For `no-title-reserved`, keep a clear title-safe region in every body prompt, run `scripts/add_slide_titles.ps1 -NoTitleOverlay`, save the outputs under `final_image/`, and label the set `去标题版`.
 - `page_mode` into the first-pass page type, while still preserving explicit `density` and `page_treatment` as the downstream compatibility fields.
-- `information_groups`, `group_weights`, `excluded_information_groups`, and `primary_emphasis_method` into reading order, text fidelity, area allocation, visual anchor size, graphic-first presentation, and auxiliary-content degradation. Exclude hidden groups from generated content and required titles. Do not translate `primary` into "largest area" unless `primary_emphasis_method` is `area-priority`.
+- `information_groups`, `group_weights`, and `primary_emphasis_method` into reading order, text fidelity, area allocation, visual anchor size, and auxiliary-content degradation. Do not translate `primary` into "largest area" unless `primary_emphasis_method` is `area-priority`.
 - `visual_strength`, `visual_expressiveness`, `creative_extension_level`, `expressive_mechanism`, `visual_focus`, and `section_notes.visual_intent` into the page's primary visual anchor, material richness, semantic decoration allowance, auxiliary-content degradation, module-vs-text tradeoff, and explicit creative boundary. High expressiveness should choose content-driven mechanisms such as scene depth, object metaphor, narrative path, contrast stage, evidence wall, system cockpit, material editorial treatment, or hero detail; it must not be implemented only as more glowing boxes.
 - `required_section_titles` into visible page section labels and QA checks.
 - `real_image_policy: "skip_when_missing"` into real-image intake decisions; do not substitute missing real images with fake-real evidence.
@@ -372,8 +369,6 @@ If the user explicitly skips the board, continue with autonomous judgment and no
 ## Enhanced V4.1 Board Requirement
 
 For this user's workflow, the Visual Decision Board must default to the enhanced V4.1 review board, not the minimal global-only board. Use `references/decision-board-v4-requirements.md` as the acceptance checklist.
-
-Maintain clear hierarchy within the selected theme rather than relying on one pale hue. Follow Ant Design's control hierarchy: use a filled accent treatment for the primary action; give secondary and tertiary actions visible borders, distinct lightness values, and clear hover/focus states. Separate page, panel, submodule, and control surfaces with deliberate shifts in lightness, border contrast, and restrained shadows. Keep text and control boundaries legible against their surfaces; do not make all controls the same pale fill, and do not add boxes where spacing or typography already establishes hierarchy. Preserve semantic colors for states such as success, warning, and error.
 
 Create the reusable board with `scripts/create-v4-review-board.mjs` after `decision_board/options.json` exists. Serve the resulting `decision_board/index.html` with `scripts/v4-review-server.mjs`.
 
