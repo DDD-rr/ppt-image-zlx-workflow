@@ -1,4 +1,4 @@
-﻿import { readFile, writeFile, mkdir } from 'node:fs/promises';
+﻿import { readFile, writeFile, mkdir, copyFile, readdir } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -35,9 +35,13 @@ const defaultPalettes = [
 ];
 
 const defaultVisualDirections = [
-  { id: 'broadcast-control-room', label: '转播指挥中心', summary: '监看墙、控制台和信号流构成专业场景。', diagram: 'broadcast' },
-  { id: 'architecture-system', label: '系统架构图', summary: '用节点、链路和能力层说明结构关系。', diagram: 'nodes' },
-  { id: 'executive-brief', label: '高级汇报页', summary: '阅读优先，视觉为正文和结论服务。', diagram: 'text' }
+  { id: 'hero-focus', label: '主张聚焦', summary: '一个核心观点或主体成为视觉焦点，其他信息围绕它解释。' },
+  { id: 'editorial-split', label: '图文分区', summary: '图像与正文各占明确区域，适合定义、场景和产品说明。' },
+  { id: 'parallel-groups', label: '并列归纳', summary: '多个同级信息组按统一节奏展开，可有轻重差异。' },
+  { id: 'process-flow', label: '流程演进', summary: '用方向或时间顺序呈现步骤、变化和结果。' },
+  { id: 'system-map', label: '系统关系', summary: '呈现中心与分支、层级、输入输出或依赖关系。' },
+  { id: 'contrast-proof', label: '对比论证', summary: '把两方或多方放在共同维度下比较，突出差异和结论。' },
+  { id: 'data-evidence', label: '数据证据', summary: '让真实图表、参数或证据成为主角，并给出清晰结论。' }
 ];
 
 function inferDiagram(value) {
@@ -62,6 +66,17 @@ function normalizeVisualDirection(option) {
     summary,
     diagram: option.diagram || inferDiagram(`${id} ${label} ${summary}`)
   };
+}
+
+function recommendOrganization(slide, informationGroups) {
+  const topic = `${slide.title || slide.name || ''} ${informationGroups.map(group => group.label).join(' ')}`;
+  if (/章节页|过渡页|封面|谢谢|主视觉/.test(topic) || slide.page_mode === 'visual-led') return 'hero-focus';
+  if (/对比|比较|竞品|竞争优势|差异|优劣/.test(topic)) return 'contrast-proof';
+  if (/参数|规格|数据|指标|证据|案例/.test(topic)) return 'data-evidence';
+  if (/拓扑|架构|系统组成|网络|层级|协同/.test(topic)) return 'system-map';
+  if (/流程|环节|步骤|时间线|演进|路径/.test(topic)) return 'process-flow';
+  if (informationGroups.length >= 3) return 'parallel-groups';
+  return 'editorial-split';
 }
 
 function asArray(value) {
@@ -274,6 +289,7 @@ function normalizeSlide(slide, index, legacySlide = null) {
   const derivedLocked = extractLockedFromRaw(slide.raw || slide.source || slide.content);
   const fallbackLocked = uniqStrings([...inheritedLocked, ...derivedLocked]);
   const defaultVisualExpressiveness = slide.defaultVisualExpressiveness || slide.visual_expressiveness || null;
+  const recommendedOrganization = recommendOrganization(slide, informationGroups);
   return {
     id: slide.id || `slide${String(index + 1).padStart(2, '0')}`,
     label: slide.label || `Slide${String(index + 1).padStart(2, '0')}`,
@@ -281,9 +297,9 @@ function normalizeSlide(slide, index, legacySlide = null) {
     role,
     summary: summary === role ? '' : summary,
     raw: slide.raw || slide.source || slide.content || `页面标题：${title}`,
-    visualDirections: (asArray(slide.visualDirections || slide.visual_directions).length
-      ? asArray(slide.visualDirections || slide.visual_directions)
-      : defaultVisualDirections).map(normalizeVisualDirection),
+    visualDirections: [...defaultVisualDirections]
+      .sort((a, b) => Number(b.id === recommendedOrganization) - Number(a.id === recommendedOrganization))
+      .map(normalizeVisualDirection),
     locked: currentLocked.length ? currentLocked : fallbackLocked,
     sectionTitles: sectionTitles.length ? sectionTitles : informationGroups.map(group => group.label),
     defaultMode: slide.defaultMode || slide.page_mode || 'module-structure',
@@ -320,8 +336,86 @@ async function readExistingBoardData(decisionPath) {
   return JSON.parse(match[1]);
 }
 
+function sourceRelativePath(projectRoot, value) {
+  const absolute = path.resolve(projectRoot, value);
+  const relative = path.relative(projectRoot, absolute);
+  if (!relative || relative.startsWith('..') || path.isAbsolute(relative)) throw new Error(`Source document must stay inside the project: ${value}`);
+  return { absolute, relative: relative.replaceAll('\\', '/') };
+}
+
+function sourcePageNumber(slideId) {
+  const match = String(slideId || '').match(/^slide0*(\d+)$/i);
+  return match ? Number(match[1]) : null;
+}
+
+function parseSourcePages(markdown) {
+  const text = markdown.replace(/^\uFEFF/, '');
+  const marker = /^(#{1,6})[ \t]*(?:第[ \t]*0*(\d+)[ \t]*页|slide[ \t]*0*(\d+)|page[ \t]*0*(\d+)|p[ \t]*0*(\d+))[^\r\n]*(?:\r?\n|$)/gim;
+  const headings = [...text.matchAll(marker)].map(match => ({
+    level: match[1].length,
+    number: Number(match[2] || match[3] || match[4] || match[5]),
+    start: match.index
+  }));
+  return new Map(headings.map((heading, index) => {
+    const next = headings.slice(index + 1).find(item => item.level === heading.level);
+    const end = next ? next.start : text.length;
+    return [heading.number, text.slice(heading.start, end).replace(/(?:\r?\n)+$/, '')];
+  }));
+}
+
+async function ensureDecisionVersion(options, decisionDir, optionsPath) {
+  const projectRoot = path.dirname(decisionDir);
+  let source = options.source_document && typeof options.source_document === 'object' ? { ...options.source_document } : {};
+  let originalPath = source.original_path || '';
+
+  if (!source.path && !originalPath) {
+    if (existsSync(path.join(projectRoot, 'PPT_Outline_Draft.md'))) originalPath = 'PPT_Outline_Draft.md';
+    else {
+      const sourceDir = path.join(projectRoot, 'source_documents');
+      if (existsSync(sourceDir)) {
+        const candidates = (await readdir(sourceDir, { withFileTypes: true }))
+          .filter(item => item.isFile() && /\.md$/i.test(item.name) && !/_决策版本\.md$/i.test(item.name));
+        if (candidates.length > 1) throw new Error('Multiple Markdown sources found. Set options.source_document.original_path and path before creating the decision board.');
+        if (candidates.length === 1) originalPath = path.posix.join('source_documents', candidates[0].name);
+      }
+    }
+  }
+
+  if (!source.path && originalPath) {
+    const original = sourceRelativePath(projectRoot, originalPath);
+    if (path.extname(original.absolute).toLowerCase() !== '.md') throw new Error('Create the decision version from the normalized Markdown outline.');
+    source.path = source.decision_version_path || original.relative.replace(/\.md$/i, '_决策版本.md');
+    source.original_path = original.relative;
+  }
+  if (!source.path) return null;
+
+  const target = sourceRelativePath(projectRoot, source.path);
+  if (path.extname(target.absolute).toLowerCase() !== '.md') throw new Error('The decision-version source must be Markdown (.md).');
+  if (!existsSync(target.absolute)) {
+    if (!source.original_path) throw new Error(`Decision-version document not found: ${source.path}`);
+    const original = sourceRelativePath(projectRoot, source.original_path);
+    await mkdir(path.dirname(target.absolute), { recursive: true });
+    await copyFile(original.absolute, target.absolute);
+  }
+
+  source.path = target.relative;
+  source.original_path = source.original_path ? sourceRelativePath(projectRoot, source.original_path).relative : '';
+  source.name = source.name || path.basename(target.absolute);
+  source.type = 'markdown';
+  options.source_document = source;
+
+  const pageMap = parseSourcePages(await readFile(target.absolute, 'utf8'));
+  for (const slide of asArray(options.slides || options.pages || options.outline_pages)) {
+    const pageNumber = sourcePageNumber(slide.id);
+    if (pageNumber && pageMap.has(pageNumber)) slide.raw = pageMap.get(pageNumber);
+  }
+  await writeFile(optionsPath, JSON.stringify(options, null, 2), 'utf8');
+  return { path: source.path, name: source.name, originalPath: source.original_path };
+}
+
 const options = await readJsonIfExists(optionsPath);
 const existingBoardData = await readExistingBoardData(decisionDir);
+const sourceDocument = await ensureDecisionVersion(options, decisionDir, optionsPath);
 const legacySlides = indexLegacySlides(existingBoardData);
 const projectName = options.project || options.project_name || options.title || path.basename(path.dirname(decisionDir)) || 'PPT 项目';
 const paletteSource = asArray(options.palettes || options.palette_directions || options.global_palettes);
@@ -332,7 +426,7 @@ const slides = (slideSource.length ? slideSource : [normalizeSlide({ title: '待
 const initialActive = slides[0]?.id || 'slide01';
 const defaultVisualExpressiveness = options.visual_expressiveness || options.defaultVisualExpressiveness || slides[0]?.defaultVisualExpressiveness || 'polished-enhanced';
 const defaultCreativeExtensionLevel = options.creative_extension_level || options.defaultCreativeExtensionLevel || deriveCreativeExtensionLevel(defaultVisualExpressiveness);
-const boardData = { projectName, palettes, slides, initialActive, defaultCreativeExtensionLevel };
+const boardData = { projectName, palettes, slides, initialActive, defaultCreativeExtensionLevel, ...(sourceDocument ? { sourceDocument } : {}) };
 
 const html = await readFile(templatePath, 'utf8');
 const commonOptionsJs = await readFile(commonOptionsPath, 'utf8');

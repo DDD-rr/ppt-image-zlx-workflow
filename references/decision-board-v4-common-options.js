@@ -10,6 +10,15 @@
       { id: 'no-title-reserved', label: '不叠加标题' }
     ]
   },
+  organizationOptions: [
+    { id: 'hero-focus', label: '主张聚焦', summary: '一个核心观点或主体成为视觉焦点，其他信息围绕它解释。' },
+    { id: 'editorial-split', label: '图文分区', summary: '图像与正文各占明确区域，适合定义、场景和产品说明。' },
+    { id: 'parallel-groups', label: '并列归纳', summary: '多个同级信息组按统一节奏展开，可有轻重差异。' },
+    { id: 'process-flow', label: '流程演进', summary: '用方向或时间顺序呈现步骤、变化和结果。' },
+    { id: 'system-map', label: '系统关系', summary: '呈现中心与分支、层级、输入输出或依赖关系。' },
+    { id: 'contrast-proof', label: '对比论证', summary: '把两方或多方放在共同维度下比较，突出差异和结论。' },
+    { id: 'data-evidence', label: '数据证据', summary: '让真实图表、参数或证据成为主角，并给出清晰结论。' }
+  ],
   commonOptions: {
     page_mode: [
       {

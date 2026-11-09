@@ -21,6 +21,10 @@ Before creating `options.json`, preserve authoritative source page boundaries. I
 
 For each slide in `options.json`, `raw` must be the exact original source text for that slide, including headings, tables, lists, and source wording. Do not replace it with an outline summary, normalized rewrite, or shortened prompt material. Put any condensed explanation in `summary` only.
 
+Before creating the board, create a project-local Markdown decision version of the material that supplies each page's `raw` text. Preserve the existing source document unchanged; name the copy `<source-name>_决策版本.md` and store its project-relative path in `options.source_document.path`, with the untouched file in `options.source_document.original_path`. When the material is already an assistant-generated `PPT_Outline_Draft.md`, copy that outline. The decision board's raw editor, page extraction, downstream prompts, and save/update actions must all use the decision-version copy as their source of truth.
+
+The raw-material panel is a visually distinct module above the page-choice controls. Show the linked decision-version filename and provide three icon-plus-label actions at the upper right, ordered `打开文件位置`, `更新`, `保存`. Open the containing folder with the decision-version file selected; Update reads the current page section from the decision version into the board; Save writes board edits back to that section. Keep Save primary, Update secondary, and file location tertiary. Put the small sync hint at the upper right beside the preview/edit tabs. Remove the redundant separator above the raw-material module. Include a formatted Markdown preview and an edit mode; make both views generously sized and vertically resizable. Do not allow review submission while raw text is unsaved, because downstream generation must not silently use stale material. Detect concurrent edits before saving and ask the user to update before overwriting. A page material change invalidates that page's checked state.
+
 For each slide in `options.json`, write `locked` as a compact array of must-preserve facts, terms, product names, branded labels, exact metrics, and other wording that should survive later prompt compression. Prefer extracting these items from the slide's `关键事实/术语/数据` section instead of inventing a second interpretation pass. Do not leave `locked` empty when the page clearly contains must-keep terms or numbers.
 
 For each slide header, keep role and summary semantically different. role is the review task for that page, such as what visual or information tradeoff the user is deciding. summary is the source-content synopsis. The V4.1 board renders both fields; duplicating the same sentence creates visible repeated copy.
@@ -51,7 +55,7 @@ Do this by default rather than only when the user asks. Many users can open the 
 
 Keep choices few and meaningful:
 
-- Exactly three visual directions by default.
+- Offer the same seven broad per-page organization schemes: 主张聚焦、图文分区、并列归纳、流程演进、系统关系、对比论证、数据证据. These describe how information is arranged, not an industry scene or a fixed illustration style. Recommend one from page meaning; let subject, material and scene details come from source content and page notes. Do not replace these schemes with topic-specific choices such as a control room, a device, or an executive report.
 - Exactly three palette directions by default.
 - Overall dark/light/assistant-recommended style selection belongs in the board when the board is used. Do not ask a separate pre-board style question unless the user skipped the board or the board is unavailable and the user approved a chat fallback.
 - Density choices: `speaker-led`, `reading-first`, `hybrid`.
@@ -72,20 +76,16 @@ Keep choices few and meaningful:
 
 Density and page treatment options must include simple visual layout cues in the board, not text-only descriptions. Use compact diagrams or preview images to show the difference between speaker-led, reading-first, hybrid, body-text carrier, feature overview, and hybrid page treatment.
 
-Visual directions should also be visually legible. Prefer a preview image when one exists. When no preview image exists yet, use a compact scene/composition diagram that communicates the direction, such as command-center monitors, architecture cutaway, editorial paper, product brochure, or dark-stage hero composition. The visual cue is approximate; the final sample image remains the proof.
+Organization choices must have compact previews that show the information arrangement itself: focal point, image-text split, parallel groups, directional sequence, connected system, shared comparison dimensions, or evidence feeding a conclusion. Avoid topic-specific scene previews here; the final generated slide will supply the topic-specific visual.
 
-The compact diagram must match the option text. Do not let architecture, map/gap, report/evidence, comparison/table, or broadcast/control-room options fall back to the same generic hero diagram. If an option has no explicit `diagram`, infer one from its id, label, and summary; otherwise add a suitable `diagram` value when creating `options.json`.
+The compact preview must match the option text and be distinct from the other six schemes. For a legacy topic-specific `visual_direction` id, show its old label as a historical selection without falsely highlighting a broad category; keep the saved value until the user actually chooses a new category for that page.
 
-Each visual direction must include:
+Each organization scheme must include:
 
 - `id`: short stable id.
 - `label`: user-facing name.
 - `summary`: one sentence.
-- `best_for`: where it works.
-- `tradeoff`: what it sacrifices.
-- `risk`: likely failure mode.
-- `avoid_reason`: why a user might reject it.
-- `preview`: optional relative image path under `decision_board/previews/`.
+- a distinct visual preview of its information relationship.
 
 Each palette direction must include:
 
