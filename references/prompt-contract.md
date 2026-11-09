@@ -54,7 +54,7 @@ Every body-image prompt must include:
 When these fields exist in `PPT_Page_Image_Guide.md`, carry them into the prompt rather than re-deciding them:
 
 - page type and page role;
-- `page_mode`, `information_groups`, `group_weights`, `primary_emphasis_method`, `required_section_titles`, source-order first reading zone, and visual-anchor zone;
+- `page_mode`, `information_groups`, `group_weights`, `excluded_information_groups`, `primary_emphasis_method`, `required_section_titles`, source-order first reading zone, and visual-anchor zone;
 - composition pattern and anti-flattening rule;
 - whether reading-first or body-text-carrier still needs a visual anchor, path, document object, product proof, or shared system instead of full-screen flat module tiling;
 - palette brief, page color role, component color roles, and visual intensity scale;
@@ -62,7 +62,8 @@ When these fields exist in `PPT_Page_Image_Guide.md`, carry them into the prompt
 - structured color-system interpretation when it exists in `style_decision.json`, `Master_Template.md`, or `PPT_Page_Image_Guide.md`; do not reduce it back to a palette label alone;
 - title zone and first body-module boundary;
 - real-image role and actual input method;
-- compression order and auxiliary degradation rules.
+- compression order and auxiliary degradation rules;
+- hidden-group exclusions override raw-source preservation for this slide, but never modify the source documents.
 - Internally derived `creative_extension_level`, `expressive_mechanism`, semantic visual extensions, and object/material carriers when present.
 
 

@@ -371,6 +371,17 @@
       font-weight: 900;
       color: var(--ink);
     }
+    .weight-title-group { display: flex; align-items: center; gap: 8px; min-width: 0; }
+    .weight-title-group h3 { margin: 0; }
+    .weight-help { position: relative; z-index: 4; flex: 0 0 auto; }
+    .weight-help > summary { display: grid; place-items: center; width: 22px; height: 22px; border: 1px solid #7fa8ca; border-radius: 50%; background: #fff; color: #245d91; font-size: 13px; font-weight: 800; line-height: 1; cursor: pointer; list-style: none; }
+    .weight-help > summary::-webkit-details-marker { display: none; }
+    .weight-help > summary:hover { background: #e7f3ff; border-color: #4e8fc8; }
+    .weight-help > summary:focus-visible { outline: 3px solid #75b8f4; outline-offset: 2px; }
+    .weight-help-popover { position: absolute; top: calc(100% + 8px); left: -4px; display: none; width: min(390px, calc(100vw - 48px)); gap: 10px; padding: 14px 16px; border: 1px solid #9bbbd7; border-radius: 10px; background: #fff; box-shadow: 0 12px 28px rgba(23, 76, 137, .2); color: #183452; }
+    .weight-help[open] .weight-help-popover { display: grid; }
+    .weight-help-item { display: grid; grid-template-columns: 72px 1fr; gap: 10px; align-items: start; font-size: 12px; line-height: 1.5; }
+    .weight-help-item strong { color: #174c89; }
     .weight-options {
       display: grid;
       grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -807,7 +818,7 @@
     function initState() {
       slides.forEach(slide => {
         const mode = commonOptions.page_mode.find(item => item.id === (slide.defaultMode || 'module-structure')) || commonOptions.page_mode[1];
-        const groupWeights = Object.fromEntries(getInformationGroups(slide).map(group => [group.id, group.defaultWeight || 'secondary']));
+        const groupWeights = Object.fromEntries(getInformationGroups(slide).map(group => [group.id, normalizeGroupWeight(group.defaultWeight || 'secondary')]));
         state.slides[slide.id] = {
           title: slide.title,
           page_mode: mode.id,
@@ -923,6 +934,23 @@
         label: title,
         defaultWeight: index === 0 ? 'primary' : 'secondary'
       }));
+    }
+
+    function normalizeGroupWeight(weight) {
+      if (weight === 'supporting' || weight === 'light') return 'graphic';
+      return weightOptions.some(option => option.id === weight) ? weight : 'secondary';
+    }
+
+    function normalizeGroupWeights(slideState) {
+      slideState.group_weights ||= {};
+      const hadLegacyWeight = Object.values(slideState.group_weights).some(weight => weight === 'supporting' || weight === 'light');
+      for (const [groupId, weight] of Object.entries(slideState.group_weights)) {
+        slideState.group_weights[groupId] = normalizeGroupWeight(weight);
+      }
+      for (const group of slideState.information_groups || []) {
+        if (!slideState.group_weights[group.id]) slideState.group_weights[group.id] = normalizeGroupWeight(group.defaultWeight || 'secondary');
+      }
+      if (hadLegacyWeight && slideState.checked && slideState._checked_signature) slideState._checked_signature = reviewSignature(slideState);
     }
 
     function applyPageMode(slideState, modeId) {
@@ -1310,7 +1338,7 @@
       const s = state.slides[slide.id];
       const groups = s.information_groups || getInformationGroups(slide);
       const wrap = el('div', 'content-group');
-      wrap.innerHTML = `<div class="group-head"><h3>信息组权重</h3><span class="hint">告诉生成器谁是主角，谁只做示意</span></div>`;
+      wrap.innerHTML = `<div class="group-head"><div class="weight-title-group"><h3>信息组权重</h3><details class="weight-help"><summary aria-label="查看信息组权重说明" title="查看权重说明">?</summary><div class="weight-help-popover" role="note"><div class="weight-help-item"><strong>主重点</strong><span>核心信息，优先保证内容完整、醒目；不自动代表版面最大，也不改变原文顺序。</span></div><div class="weight-help-item"><strong>次重点</strong><span>重要支撑信息，保留主要内容，视觉层级略低于主重点。</span></div><div class="weight-help-item"><strong>图示化</strong><span>优先用图标、Logo、示意图或融入主视觉呈现，只保留必要短标签，不放说明性段落。</span></div><div class="weight-help-item"><strong>不显示</strong><span>从本页生成内容中排除该组，即使原始材料或旧分组里仍有它；不修改源材料。</span></div></div></details></div><span class="hint">告诉生成器各信息组应如何呈现</span></div>`;
       const table = el('div', 'weight-table');
       groups.forEach(group => {
         const row = el('div', 'weight-row');
@@ -1320,6 +1348,7 @@
           const button = el('button', 'weight-option' + (s.group_weights[group.id] === option.id ? ' selected' : ''), option.label);
           button.type = 'button';
           button.title = option.summary;
+          button.setAttribute('aria-pressed', String(s.group_weights[group.id] === option.id));
           button.addEventListener('click', () => { s.group_weights[group.id] = option.id; renderAll(false); });
           options.appendChild(button);
         });
@@ -1620,6 +1649,16 @@
       const palette = palettes.find(p => p.id === state.palette_direction) || palettes[0];
       const firstSlideId = slides[0]?.id || Object.keys(state.slides)[0];
       const first = state.slides[firstSlideId] || {};
+      const decisionSlides = JSON.parse(JSON.stringify(state.slides));
+      for (const slideState of Object.values(decisionSlides)) {
+        normalizeGroupWeights(slideState);
+        const excluded = (slideState.information_groups || []).filter(group => slideState.group_weights[group.id] === 'hidden');
+        const excludedLabels = new Set(excluded.map(group => group.label));
+        slideState.excluded_information_groups = excluded.map(({ id, label }) => ({ id, label }));
+        slideState.required_section_titles = (slideState.required_section_titles || []).filter(title => !excludedLabels.has(title));
+        slideState.locked_text = (slideState.locked_text || []).filter(text => !excludedLabels.has(text));
+        slideState.custom_locked_text = (slideState.custom_locked_text || []).filter(text => !excludedLabels.has(text));
+      }
       return {
         schema_version: 'visual_decision_board_v4_1',
         content_handling: state.content_handling,
@@ -1650,7 +1689,7 @@
             ? '去标题版：不叠加主标题，但主体图必须保留标题安全区，最终图片仍保存到 final_image。'
             : '叠加标题版：生成主体图后使用本地标题样式叠加主标题。'
         },
-        slides: state.slides,
+        slides: decisionSlides,
         global_notes: state.global_notes,
         confirmed_at: new Date().toISOString()
       };
@@ -1813,6 +1852,7 @@
             }
           }
           for (const slide of slides) if (draft.state.slides[slide.id]) Object.assign(state.slides[slide.id], draft.state.slides[slide.id]);
+          for (const slide of slides) normalizeGroupWeights(state.slides[slide.id]);
           if (!state.slides[state.active]) state.active = slides[0].id;
           document.getElementById('saveStatus').textContent = '已恢复未提交的草稿';
         } else if (draft.stale) document.getElementById('saveStatus').textContent = '页面已变化，旧草稿未恢复';

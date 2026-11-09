@@ -1,10 +1,13 @@
-﻿# Information Priority
+# Information Priority
 
 Use when the decision board, page guide, prompt, or QA mentions `page_mode`, `information_groups`, `group_weights`, `primary_emphasis_method`, `required_section_titles`, dense modules, or anti-flattening.
 
 ## Core Meaning
 
-- `group_weights.primary` means information or reading priority by default. It does not mean largest area unless `primary_emphasis_method` is `area-priority`.
+- `group_weights.primary` means information or reading priority by default. Preserve the most text and give it the clearest reading target; it does not mean largest area unless `primary_emphasis_method` is `area-priority`.
+- `group_weights.secondary` means preserve important supporting details while keeping the group below the primary group.
+- `group_weights.graphic` means carry the information mainly through icons, logos, diagrams, or integrated visual forms; keep only short identification labels and avoid explanatory paragraphs.
+- `group_weights.hidden` means exclude that group from the generated slide, even when it remains in source text, stale group data, locked text, or required-title candidates. It does not modify either source document.
 - `reading-priority`: the primary group is read first, keeps the most text fidelity, and has the clearest hierarchy.
 - `area-priority`: the primary group owns the largest main region and should receive enough space.
 - `visual-anchor`: the primary group is remembered through a strong object, scene, proof, or transformation. It does not change source order, does not automatically move the group to the upper-left first reading position, and does not automatically make the anchor the largest area.
@@ -19,7 +22,8 @@ Translate board decisions into:
 - visual-anchor size, role, and position relative to source-order reading;
 - area allocation;
 - auxiliary-content degradation;
-- required section labels;
+- required section labels after removing labels belonging to hidden groups;
+- explicit exclusions from `excluded_information_groups`;
 - composition relationship rather than only module count.
 - source-order first reading position versus visual-anchor position; keep them separate unless `narrative-reorder` is explicitly confirmed.
 
@@ -45,12 +49,13 @@ When `required_section_titles` exists, treat the titles as information-structure
 
 Include:
 
-- `page_mode`, `information_groups`, `group_weights`, and `primary_emphasis_method` when available;
+- `page_mode`, `information_groups`, `group_weights`, `excluded_information_groups`, and `primary_emphasis_method` when available;
 - explicit statement that primary means emphasis and fidelity priority, not source-order changes; only explicit narrative reorder may alter module sequence;
 - explicit statement of the first source-order module and its first reading zone, plus the visual-anchor zone when different;
 - composition pattern and object identity for each information group;
 - module role gate result when three to six peer modules appear;
 - text fidelity tiers and required section labels;
+- explicit instruction to omit hidden groups, their associated locked text, and their source sections from the generated page;
 - compression order when space is tight.
 
 ## QA Signals
@@ -60,7 +65,8 @@ Reject outputs where:
 - primary information becomes only the largest rectangle while source order, reading path, or text fidelity weakens;
 - a primary group or visual anchor is moved before earlier source modules without an explicit narrative-reorder decision;
 - the strongest scene or object occupies the upper-left first reading zone while the first source-order module is pushed to a secondary area without approval;
-- required first-level information groups disappear silently;
+- visible first-level information groups disappear without a hidden-weight decision;
+- hidden groups appear in the page, image prompt, required labels, or locked text;
 - modules are tidy but generic boxes, icons, and text without object/material identity;
 - main modules form only a flat equal-card grid;
 - auxiliary modules become a second hero;

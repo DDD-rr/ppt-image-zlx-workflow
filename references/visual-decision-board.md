@@ -173,12 +173,14 @@ The board should let the user assign each group one of four weights:
 
 - `primary`: main information priority; preserve more text and make it the clearest reading target.
 - `secondary`: preserve enough detail but keep below the primary group.
-- `supporting`: use as proof, context, anchor, or schematic support.
-- `light`: compress into icons, tags, brief labels, or background semantics.
+- `graphic`: prioritize icons, logos, diagrams, or integration into the main visual; retain only short identification labels and avoid explanatory paragraphs.
+- `hidden`: exclude the information group from this slide's generated content, even if it remains in stale group data or source text. This choice does not alter the source document.
 
 Do not equate `primary` with the largest area unless `primary_emphasis_method` is `area-priority`. A `reading-priority` primary group may be smaller than a product image but must have the strongest reading path, best text fidelity, and most complete information. A `visual-anchor` supporting image can be medium sized when it improves memorability without becoming the main message.
 
-Preserve `source_order` separately from `group_weights`. The first-level information groups should be saved and rendered in the outline/source order by default. `primary`, `secondary`, `supporting`, and `light` change emphasis and degradation order only; they do not reorder modules. If a user wants the visual reading order to differ from source order, collect an explicit narrative-reorder decision and record it in project data.
+For `graphic`, use semantic visual forms as the information carrier and limit text to concise labels. For `hidden`, add the group to `excluded_information_groups`, remove its label from `required_section_titles`, and exclude its associated source and locked content from the generated page. The exclusion applies only to this slide output; it never edits the original or decision-version source.
+
+Preserve `source_order` separately from `group_weights`. The first-level information groups should be saved and rendered in the outline/source order by default. `primary`, `secondary`, and `graphic` change presentation priority only; `hidden` excludes a group from this slide output. None of these settings reorder the remaining modules. If a user wants the visual reading order to differ from source order, collect an explicit narrative-reorder decision and record it in project data.
 
 When saving JSON, include:
 
@@ -188,12 +190,17 @@ When saving JSON, include:
   "primary_emphasis_method": "reading-priority",
   "information_groups": [
     { "id": "core_features", "label": "核心功能" },
-    { "id": "product_shape", "label": "产品形态" }
+    { "id": "product_shape", "label": "产品形态" },
+    { "id": "legacy_notes", "label": "已删减内容" }
   ],
   "group_weights": {
     "core_features": "primary",
-    "product_shape": "supporting"
-  }
+    "product_shape": "graphic",
+    "legacy_notes": "hidden"
+  },
+  "excluded_information_groups": [
+    { "id": "legacy_notes", "label": "已删减内容" }
+  ]
 }
 ```
 
@@ -204,7 +211,7 @@ When a page needs visible first-level information group labels such as `产品�
 Downstream prompts and QA must treat `required_section_titles` as information-structure requirements:
 
 - They should appear as section labels or equivalent visible group headings.
-- They should not be silently dropped when content is modularized.
+- They should not be silently dropped when content is modularized, unless their information group is explicitly set to `hidden`.
 - Reading-first and body-text-carrier pages should preserve these titles by default.
 
 ## Real Images
@@ -355,7 +362,7 @@ In `PPT_Page_Image_Guide.md`, translate:
 - `page_treatment` into page type, content blueprint, and module priorities.
 - `title_overlay.mode` into finalization behavior. For `overlay-title`, create and apply `title_style.json`. For `no-title-reserved`, keep a clear title-safe region in every body prompt, run `scripts/add_slide_titles.ps1 -NoTitleOverlay`, save the outputs under `final_image/`, and label the set `去标题版`.
 - `page_mode` into the first-pass page type, while still preserving explicit `density` and `page_treatment` as the downstream compatibility fields.
-- `information_groups`, `group_weights`, and `primary_emphasis_method` into reading order, text fidelity, area allocation, visual anchor size, and auxiliary-content degradation. Do not translate `primary` into "largest area" unless `primary_emphasis_method` is `area-priority`.
+- `information_groups`, `group_weights`, `excluded_information_groups`, and `primary_emphasis_method` into reading order, text fidelity, area allocation, visual anchor size, graphic-first presentation, and auxiliary-content degradation. Exclude hidden groups from generated content and required titles. Do not translate `primary` into "largest area" unless `primary_emphasis_method` is `area-priority`.
 - `visual_strength`, `visual_expressiveness`, `creative_extension_level`, `expressive_mechanism`, `visual_focus`, and `section_notes.visual_intent` into the page's primary visual anchor, material richness, semantic decoration allowance, auxiliary-content degradation, module-vs-text tradeoff, and explicit creative boundary. High expressiveness should choose content-driven mechanisms such as scene depth, object metaphor, narrative path, contrast stage, evidence wall, system cockpit, material editorial treatment, or hero detail; it must not be implemented only as more glowing boxes.
 - `required_section_titles` into visible page section labels and QA checks.
 - `real_image_policy: "skip_when_missing"` into real-image intake decisions; do not substitute missing real images with fake-real evidence.
