@@ -366,6 +366,8 @@ If the user explicitly skips the board, continue with autonomous judgment and no
 
 For this user's workflow, the Visual Decision Board must default to the enhanced V4.1 review board, not the minimal global-only board. Use `references/decision-board-v4-requirements.md` as the acceptance checklist.
 
+Maintain clear hierarchy within the selected theme rather than relying on one pale hue. Follow Ant Design's control hierarchy: use a filled accent treatment for the primary action; give secondary and tertiary actions visible borders, distinct lightness values, and clear hover/focus states. Separate page, panel, submodule, and control surfaces with deliberate shifts in lightness, border contrast, and restrained shadows. Keep text and control boundaries legible against their surfaces; do not make all controls the same pale fill, and do not add boxes where spacing or typography already establishes hierarchy. Preserve semantic colors for states such as success, warning, and error.
+
 Create the reusable board with `scripts/create-v4-review-board.mjs` after `decision_board/options.json` exists. Serve the resulting `decision_board/index.html` with `scripts/v4-review-server.mjs`.
 
 A board is not complete unless it includes:
