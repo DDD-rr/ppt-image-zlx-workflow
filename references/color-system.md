@@ -14,7 +14,7 @@ Use when deciding project palette, writing page guides, or prompting pages where
 - Treat gradient as part of the color system, not as optional decoration added at the end. Decide where gradient carries atmosphere, spatial depth, surface material change, or local highlight logic before prompt generation.
 - Prefer low-cost structured reuse over repeated free-form color analysis. Infer the color system once, then pass compact structured fields downstream into `Master_Template.md`, `PPT_Page_Image_Guide.md`, prompts, and QA.
 - Adapt the same color system by page role. Hardware, control-room, dark-scene, reading-first, architecture, evidence, and atmosphere-led pages should not all use the same hue balance even when they share one project palette.
-- Every page should preserve the selected palette as a role system, not just as a loose mood. Page-level proportions may vary, but the shared background family, primary accent, secondary/depth accent, neutral/material colors, and text/readability roles should remain visible unless a documented page exception says otherwise.
+- Every page should preserve the selected palette as its default role system, not just as a loose mood. Page-level proportions may vary, but the shared background family, primary accent, secondary/depth accent, neutral/material colors, and text/readability roles should remain visible. The palette is not a ban on semantically necessary status/signal colors: when the source meaning calls for it, use red for danger/unsafe, amber or gold for caution, and green for safe/positive states, even if they are outside the base palette. Keep these colors local to the relevant signal, apply them consistently, and maintain readable contrast; do not recolor unrelated elements or let status colors take over the page.
 - Add an anti-collapse correction when the chosen palette is likely to drift into a generic safe output, especially for dark hardware, control-room, dashboard, or night-scene pages. Preserve the selected palette family instead of letting the output collapse into default black-blue-gray.
 - Never treat `palette_direction` as sufficient downstream color input by itself. Before image generation, resolve it into a reusable color-role contract and carry that contract forward instead of repeating only the palette label.
 
@@ -103,7 +103,7 @@ For same-family pages, require at least:
 
 ## Status Colors
 
-Use red, green, gold, and other status colors only when their meaning is essential. If the page does not need semantic status, express category, risk, priority, or conclusion through position, type scale, tonal steps, material hierarchy, or reading path.
+Use red, green, gold, and other status colors when their semantic meaning is needed to read the information correctly (for example danger/unsafe, safe/positive, or caution). These status colors may sit outside the project palette, but should remain localized to the corresponding item, marker, label, or region and retain sufficient contrast. Do not add status colors decoratively. If the page does not need semantic status, express category, risk, priority, or conclusion through position, type scale, tonal steps, material hierarchy, or reading path.
 
 ## Prompt Requirements
 
