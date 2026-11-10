@@ -144,6 +144,9 @@
   }
   async function refresh() {
     if (!bridge()) return;
+    const boardTitle = document.getElementById('boardTitle');
+    if (boardTitle && !boardTitle.textContent.includes('逐页版')) boardTitle.textContent += ' · 逐页版';
+    if (!document.title.includes('逐页版')) document.title += ' · 逐页版';
     snapshot = await api(flow('/snapshot'));
     const current = bridge().active();
     if (lastPage !== current) { error = ''; lastPage = current; }
