@@ -1,10 +1,8 @@
 import { createServer } from 'node:http';
-import { readFile, writeFile, mkdir, rename } from 'node:fs/promises';
+import { readFile, writeFile, mkdir, rename, readdir, stat } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { createHash, randomUUID } from 'node:crypto';
-import { spawn } from 'node:child_process';
 
 function isPort(value) { return /^\d+$/.test(String(value || '')); }
 const firstArg = process.argv[2];
@@ -21,6 +19,7 @@ const optionsPath = path.join(root, 'options.json');
 const projectRoot = path.resolve(root, '..');
 let boardHash = await currentBoardHash();
 const requiresContentHandling = (await readFile(path.join(root, 'index.html'), 'utf8')).includes('id="contentHandlingControl"');
+const generatedImageHashCache = new Map();
 
 const mimeTypes = {
   '.html': 'text/html; charset=utf-8',
@@ -181,7 +180,59 @@ createServer(async (req, res) => {
           pages[slide.id] = { raw, pageHash: hashText(raw), outOfSync: raw !== slide.raw };
         } catch {}
       }
-      return json(res, 200, { name: boardData.sourceDocument.name || path.basename(filePath), path: boardData.sourceDocument.path, pages });
+      return json(res, 200, { name: boardData.sourceDocument.name || path.basename(filePath), path: filePath, pages });
+    }
+    if (req.method === 'GET' && url.pathname === '/api/generated-images') {
+      const slideId = url.searchParams.get('slideId') || '';
+      const number = pageNumberFromId(slideId);
+      if (!number) return json(res, 400, { error: '页面编号无效。' });
+      const prefix = `slide_${String(number).padStart(2, '0')}`;
+      const imagePattern = new RegExp(`^${prefix}(?:_[A-Za-z0-9-]+)?\\.(?:png|jpe?g|webp)$`, 'i');
+      const images = [];
+      const imagesByHash = new Map();
+      for (const kind of ['final_image', 'body_image']) {
+        const directory = path.join(projectRoot, kind);
+        let names = [];
+        try { names = await readdir(directory); } catch {}
+        for (const name of names.filter(item => imagePattern.test(item)).sort((a, b) => a.length - b.length || a.localeCompare(b))) {
+          try {
+            const filePath = path.join(directory, name);
+            const fileStat = await stat(filePath);
+            if (!fileStat.isFile()) continue;
+            const cachedHash = generatedImageHashCache.get(filePath);
+            const hash = cachedHash && cachedHash.size === fileStat.size && cachedHash.modifiedAt === fileStat.mtimeMs
+              ? cachedHash.hash
+              : createHash('sha256').update(await readFile(filePath)).digest('hex');
+            generatedImageHashCache.set(filePath, { size: fileStat.size, modifiedAt: fileStat.mtimeMs, hash });
+            const image = { kind: kind === 'final_image' ? 'final' : 'body', name, path: filePath, modifiedAt: fileStat.mtimeMs, url: `/api/generated-image/${kind}/${encodeURIComponent(name)}?v=${fileStat.mtimeMs}` };
+            const duplicate = imagesByHash.get(hash);
+            if (!duplicate || (image.kind === 'final' && duplicate.kind !== 'final')) {
+              if (duplicate) images[images.indexOf(duplicate)] = image;
+              else images.push(image);
+              imagesByHash.set(hash, image);
+            }
+          } catch {}
+        }
+      }
+      images.sort((a, b) => b.modifiedAt - a.modifiedAt || (a.kind === b.kind ? a.name.localeCompare(b.name) : a.kind === 'final' ? -1 : 1));
+      const chronological = [...images].sort((a, b) => a.modifiedAt - b.modifiedAt || a.name.localeCompare(b.name));
+      const versionNumbers = new Map(chronological.map((image, index) => [image.url, index + 1]));
+      const versions = images.map(image => ({ ...image, versionNumber: versionNumbers.get(image.url) }));
+      return json(res, 200, { slideId, images: versions, preferred: versions.find(item => item.kind === 'final')?.url || versions[0]?.url || null });
+    }
+    if (req.method === 'GET' && url.pathname.startsWith('/api/generated-image/')) {
+      const match = url.pathname.match(/^\/api\/generated-image\/(final_image|body_image)\/([^/]+)$/);
+      if (!match) return json(res, 404, { error: '找不到图片。' });
+      const [, kind, encodedName] = match;
+      const name = path.basename(decodeURIComponent(encodedName));
+      if (name !== decodeURIComponent(encodedName) || !/^slide_\d{2,}(?:_[A-Za-z0-9-]+)?\.(?:png|jpe?g|webp)$/i.test(name)) return json(res, 400, { error: '图片名称无效。' });
+      const filePath = path.join(projectRoot, kind, name);
+      try {
+        const image = await readFile(filePath);
+        const type = mimeTypes[path.extname(name).toLowerCase()] || 'application/octet-stream';
+        res.writeHead(200, { 'Content-Type': type, 'Cache-Control': 'public, max-age=3600' });
+        return res.end(image);
+      } catch { return json(res, 404, { error: '图片不存在。' }); }
     }
     if (req.method === 'GET' && url.pathname === '/api/status') {
       let saved = false;
@@ -239,14 +290,6 @@ createServer(async (req, res) => {
       await syncPageIntoBoard(input.slideId, savedRaw);
       const guidePromptRebuildPending = page.guidePromptRebuildPending || page.raw !== savedRaw;
       return json(res, 200, { raw: savedRaw, pageHash: hashText(savedRaw), boardHash, guidePromptRebuildPending, name: boardData.sourceDocument.name || path.basename(filePath) });
-    }
-    if (req.method === 'POST' && url.pathname === '/api/source/open-location') {
-      const boardData = await readJson(boardDataPath);
-      const filePath = resolveProjectFile(boardData.sourceDocument?.path);
-      const child = spawn('explorer.exe', [`/select,${filePath}`], { detached: true, stdio: 'ignore' });
-      await new Promise((resolve, reject) => { child.once('spawn', resolve); child.once('error', reject); });
-      child.unref();
-      return json(res, 200, { ok: true, path: filePath, directory: path.dirname(filePath), name: boardData.sourceDocument.name || path.basename(filePath) });
     }
     if (req.method === 'POST' && url.pathname === '/api/upload') {
       const chunks = []; let size = 0;
