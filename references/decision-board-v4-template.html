@@ -305,9 +305,9 @@
     .generated-image-version-list { display: grid; gap: 8px; }
     .generated-image-version { display: grid; grid-template-columns: 24px minmax(0, 1fr); gap: 7px; align-items: center; width: 100%; padding: 6px; border: 1px solid transparent; border-radius: 9px; background: transparent; color: #314e69; text-align: left; box-shadow: none; }
     .generated-image-version:hover { transform: none; border-color: #c9d9e7; background: #f5f9fd; box-shadow: none; }
-    .generated-image-version[aria-current="true"] { border-color: #e17a45; background: #fff8f3; box-shadow: 0 0 0 1px rgba(225, 122, 69, .12); }
+    .generated-image-version[aria-current="true"] { border-color: #91caff; background: #e6f4ff; box-shadow: none; }
     .generated-image-version-number { color: #7c8da0; font-size: 12px; text-align: center; }
-    .generated-image-version[aria-current="true"] .generated-image-version-number { color: #c55d31; font-weight: 800; }
+    .generated-image-version[aria-current="true"] .generated-image-version-number { color: #0958d9; font-weight: 800; }
     .generated-image-thumb { display: block; width: 100%; aspect-ratio: 16 / 9; object-fit: cover; border: 1px solid #d6e0e9; border-radius: 5px; background: #edf2f6; }
     .generated-image-stage { display: grid; grid-template-rows: auto minmax(0, 1fr); min-width: 0; gap: 9px; padding: 11px; border: 1px solid #d5e0ea; border-radius: 12px; background: #e9eff5; }
     .generated-image-stagebar { display: flex; justify-content: space-between; align-items: center; gap: 12px; min-width: 0; padding: 0 4px; }
@@ -610,16 +610,16 @@
     .global-grid { gap: 20px; }
     .category-tabs { gap: 8px; margin: 12px 0 18px; }
     .category-tab { background: #edf6ff; color: #3a658b; border: 1px solid #d6e8f7; border-radius: 999px; }
-    .category-tab.selected { background: #247bee; border-color: #247bee; box-shadow: 0 7px 16px rgba(36, 123, 238, .18); }
+    .category-tab.selected { background: #247bee; border-color: #247bee; box-shadow: none; }
     .mini-module, .question-card, .weight-row { background: #eaf2f9; border-color: #b9d0e4; border-radius: 13px; }
     .mini-module { padding: 18px; }
     .choice, .card-option, .mode-card, .visual-card, .radio-choice, .weight-option { background: #fff; border-color: #afc9df; border-radius: 11px; box-shadow: 0 2px 6px rgba(24, 72, 119, .08); }
     .choice, .radio-choice { padding: 11px 13px; }
     .card-option, .mode-card, .visual-card { padding: 16px; }
-    .choice.selected, .card-option.selected, .mode-card.selected, .visual-card.selected { border: 2px solid #2c82e9; background: linear-gradient(145deg, #d7eaff, #c8e0ff); color: #103f76; box-shadow: 0 5px 14px rgba(24, 115, 222, .16); }
+    .choice.selected, .card-option.selected, .mode-card.selected, .visual-card.selected { border: 1px solid #91caff; background: linear-gradient(145deg, #f0f7ff, #e6f4ff); color: #0958d9; box-shadow: none; }
     .choice.selected strong, .card-option.selected h4, .mode-card.selected h4, .visual-card.selected h4 { color: #0e3b70; }
     .choice.selected span, .card-option.selected p, .mode-card.selected p, .visual-card.selected p { color: #315d88; }
-    .radio-choice.selected, .weight-option.selected { border: 2px solid #2c82e9; background: #d7eaff; color: #103f76; box-shadow: 0 4px 10px rgba(24, 115, 222, .12); }
+    .radio-choice.selected, .weight-option.selected { border: 1px solid #91caff; background: #e6f4ff; color: #0958d9; box-shadow: none; }
     .choice:hover, .card-option:hover, .mode-card:hover, .visual-card:hover, .radio-choice:hover, .weight-option:hover { border-color: #89bff1; }
     .swatch { border-color: rgba(24, 72, 119, .17); }
     textarea, input[type="text"] { background: #fff; border-color: #a9c4dc; border-radius: 10px; padding: 10px 12px; box-shadow: inset 0 1px 2px rgba(24, 72, 119, .04); }
@@ -643,10 +643,11 @@
     .nav-button.active { background: #e9f4ff; border-color: #a9d2f5; }
     .nav-index { background: #e9f4ff; color: #2674c3; border-radius: 9px; }
     .nav-button.active .nav-index { background: #247bee; color: white; }
-    .slide-hero { position: relative; min-height: 158px; background: linear-gradient(120deg, #eaf6ff, #d3ebff 66%, #b7dcfb); color: #123e6c; border-color: #b9d9f2; padding: 22px 240px 22px 22px; border-radius: 16px; }
+    .slide-hero { position: relative; min-height: 132px; background: linear-gradient(112deg, #3b4b60 0%, #4a6079 58%, #5b627b 100%); color: #f5f7fa; border: 1px solid #53647a; border-left: 3px solid #1677ff; padding: 18px 250px 18px 26px; border-radius: 12px; box-shadow: 0 4px 14px rgba(31,45,61,.11); }
     .slide-review-action { position: absolute; right: 22px; top: 50%; transform: translateY(-50%); }
     .slide-review-action:hover { transform: translateY(calc(-50% - 1px)); }
-    .slide-hero h2 { color: #143d6a; }
+    .slide-hero h2 { color: #f5f7fa; font-size: clamp(24px, 2.2vw, 32px); font-weight: 700; letter-spacing: -.02em; }
+    .slide-hero .eyebrow { background: rgba(255,255,255,.14); color: #eaf4ff; }
     .slide-hero p { color: #527495; }
     .content-group { padding: 26px 0; border-top-color: #dfecf7; }
     .raw-material-group { margin: 6px 0 30px; padding: 18px 20px; border: 1px solid #c3d9eb; border-left: 4px solid #5797d0; border-radius: 13px; background: #edf5fc; box-shadow: 0 2px 6px rgba(24, 72, 119, .05); }
@@ -668,6 +669,7 @@
     .organization-preview svg { display: block; width: 100%; height: 100%; }
     .page-footer-actions { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
     .asset-zone { border-color: #a9c5de; background: #eaf2f9; border-radius: 13px; }
+    .asset-role-title { margin: 20px 0 0; padding-top: 14px; border-top: 1px solid #d5e2ec; color: #434343; font-size: 13px; }
     .asset-zone.drag, .asset-paste-target.drag { background: #eaf5ff; box-shadow: 0 0 0 2px rgba(36, 123, 238, .12); }
     .asset-paste-target { border-color: #c6dff2; background: #fff; border-radius: 10px; }
     .compact-toggle { background: #edf6ff; }
@@ -710,7 +712,6 @@
   <header>
     <div>
       <h1 id="boardTitle">PPT 视觉决策板 V4.1</h1>
-      <p>全局风格独立确认；Slide 审阅区只由左侧进度导航统领，点击页签会回到对应页面顶部。</p>
     </div>
     <div class="top-actions">
       <span class="status-pill" id="saveStatus" role="status" aria-live="polite">未保存</span>
@@ -1606,7 +1607,7 @@
           row.appendChild(remove); records.appendChild(row);
         });
         zone.appendChild(records);
-        zone.appendChild(el('h4', '', '图片用途'));
+        zone.appendChild(el('h4', 'asset-role-title', '图片用途'));
         const grid = el('div', 'asset-type-grid');
         const roleOptions = (asset.roleOptions && asset.roleOptions.length ? asset.roleOptions : imageTypes);
         roleOptions.forEach(type => grid.appendChild(choiceButton(type, s.real_image_types[asset.id], value => { s.real_image_types[asset.id] = value; s.real_image_role_explicit ||= {}; s.real_image_role_explicit[asset.id] = true; renderAll(false); })));
