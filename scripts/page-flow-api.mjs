@@ -143,7 +143,7 @@ async function handlePost(route, body) {
       await atomic(statePath, saved);
       return [200, { request: item }];
     }
-    if (route === '/api/accept' || route === '/api/reject' || route.startsWith('/api/run/')) {
+    if (route === '/api/accept' || route === '/api/unaccept' || route === '/api/reject' || route.startsWith('/api/run/')) {
       if (!request) return [404, { error: '找不到生成请求' }];
       const page = saved.pages[request.pageId] ||= {};
       if (route === '/api/run/start') {
@@ -171,6 +171,17 @@ async function handlePost(route, body) {
         if (page.adopted?.id && saved.versions[page.adopted.id]) saved.versions[page.adopted.id].status = 'superseded';
         version.status = 'adopted'; request.status = 'accepted';
         page.adopted = { id: version.id, sourceHash: ctx.sourceHash, decisionHash: ctx.decisionHash, acceptedAt: new Date().toISOString() };
+      } else if (route === '/api/unaccept') {
+        if (request.status !== 'accepted' || page.adopted?.id !== request.finalVersionId) return [409, { error: '该版本当前并未采用' }];
+        const active = activeRequest(saved);
+        if (active && active.id !== request.id) return [409, { error: `第 ${pageNumber(active.pageId)} 页仍有待处理任务，请先完成该页。` }];
+        const version = saved.versions[request.finalVersionId];
+        const ctx = await context(request.pageId);
+        const isCurrent = !!version && ctx.sourceMatches && request.sourceHash === ctx.sourceHash && request.decisionHash === ctx.decisionHash;
+        request.status = isCurrent ? 'ready' : 'stale';
+        if (version) version.status = isCurrent ? 'candidate' : 'invalidated';
+        delete page.adopted;
+        page.lastRequestId = request.id;
       } else {
         if (request.status !== 'ready') return [409, { error: '该图尚未等待确认' }];
         request.status = 'rejected';

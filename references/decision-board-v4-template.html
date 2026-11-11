@@ -274,11 +274,12 @@
       gap: 12px;
       margin-bottom: 10px;
     }
-    .raw-group-head { align-items: center; flex-wrap: wrap; }
+    .raw-group-head { align-items: center; flex-wrap: wrap; gap: 10px 16px; }
     .raw-group-head h3 { margin: 0; }
-    .raw-head-tools { display: flex; align-items: center; justify-content: flex-end; gap: 8px; flex-wrap: wrap; }
-    .raw-file-details { display: grid; gap: 3px; min-width: 240px; color: #527494; font-size: 12px; line-height: 1.45; }
-    .raw-file-details span { overflow-wrap: anywhere; }
+    .raw-head-tools { display: grid; grid-template-columns: minmax(0, 1fr) auto; flex: 0 1 1020px; width: min(100%, 1020px); min-width: 0; margin-left: auto; align-items: center; gap: 8px 14px; padding: 10px 12px; border: 1px solid #c9e4d2; border-radius: 10px; background: #f2faf4; }
+    .raw-file-details { display: grid; min-width: 0; max-width: 100%; gap: 3px; color: #527494; font-size: 12px; line-height: 1.45; }
+    .raw-file-details span { min-width: 0; max-width: 100%; overflow-wrap: anywhere; word-break: break-word; }
+    .raw-actions { flex: 0 0 auto; }
     .raw-actions, .raw-tabs { display: flex; align-items: center; gap: 7px; }
     .raw-action { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 7px 11px; font-size: 12px; font-weight: 700; }
     .raw-action.secondary { border: 1px solid #6b9bc2; background: #e9f3fc; color: #174c89; }
@@ -294,12 +295,12 @@
     .raw-sync-status[data-state="error"] { color: #b42318; }
     .raw-preview, .raw-editor { width: 100%; min-height: 208px; height: 260px; max-height: 65vh; margin-top: 8px; overflow: auto; resize: vertical; border: 1px solid #cbdff0; border-radius: 10px; background: #fff; padding: 13px 15px; color: #173c60; line-height: 1.65; }
     .raw-preview { display: block; }
-    .generated-image-group { margin: 0 0 18px; padding: 20px; border: 1px solid #cbdced; border-radius: 14px; background: linear-gradient(150deg, #f9fbfe 0%, #eff5fb 100%); box-shadow: 0 8px 24px rgba(30, 72, 112, .07); }
+    .generated-image-group { margin: 0 0 18px; padding: 16px; border: 1px solid #cbdced; border-radius: 14px; background: linear-gradient(150deg, #f9fbfe 0%, #eff5fb 100%); box-shadow: 0 8px 24px rgba(30, 72, 112, .07); }
     .generated-image-head { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-bottom: 16px; }
     .generated-image-head h3 { margin: 0; color: #173b5f; font-size: 18px; }
     .generated-image-subtitle { margin: 4px 0 0; color: #70869b; font-size: 12px; }
     .generated-image-count { flex: 0 0 auto; padding: 5px 10px; border: 1px solid #d7e5f1; border-radius: 999px; background: #fff; color: #54718e; font-size: 12px; font-weight: 700; }
-    .generated-image-layout { display: grid; grid-template-columns: 168px minmax(0, 1fr); gap: 16px; align-items: stretch; min-height: 350px; }
+    .generated-image-layout { display: grid; grid-template-columns: 168px minmax(0, 1fr); grid-template-rows: minmax(280px, 56vh) auto; gap: 12px 16px; align-items: stretch; min-height: 340px; }
     .generated-image-rail { min-width: 0; max-height: 66vh; overflow: auto; padding: 10px; border: 1px solid #d7e3ee; border-radius: 11px; background: rgba(255, 255, 255, .82); }
     .generated-image-rail-title { display: flex; justify-content: space-between; margin: 2px 2px 9px; color: #71879b; font-size: 11px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; }
     .generated-image-version-list { display: grid; gap: 8px; }
@@ -309,13 +310,13 @@
     .generated-image-version-number { color: #7c8da0; font-size: 12px; text-align: center; }
     .generated-image-version[aria-current="true"] .generated-image-version-number { color: #0958d9; font-weight: 800; }
     .generated-image-thumb { display: block; width: 100%; aspect-ratio: 16 / 9; object-fit: cover; border: 1px solid #d6e0e9; border-radius: 5px; background: #edf2f6; }
-    .generated-image-stage { display: grid; grid-template-rows: auto minmax(0, 1fr); min-width: 0; gap: 9px; padding: 11px; border: 1px solid #d5e0ea; border-radius: 12px; background: #e9eff5; }
+    .generated-image-stage { display: grid; grid-template-rows: auto minmax(0, 1fr); height: 56vh; min-height: 280px; max-height: 680px; min-width: 0; gap: 9px; padding: 11px; border: 1px solid #d5e0ea; border-radius: 12px; background: #e9eff5; }
     .generated-image-stagebar { display: flex; justify-content: space-between; align-items: center; gap: 12px; min-width: 0; padding: 0 4px; }
     .generated-image-stage-name { overflow: hidden; color: #526d86; font-size: 12px; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
     .generated-image-open { flex: 0 0 auto; color: #2366a0; font-size: 12px; font-weight: 700; text-decoration: none; }
     .generated-image-open:hover { color: #174c89; text-decoration: underline; }
-    .generated-image-canvas { display: grid; place-items: center; min-width: 0; min-height: 280px; overflow: hidden; padding: 20px; border: 1px solid #d2dce6; border-radius: 8px; background: #f8fafc; }
-    .generated-image-preview { display: block; width: 100%; max-height: 62vh; object-fit: contain; border-radius: 4px; box-shadow: 0 8px 22px rgba(26, 47, 66, .18); }
+    .generated-image-canvas { display: grid; place-items: center; min-width: 0; min-height: 240px; overflow: hidden; padding: 18px; border: 1px solid #d2dce6; border-radius: 8px; background: #f8fafc; }
+    .generated-image-preview { display: block; width: 100%; max-height: 78vh; object-fit: contain; border-radius: 4px; box-shadow: 0 8px 22px rgba(26, 47, 66, .18); }
     .generated-image-main { display: grid; grid-template-rows: minmax(0, 1fr) auto; min-width: 0; gap: 10px; }
     .generated-image-details { display: grid; grid-template-columns: minmax(0, 1fr) 220px; gap: 12px 20px; min-width: 0; padding: 13px 15px; border: 1px solid #d7e3ee; border-radius: 11px; background: rgba(255, 255, 255, .88); }
     .generated-image-details[hidden] { display: none; }
@@ -324,8 +325,18 @@
     .generated-image-detail-value { display: block; color: #365875; font-size: 12px; line-height: 1.55; overflow-wrap: anywhere; }
     .generated-image-filepath { max-height: 120px; overflow: auto; padding: 8px; border-radius: 7px; background: #f1f5f9; color: #536d84; font-family: ui-monospace, Consolas, monospace; font-size: 10px; line-height: 1.5; user-select: text; }
     .generated-image-empty { grid-column: 1 / -1; align-self: center; margin: 0; color: #74899d; font-size: 13px; text-align: center; }
+    .generated-image-group[data-state="empty"], .generated-image-group[data-state="loading"], .generated-image-group[data-state="error"] { padding: 12px 16px; }
+    .generated-image-group[data-state="empty"] .generated-image-head, .generated-image-group[data-state="loading"] .generated-image-head, .generated-image-group[data-state="error"] .generated-image-head { margin-bottom: 8px; }
+    .generated-image-group[data-state="empty"] .generated-image-layout, .generated-image-group[data-state="loading"] .generated-image-layout, .generated-image-group[data-state="error"] .generated-image-layout { display: block; min-height: 0; }
+    .generated-image-group[data-state="empty"] .generated-image-rail, .generated-image-group[data-state="loading"] .generated-image-rail, .generated-image-group[data-state="error"] .generated-image-rail, .generated-image-group[data-state="empty"] .generated-image-details, .generated-image-group[data-state="loading"] .generated-image-details, .generated-image-group[data-state="error"] .generated-image-details, .generated-image-group[data-state="empty"] .generated-image-stagebar, .generated-image-group[data-state="loading"] .generated-image-stagebar, .generated-image-group[data-state="error"] .generated-image-stagebar { display: none; }
+    .generated-image-group[data-state="empty"] .generated-image-stage, .generated-image-group[data-state="loading"] .generated-image-stage, .generated-image-group[data-state="error"] .generated-image-stage { display: block; height: auto; min-height: 0; max-height: none; padding: 0; border: 0; background: transparent; }
+    .generated-image-group[data-state="empty"] .generated-image-canvas, .generated-image-group[data-state="loading"] .generated-image-canvas, .generated-image-group[data-state="error"] .generated-image-canvas { height: 56px; min-height: 56px; padding: 8px 12px; border-radius: 10px; }
+    .generated-image-group[data-state="empty"] .generated-image-canvas { border-style: dashed; background: #f6f9fc; }
+    .generated-image-group[data-state="loading"] .generated-image-canvas { background: linear-gradient(100deg, #f2f7fb 20%, #e7f0f7 38%, #f2f7fb 56%); background-size: 220% 100%; animation: generated-image-shimmer 1.5s ease-in-out infinite; }
+    .generated-image-group[data-state="error"] .generated-image-canvas { border-color: #f0d9d7; background: #fff8f7; }
+    @keyframes generated-image-shimmer { to { background-position: -220% 0; } }
     @media (max-width: 980px) { .generated-image-layout { grid-template-columns: 138px minmax(0, 1fr); } .generated-image-details { grid-template-columns: minmax(0, 1fr) 180px; } }
-    @media (max-width: 680px) { .generated-image-group { padding: 13px; } .generated-image-layout { grid-template-columns: minmax(0, 1fr); } .generated-image-rail { max-height: 155px; } .generated-image-version-list { display: flex; overflow-x: auto; } .generated-image-version { flex: 0 0 112px; } .generated-image-main { grid-template-rows: auto auto; } .generated-image-details { grid-template-columns: minmax(0, 1fr); } .generated-image-details-title { grid-column: auto; } .generated-image-canvas { min-height: 210px; padding: 10px; } }
+    @media (max-width: 680px) { .raw-head-tools { grid-template-columns: minmax(0, 1fr); } .raw-actions { justify-content: flex-start; } .generated-image-group { padding: 13px; } .generated-image-layout { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto auto; } .generated-image-rail { max-height: 155px; } .generated-image-version-list { display: flex; overflow-x: auto; } .generated-image-version { flex: 0 0 112px; } .generated-image-stage { height: auto; } .generated-image-main { grid-template-rows: auto auto; } .generated-image-details { grid-template-columns: minmax(0, 1fr); } .generated-image-details-title { grid-column: auto; } .generated-image-canvas { min-height: 210px; padding: 10px; } }
     .raw-editor { display: none; resize: vertical; white-space: pre-wrap; font-family: ui-monospace, Consolas, "Microsoft YaHei UI", monospace; font-size: 13px; }
     .raw-preview h1, .raw-preview h2, .raw-preview h3, .raw-preview h4 { margin: 12px 0 7px; color: #153f68; line-height: 1.35; }
     .raw-preview h1 { font-size: 20px; } .raw-preview h2 { font-size: 18px; } .raw-preview h3 { font-size: 16px; } .raw-preview h4 { font-size: 14px; }
@@ -1187,7 +1198,8 @@
     function generatedImageBlock(slide) {
       const wrap = el('section', 'generated-image-group');
       wrap.dataset.slideId = slide.id;
-      wrap.innerHTML = '<div class="generated-image-head"><div><h3>生成图片</h3><p class="generated-image-subtitle">浏览本页已生成的图片版本 · 每 6 秒自动检查</p></div><span class="generated-image-count">正在读取…</span></div><div class="generated-image-layout"><aside class="generated-image-rail"><div class="generated-image-rail-title"><span>版本</span><span class="generated-image-rail-count"></span></div><div class="generated-image-version-list"></div></aside><div class="generated-image-main"><div class="generated-image-stage"><div class="generated-image-stagebar"><span class="generated-image-stage-name">选择一个图片版本</span><a class="generated-image-open" target="_blank" rel="noopener" hidden>查看原图 ↗</a></div><div class="generated-image-canvas"><p class="generated-image-empty">正在查找本页生成图片…</p><img class="generated-image-preview" alt="" hidden></div></div><aside class="generated-image-details" hidden><div class="generated-image-details-title">当前版本信息</div><div><span class="generated-image-detail-label">文件位置</span><code class="generated-image-detail-value generated-image-filepath"></code></div><div><span class="generated-image-detail-label">生成时间</span><time class="generated-image-detail-value generated-image-time"></time></div></aside></div></div>';
+      wrap.dataset.state = 'loading';
+      wrap.innerHTML = '<div class="generated-image-head"><div><h3>生成图片</h3></div><span class="generated-image-count">正在读取…</span></div><div class="generated-image-layout"><aside class="generated-image-rail"><div class="generated-image-rail-title"><span>版本</span><span class="generated-image-rail-count"></span></div><div class="generated-image-version-list"></div></aside><div class="generated-image-main"><div class="generated-image-stage"><div class="generated-image-stagebar"><span class="generated-image-stage-name">选择一个图片版本</span><a class="generated-image-open" target="_blank" rel="noopener" hidden>查看原图 ↗</a></div><div class="generated-image-canvas"><p class="generated-image-empty">正在查找本页生成图片…</p><img class="generated-image-preview" alt="" hidden></div></div><aside class="generated-image-details" hidden><div class="generated-image-details-title">当前版本信息</div><div><span class="generated-image-detail-label">文件位置</span><code class="generated-image-detail-value generated-image-filepath"></code></div><div><span class="generated-image-detail-label">生成时间</span><time class="generated-image-detail-value generated-image-time"></time></div></aside></div></div>';
       return wrap;
     }
 
@@ -1211,6 +1223,7 @@
         const details = wrap.querySelector('.generated-image-details');
         list.replaceChildren();
         if (!data.images?.length) {
+          wrap.dataset.state = 'empty';
           imageElement.hidden = true;
           openLink.hidden = true;
           details.hidden = true;
@@ -1219,6 +1232,7 @@
           empty.textContent = '本页还没有生成图片；生成后会自动显示在这里。';
           return;
         }
+        wrap.dataset.state = 'ready';
         count.textContent = `${data.images.length} 个版本`;
         railCount.textContent = String(data.images.length);
         const selectedUrl = data.images.some(image => image.url === oldSelection) ? oldSelection : data.preferred;
@@ -1249,6 +1263,7 @@
         const selectedImage = data.images.find(image => image.url === selectedUrl);
         renderGeneratedImageSelection(wrap, selectedImage);
       } catch (error) {
+        wrap.dataset.state = 'error';
         const empty = wrap.querySelector('.generated-image-empty');
         if (empty) { empty.hidden = false; empty.textContent = error.message; }
       }
@@ -1279,7 +1294,6 @@
       const heading = el('h3', '', '本页原始材料');
       const tools = el('div', 'raw-head-tools');
       const fileDetails = el('div', 'raw-file-details');
-      fileDetails.append(el('span', '', sourceDocument?.name ? `关联决策版本：${sourceDocument.name}` : '未关联决策版本文档'));
       fileDetails.append(el('span', '', sourceFilePath || '文件位置未知'));
       const actions = el('div', 'raw-actions');
       const makeAction = (id, label, tone, pathData) => {

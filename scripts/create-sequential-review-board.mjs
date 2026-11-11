@@ -44,6 +44,44 @@ const bridge = `      renderAll(false);
       window.__PAGE_FLOW_BRIDGE__ = {
         active: () => state.active,
         rawDirty: () => rawDirty.size > 0,
+        previewData: () => {
+          const slide = slides.find(item => item.id === state.active);
+          const s = state.slides[state.active];
+          const lookup = (list, id) => list?.find(item => item.id === id);
+          const mode = lookup(commonOptions.page_mode, s.page_mode);
+          const layout = lookup(organizationOptions, s.visual_direction) || lookup(slide.visualDirections, s.visual_direction);
+          const emphasis = lookup(emphasisMethods, s.primary_emphasis_method);
+          const mechanism = lookup(commonOptions.expressive_mechanism, s.expressive_mechanism);
+          const expression = lookup(commonOptions.expression_mode, s.expression_mode);
+          const restraint = lookup(commonOptions.visual_restraint, s.visual_restraint);
+          const expressiveness = lookup(commonOptions.visual_expressiveness, s.visual_expressiveness);
+          const imageStrength = lookup(commonOptions.visual_strength, s.visual_strength);
+          const palette = lookup(palettes, state.palette_direction);
+          const handling = lookup(globalControls.content_handling, state.content_handling);
+          const titleMode = lookup(globalControls.title_overlay, state.title_overlay);
+          const optionLabel = (list, id) => lookup(list, id)?.label || id || '未设置';
+          const usedImages = Object.entries(s.real_image_types || {}).filter(([id, role]) => role !== 'skip' && (s.real_images?.[id] || []).length).map(([id, role]) => optionLabel(imageTypes, role));
+          return {
+            settings: [
+              { label: '文字比例', value: mode?.label || optionLabel(commonOptions.page_mode, s.page_mode), effect: mode?.summary || '' },
+              { label: '信息量', value: optionLabel(commonOptions.density, s.density), effect: '版面：' + optionLabel(commonOptions.page_treatment, s.page_treatment) },
+              { label: '图像占比', value: imageStrength?.label || optionLabel(commonOptions.visual_strength, s.visual_strength), effect: imageStrength?.summary || '' },
+              { label: '页面结构', value: layout?.label || optionLabel(organizationOptions, s.visual_direction), effect: layout?.summary || '' },
+              { label: '整页重点', value: emphasis?.label || optionLabel(emphasisMethods, s.primary_emphasis_method), effect: emphasis?.summary || '' },
+              { label: '画面表达', value: mechanism?.label || optionLabel(commonOptions.expressive_mechanism, s.expressive_mechanism), effect: mechanism?.summary || '' },
+              { label: '画面题材', value: expression?.label || optionLabel(commonOptions.expression_mode, s.expression_mode), effect: expression?.summary || '' },
+              { label: '整体气质', value: restraint?.label || optionLabel(commonOptions.visual_restraint, s.visual_restraint) },
+              { label: '视觉强度', value: expressiveness?.label || optionLabel(commonOptions.visual_expressiveness, s.visual_expressiveness) }
+            ],
+            groups: (s.information_groups || []).map(group => ({ label: group.label, value: optionLabel(weightOptions, s.group_weights?.[group.id]) })),
+            global: [
+              { label: '全局色系', value: palette?.label || state.palette_direction },
+              { label: '原文处理', value: optionLabel(globalControls.content_handling, state.content_handling) },
+              { label: '标题策略', value: optionLabel(globalControls.title_overlay, state.title_overlay) },
+              { label: '真实素材', value: usedImages.length ? usedImages.join('、') : '未启用' }
+            ]
+          };
+        },
         confirmPage: () => {
           const current = state.slides[state.active];
           if (!current.checked) toggleChecked(current);
