@@ -127,7 +127,10 @@ async function syncPageIntoBoard(slideId, raw) {
   const boardData = await readJson(boardDataPath);
   const page = boardData.slides?.find(item => item.id === slideId);
   if (!page) throw new Error(`决策板中找不到页面 ${slideId}。`);
-  if (page.raw !== raw) page.guidePromptRebuildPending = true;
+  if (page.raw !== raw) {
+    page.raw = raw;
+    page.guidePromptRebuildPending = true;
+  }
   await writeAtomic(boardDataPath, JSON.stringify(boardData));
   await writeAtomic(path.join(root, 'board-inline-data.js'), `window.__BOARD_DATA__ = ${JSON.stringify(boardData)};\n`);
 

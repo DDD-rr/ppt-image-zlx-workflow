@@ -2,7 +2,7 @@
 
 ## Content handling takes precedence over generic text budgets
 
-Read the confirmed `content_handling` from the decision board. For `strict`, include every required source passage verbatim in the prompt and require it visibly on the final image; retain exact wording, numbers, units, and qualifications. Do not apply Tier B/C compression, keyword limits, page-weight degradation, or replace text with icons. Preserve page boundaries and the chosen title mode. If it cannot fit or cannot be reproduced faithfully, report the specific limitation and ask for a user-directed resolution. For `interpret`, derive visuals from the meaning of each passage and allow source-grounded summaries while retaining locked wording, factual claims, qualifiers, and source order. Do not confuse either mode with `strict-source`, which controls the visual creative extension only.
+Read the confirmed `content_handling` from the decision board. For `strict`, include every required source passage verbatim in the prompt and require it visibly on the final image; retain exact wording, numbers, units, and qualifications. Do not apply Tier B/C compression, keyword limits, page-weight degradation, or replace text with icons unless the user explicitly marked that exact source span in `raw_visual_marks`. Such a mark is a narrow, user-selected exception: `replace` means preserve the source in the Markdown and decision data but express that span's meaning visually without printing its words; `soften` means retain the words with lower prominence and pair them with a visual. Apply no exception to adjacent unmarked text. Preserve page boundaries and the chosen title mode. If it cannot fit or cannot be reproduced faithfully, report the specific limitation and ask for a user-directed resolution. For `interpret`, derive visuals from the meaning of each passage and allow source-grounded summaries while retaining locked wording, factual claims, qualifiers, and source order; explicit span marks still specify the selected span's presentation. Do not confuse either mode with `strict-source`, which controls the visual creative extension only. Never invent official logos for marked spans; use confirmed assets or generic pictograms.
 
 Use before generating each generated body image. This file defines the core prompt skeleton. Load only the conditional rule packages that apply to the current page.
 
@@ -11,7 +11,7 @@ Use before generating each generated body image. This file defines the core prom
 | Condition | Add |
 | --- | --- |
 | Standard content page, left-title layout, or title-area risk | `references/title-safety.md` |
-| `page_mode`, `information_groups`, `group_weights`, `primary_emphasis_method`, repeated modules, or required section titles exist | `references/information-priority.md` |
+| `page_mode`, `information_groups`, `group_weights`, `raw_visual_marks`, `primary_emphasis_method`, repeated modules, or required section titles exist | `references/information-priority.md` |
 | Palette, material hierarchy, external color source, cyan-orange decision, or component color roles affect the page | `references/color-system.md` |
 | Real images, screenshots, product photos, evidence images, or uploaded references are involved | `references/real-image-policy.md` |
 | Evidence-heavy page | `references/evidence-scenarios.md`, only the relevant scenario |
@@ -34,6 +34,7 @@ Every body-image prompt must include:
 - Information-bearing visual objects with object/material identity, not generic boxes/cards/modules alone.
 - Information budget: primary visual system, supporting module count, optional closure or flow system.
 - Content blueprint: title zone, usable body region, primary anchor bounds, module grid, first-module start line, bottom safe line, and module priorities.
+- `raw_visual_marks`: quote each selected source span and its requested treatment. For `replace`, explicitly say the selected words must not appear in the image and name the visual objects that carry the meaning. For `soften`, specify how the words remain readable but subordinate and what graphic supports them. Apply rules only to the marked span.
 - Title overlay mode: `overlay-title` or `no-title-reserved`. In both modes, reserve the title-safe region; in `no-title-reserved`, keep that region quiet and usable for manual post-production without adding title text or title-like decoration.
 - Alignment contract: one page-level content frame plus the shared edges, column widths, row heights, centerlines, or baselines that bind major zones together.
 - Main content comfort floor for dense matrices, comparison tables, architecture stacks, roadmaps, workflows, or core-function areas.
@@ -55,6 +56,7 @@ When these fields exist in `PPT_Page_Image_Guide.md`, carry them into the prompt
 
 - page type and page role;
 - `page_mode`, `information_groups`, `group_weights`, `excluded_information_groups`, `primary_emphasis_method`, `required_section_titles`, source-order first reading zone, and visual-anchor zone;
+- each `raw_visual_marks` entry, including the exact text-rendering rule and its semantic visual carrier;
 - composition pattern and anti-flattening rule;
 - whether reading-first or body-text-carrier still needs a visual anchor, path, document object, product proof, or shared system instead of full-screen flat module tiling;
 - palette brief, page color role, component color roles, and visual intensity scale;

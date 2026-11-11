@@ -13,6 +13,7 @@ Check each body image and final overlaid image:
 - Tier A text appears with acceptable completeness and meaning. Reject pages that sacrifice required information for a cleaner or more stylized composition when the page role is information-bearing.
 - When a model invents unverifiable evidence detail, remove or abstract only that detail. Preserve useful composition, material depth, and evidence structure when regenerating.
 - Locked text is not obviously corrupted.
+- For every `raw_visual_marks` entry with `replace`, confirm the selected words do not appear in the generated image and a fitting visual carries their meaning; for `soften`, confirm the words remain present at lower prominence with a relevant visual beside or integrated with them.
 - Chinese text does not show high-impact glyph deformation: horizontal squeezing, vertical stretching, condensed/narrow fake font behavior, perspective distortion in body copy, sticky strokes, or pseudo-text replacing required content.
 - No watermark, unrelated logo, unrelated stock imagery, fake chart, or fake KPI appears.
 

@@ -77,7 +77,9 @@ function guidePending(page, ctx) {
   return !!ctx.slide.guidePromptRebuildPending && !(page?.rebuiltFor?.sourceHash === ctx.sourceHash && page?.rebuiltFor?.decisionHash === ctx.decisionHash);
 }
 const blocking = new Set(['queued', 'running', 'ready']);
-function activeRequest(saved) { return Object.values(saved.requests).find(item => blocking.has(item.status)); }
+const maxActiveRequests = 2;
+function activeRequests(saved) { return Object.values(saved.requests).filter(item => blocking.has(item.status)).sort((a, b) => a.createdAt.localeCompare(b.createdAt)); }
+function activeRequest(saved) { return activeRequests(saved)[0]; }
 async function images(id, saved) {
   const number = pageNumber(id);
   if (!number) throw new Error('页码无效');
@@ -122,17 +124,72 @@ async function handlePost(route, body) {
   return mutate(async () => {
     const saved = await state();
     const request = body.requestId && saved.requests[body.requestId];
+    if (route === '/api/candidate/mark' || route === '/api/candidate/unmark' || route === '/api/candidate/accept' || route === '/api/candidate/unaccept') {
+      const ctx = await context(body.pageId);
+      if (!ctx.sourceMatches) return [409, { error: '本页材料尚未同步，不能标记历史图片。请先在本页原始材料中点击“更新”。' }];
+      const page = saved.pages[body.pageId] ||= {};
+      if (route === '/api/candidate/mark') {
+        const version = await fileRecord(body.path, 'final_image', pageNumber(body.pageId));
+        const previousId = page.markedCandidateVersionId;
+        if (previousId && previousId !== version.id) {
+          const previous = saved.versions[previousId];
+          if (previous?.manualCandidate) previous.status = 'historical';
+        }
+        const priorAdoption = page.adopted?.id;
+        if (priorAdoption && priorAdoption !== version.id) {
+          if (saved.versions[priorAdoption]) saved.versions[priorAdoption].status = 'superseded';
+          delete page.adopted;
+        }
+        const last = saved.requests[page.lastRequestId];
+        if (last?.status === 'ready' && last.finalVersionId !== version.id) {
+          last.status = 'rejected';
+          if (saved.versions[last.finalVersionId]) saved.versions[last.finalVersionId].status = 'historical';
+        }
+        saved.versions[version.id] = { ...(saved.versions[version.id] || {}), ...version, requestId: saved.versions[version.id]?.requestId || null, pageId: body.pageId, sourceHash: ctx.sourceHash, decisionHash: ctx.decisionHash, status: 'adopted', manualCandidate: true };
+        page.markedCandidateVersionId = version.id;
+        page.adopted = { id: version.id, sourceHash: ctx.sourceHash, decisionHash: ctx.decisionHash, acceptedAt: new Date().toISOString() };
+        page.review = { sourceHash: ctx.sourceHash, decisionHash: ctx.decisionHash, reviewedAt: new Date().toISOString() };
+        if (version.requestId && saved.requests[version.requestId]?.status === 'ready') saved.requests[version.requestId].status = 'accepted';
+        await atomic(statePath, saved);
+        return [200, { markedCandidate: saved.versions[version.id] }];
+      }
+      if (!page.markedCandidateVersionId) return [409, { error: '本页没有已标记的候选图片。' }];
+      if (body.versionId && body.versionId !== page.markedCandidateVersionId) return [409, { error: '该图片已不是当前标记的候选版本。' }];
+      const version = saved.versions[page.markedCandidateVersionId];
+      if (!version) return [404, { error: '找不到标记图片记录。' }];
+      if (route === '/api/candidate/unmark') {
+        if (version.status === 'adopted') version.status = 'historical';
+        delete page.markedCandidateVersionId;
+        if (page.adopted?.id === version.id) delete page.adopted;
+      } else if (route === '/api/candidate/accept') {
+        const verified = await fileRecord(version.path, 'final_image', pageNumber(body.pageId));
+        if (verified.id !== version.id) return [409, { error: '候选图片文件已变化，请重新标记。' }];
+        if (page.adopted?.id && saved.versions[page.adopted.id]) saved.versions[page.adopted.id].status = 'superseded';
+        version.status = 'adopted';
+        page.adopted = { id: version.id, sourceHash: ctx.sourceHash, decisionHash: ctx.decisionHash, acceptedAt: new Date().toISOString() };
+        if (version.requestId && saved.requests[version.requestId]?.status === 'ready') saved.requests[version.requestId].status = 'accepted';
+      } else {
+        if (page.adopted?.id !== version.id) return [409, { error: '该标记图片当前未采用。' }];
+        delete page.adopted;
+        version.status = 'candidate';
+      }
+      await atomic(statePath, saved);
+      return [200, { version, markedCandidateVersionId: page.markedCandidateVersionId || null, adopted: page.adopted || null }];
+    }
     if (route === '/api/request') {
       const ctx = await context(body.pageId);
       if (!ctx.sourceMatches) return [409, { error: '本页原文与决策版本不一致，请先在原决策板同步。' }];
       const page = saved.pages[body.pageId] ||= {};
-      const active = activeRequest(saved);
-      if (active && !(body.retry && active.pageId === body.pageId && active.status === 'ready')) return [409, { error: `第 ${pageNumber(active.pageId)} 页仍在等待处理或确认，请先完成该页。` }];
+      const active = activeRequests(saved);
+      const samePage = active.find(item => item.pageId === body.pageId);
+      const replacingReady = !!(body.retry && samePage?.status === 'ready');
+      if (samePage && !replacingReady) return [409, { error: `第 ${pageNumber(body.pageId)} 页已有待处理或验收任务，请先完成该页。` }];
+      if (active.length >= maxActiveRequests && !replacingReady) return [409, { error: `已有 ${maxActiveRequests} 个页面任务并行处理，请等其中一个页面完成或验收后再开始。` }];
       if (!reviewed(page, ctx) && !body.confirmReview) return [409, { error: '请先确认本页原文和视觉决策。' }];
       if (body.confirmReview) page.review = { sourceHash: ctx.sourceHash, decisionHash: ctx.decisionHash, reviewedAt: new Date().toISOString() };
-      if (active) {
-        active.status = 'rejected';
-        const previous = saved.versions[active.finalVersionId];
+      if (replacingReady) {
+        samePage.status = 'rejected';
+        const previous = saved.versions[samePage.finalVersionId];
         if (previous) previous.status = 'rejected';
       }
       const id = randomUUID();
@@ -171,10 +228,9 @@ async function handlePost(route, body) {
         if (page.adopted?.id && saved.versions[page.adopted.id]) saved.versions[page.adopted.id].status = 'superseded';
         version.status = 'adopted'; request.status = 'accepted';
         page.adopted = { id: version.id, sourceHash: ctx.sourceHash, decisionHash: ctx.decisionHash, acceptedAt: new Date().toISOString() };
+        page.markedCandidateVersionId = version.id;
       } else if (route === '/api/unaccept') {
         if (request.status !== 'accepted' || page.adopted?.id !== request.finalVersionId) return [409, { error: '该版本当前并未采用' }];
-        const active = activeRequest(saved);
-        if (active && active.id !== request.id) return [409, { error: `第 ${pageNumber(active.pageId)} 页仍有待处理任务，请先完成该页。` }];
         const version = saved.versions[request.finalVersionId];
         const ctx = await context(request.pageId);
         const isCurrent = !!version && ctx.sourceMatches && request.sourceHash === ctx.sourceHash && request.decisionHash === ctx.decisionHash;
@@ -206,9 +262,13 @@ export async function handlePageFlow(req, res, url) {
         const ctx = await context(slide.id);
         const page = saved.pages[slide.id] || {};
         const last = saved.requests[page.lastRequestId];
-        return { id: slide.id, label: slide.label, title: slide.title, role: slide.role, summary: slide.summary, raw: slide.raw, checked: reviewed(page, ctx), sourceMatches: ctx.sourceMatches, needsReview: !!page.adopted && !current(page, ctx), guidePromptRebuildPending: guidePending(page, ctx), decision: ctx.decisionPage, sourceHash: ctx.sourceHash, decisionHash: ctx.decisionHash, adopted: page.adopted || null, adoptedVersion: saved.versions[page.adopted?.id] || null, lastRequest: last || null, candidate: saved.versions[last?.finalVersionId] || null };
+        const markedCandidate = saved.versions[page.markedCandidateVersionId] || null;
+        const markedCurrent = !!markedCandidate && markedCandidate.sourceHash === ctx.sourceHash && markedCandidate.decisionHash === ctx.decisionHash;
+        const confirmed = ctx.sourceMatches && !!current(page, ctx);
+        return { id: slide.id, label: slide.label, title: slide.title, role: slide.role, summary: slide.summary, raw: slide.raw, checked: confirmed, confirmed, reviewedForGeneration: reviewed(page, ctx), sourceMatches: ctx.sourceMatches, needsReview: !!page.adopted && !current(page, ctx), guidePromptRebuildPending: guidePending(page, ctx), decision: ctx.decisionPage, sourceHash: ctx.sourceHash, decisionHash: ctx.decisionHash, adopted: page.adopted || null, adoptedVersion: saved.versions[page.adopted?.id] || null, markedCandidate, lastRequest: last || null, candidate: markedCandidate || saved.versions[last?.finalVersionId] || null };
       }));
-      return json(res, 200, { projectName: data.projectName, contentHandling: decision.content_handling, palette: decision.global_palette?.palette_label || decision.palette_direction, titleMode: decision.title_overlay?.label || decision.title_overlay?.mode, pages, activeRequest: activeRequest(saved) || null });
+      const active = activeRequests(saved);
+      return json(res, 200, { projectName: data.projectName, contentHandling: decision.content_handling, palette: decision.global_palette?.palette_label || decision.palette_direction, titleMode: decision.title_overlay?.label || decision.title_overlay?.mode, pages, activeRequest: active[0] || null, activeRequests: active });
     }
     if (req.method === 'GET' && route === '/api/images') {
       const ctx = await context(url.searchParams.get('page'));
@@ -217,7 +277,10 @@ export async function handlePageFlow(req, res, url) {
     }
     if (req.method === 'GET' && route === '/api/requests/next') {
       const saved = await state();
-      return json(res, 200, { request: Object.values(saved.requests).find(item => item.status === 'queued') || null });
+      const requestId = url.searchParams.get('requestId');
+      const pageId = url.searchParams.get('pageId');
+      const request = requestId ? saved.requests[requestId] : pageId ? Object.values(saved.requests).find(item => item.pageId === pageId && item.status === 'queued') : Object.values(saved.requests).find(item => item.status === 'queued');
+      return json(res, 200, { request: request && ['queued', 'running'].includes(request.status) ? request : null });
     }
     if (req.method === 'POST') {
       const [status, result] = await handlePost(route, await input(req));

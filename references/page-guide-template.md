@@ -1,6 +1,6 @@
 # PPT_Page_Image_Guide
 
-Before writing page guides, record confirmed `content_handling` (`strict` or `interpret`). For strict sources, list and carry the entire required on-page source text verbatim into each page prompt and check it in the resulting image; do not treat the example keyword limits below as permission to omit text. For interpret sources, map summaries and visual ideas back to source meaning and keep names, numbers, qualifications, and locked wording. If the decision is missing, ask the user before continuing. The choice is independent of visual creativity.
+Before writing page guides, record confirmed `content_handling` (`strict` or `interpret`). For strict sources, list and carry the entire required on-page source text verbatim into each page prompt and check it in the resulting image; do not treat the example keyword limits below as permission to omit text. The sole span-level exception is an explicit `raw_visual_marks` annotation: `replace` expresses only that selected span visually without printing its words, while `soften` retains its words at lower prominence alongside a visual. Keep every unmarked span under the normal strict rule. For interpret sources, map summaries and visual ideas back to source meaning and keep names, numbers, qualifications, and locked wording. If a mark has `needsReview`, stop for user re-marking before generation. If the decision is missing, ask the user before continuing. The choice is independent of visual creativity.
 
 项目：
 来源大纲：
@@ -14,6 +14,7 @@ Before writing page guides, record confirmed `content_handling` (`strict` or `in
 - 母版摘要：见 `Master_Template.md`。
 - 项目配色摘要：按 `references/color-system.md` 写明候选方向、最终选择、来源、色彩占比、组件级色彩规则和禁止组合。
 - 信息优先级摘要：按 `references/information-priority.md` 写明 `page_mode`、`information_groups`、`group_weights`、`primary_emphasis_method`、`required_section_titles` 如何影响阅读顺序、文本保留、视觉锚点、面积分配和辅助内容降级。
+- 选中文字呈现：逐条记录 `raw_visual_marks` 的原文、标记方式和对应视觉表达；标明哪些文字必须隐藏、哪些文字需弱化保留。若存在 `needsReview`，暂停生成并要求重新标记。
 - 视觉表现力度摘要：写明全局 `visual_expressiveness` 与单页覆盖；说明它如何影响材质、光效、装饰线、场景深度和反 AI 约束的松紧。
 - 真实图片规则：按 `references/real-image-policy.md` 写明实际输入方式、dominance role 和缺失图片处理。
 - 标题系统摘要：见 `references/title-style.md` 和项目级 `title_style.json`。

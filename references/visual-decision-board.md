@@ -79,6 +79,7 @@ Keep choices few and meaningful:
   - `visual-anchor`: 主重点通过大图、大场景或强视觉对象建立记忆；不自动前置到左上第一阅读位，不自动改变大纲顺序，不自动成为最大面积。
   - `path-priority`: 主重点通过流程、连接、因果或系统路径表达。
 - If the board collects per-page `information_groups` and `group_weights`, make clear that `primary` means reading priority / information priority by default, not necessarily the largest rectangle. Use `primary_emphasis_method` to decide whether the priority becomes area, reading order, visual anchor, or path.
+- In the editable sequential board, derive content groups from the direct subheadings under each page's `页面内容` section; do not treat layout notes, image requirements, or prompt drafts as content groups. After raw-material save/update, compare these headings with the current groups and offer an explicit sync. Keep weights for exact heading matches, archive unmatched old groups with their prior weights, and add new headings as `unassigned`; block generation for that page until each new group receives a weight. Text added inside an unchanged heading remains part of that existing group.
 
 Density and page treatment options must include simple visual layout cues in the board, not text-only descriptions. Use compact diagrams or preview images to show the difference between speaker-led, reading-first, hybrid, body-text carrier, feature overview, and hybrid page treatment.
 

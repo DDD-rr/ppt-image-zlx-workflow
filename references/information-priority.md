@@ -2,6 +2,8 @@
 
 Use when the decision board, page guide, prompt, or QA mentions `page_mode`, `information_groups`, `group_weights`, `primary_emphasis_method`, `required_section_titles`, dense modules, or anti-flattening.
 
+When `raw_visual_marks` exists, treat each mark as a user-selected instruction for that exact raw-text span. `replace` means translate the span's meaning into a fitting diagram, pictogram, or visual object and do not render its words; `soften` means keep the words readable at lower prominence and pair them with a visual. Unmarked source text follows the page's normal fidelity rules. Stop if a mark has `needsReview`; ask the user to select and mark the span again. Do not invent real brand or event logos: use confirmed image assets or generic pictograms.
+
 ## Core Meaning
 
 - `group_weights.primary` means information or reading priority by default. Preserve the most text and give it the clearest reading target; it does not mean largest area unless `primary_emphasis_method` is `area-priority`.
@@ -50,6 +52,7 @@ When `required_section_titles` exists, treat the titles as information-structure
 Include:
 
 - `page_mode`, `information_groups`, `group_weights`, `excluded_information_groups`, and `primary_emphasis_method` when available;
+- every `raw_visual_marks` span, its mode, visual interpretation, and explicit text-rendering rule;
 - explicit statement that primary means emphasis and fidelity priority, not source-order changes; only explicit narrative reorder may alter module sequence;
 - explicit statement of the first source-order module and its first reading zone, plus the visual-anchor zone when different;
 - composition pattern and object identity for each information group;

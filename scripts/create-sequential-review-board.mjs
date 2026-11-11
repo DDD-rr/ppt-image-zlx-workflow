@@ -43,7 +43,7 @@ if (!bridgeAnchor.test(oldHtml)) throw new Error('原决策板结构已变化，
 const bridge = `      renderAll(false);
       window.__PAGE_FLOW_BRIDGE__ = {
         active: () => state.active,
-        rawDirty: () => rawDirty.size > 0,
+        rawDirty: () => rawDirty.has(state.active),
         previewData: () => {
           const slide = slides.find(item => item.id === state.active);
           const s = state.slides[state.active];
@@ -56,7 +56,7 @@ const bridge = `      renderAll(false);
           const restraint = lookup(commonOptions.visual_restraint, s.visual_restraint);
           const expressiveness = lookup(commonOptions.visual_expressiveness, s.visual_expressiveness);
           const imageStrength = lookup(commonOptions.visual_strength, s.visual_strength);
-          const palette = lookup(palettes, state.palette_direction);
+          const palette = state.palette_direction === 'custom' ? state.custom_palette : palettePresentation(lookup(palettes, state.palette_direction) || palettes[0]);
           const handling = lookup(globalControls.content_handling, state.content_handling);
           const titleMode = lookup(globalControls.title_overlay, state.title_overlay);
           const optionLabel = (list, id) => lookup(list, id)?.label || id || '未设置';
@@ -73,7 +73,9 @@ const bridge = `      renderAll(false);
               { label: '整体气质', value: restraint?.label || optionLabel(commonOptions.visual_restraint, s.visual_restraint) },
               { label: '视觉强度', value: expressiveness?.label || optionLabel(commonOptions.visual_expressiveness, s.visual_expressiveness) }
             ],
-            groups: (s.information_groups || []).map(group => ({ label: group.label, value: optionLabel(weightOptions, s.group_weights?.[group.id]) })),
+            groups: (s.information_groups || []).map(group => ({ label: group.label, value: s.group_weights?.[group.id] === 'unassigned' ? '待分配' : optionLabel(weightOptions, s.group_weights?.[group.id]), pending: s.group_weights?.[group.id] === 'unassigned' })),
+            groupSyncPending: (() => { const diff = contentGroupDiff(slide, s); return diff.added.length > 0 || diff.removed.length > 0; })(),
+            annotations: (s.raw_visual_marks || []).map(mark => ({ label: mark.quote, value: mark.needsReview ? '需要重新标记' : mark.mode === 'replace' ? '图示替代，不呈现所选文字' : '文字弱化并配合图示', effect: mark.needsReview ? '原文编辑后位置不明确，请重新标记。' : '', needsReview: !!mark.needsReview })),
             global: [
               { label: '全局色系', value: palette?.label || state.palette_direction },
               { label: '原文处理', value: optionLabel(globalControls.content_handling, state.content_handling) },
@@ -83,11 +85,9 @@ const bridge = `      renderAll(false);
           };
         },
         confirmPage: () => {
-          const current = state.slides[state.active];
-          if (!current.checked) toggleChecked(current);
-          renderAll(false);
           return currentDecision();
         },
+        refreshCandidateNav: () => renderNav(),
         nextPage: ids => {
           const currentIndex = slides.findIndex(item => item.id === state.active);
           const next = [...slides.slice(currentIndex + 1), ...slides.slice(0, currentIndex)].find(item => ids.includes(item.id));
@@ -96,8 +96,9 @@ const bridge = `      renderAll(false);
       };
       document.dispatchEvent(new Event('page-flow-ready'));
       draftReady = true;`;
-const html = oldHtml.replace(bridgeAnchor, bridge).replace('</body>', '<script src="page-flow.js" defer></script>\n</body>');
+const html = oldHtml.replace(bridgeAnchor, bridge).replace('</body>', '<script src="page-flow.js?v=2" defer></script>\n</body>');
 await writeFile(path.join(target, 'index.html'), html);
 await cp(new URL('../references/page-flow.js', import.meta.url), path.join(target, 'page-flow.js'));
+await cp(new URL('../references/assets/visual-previews.jpg', import.meta.url), path.join(target, 'visual-previews.jpg'));
 console.log(`新版决策板：${path.join(target, 'index.html')}`);
 console.log('原有 decision_board 未修改。');
