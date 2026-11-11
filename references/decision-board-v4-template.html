@@ -303,6 +303,7 @@
     .raw-editor-highlight { overflow: hidden; color: #173c60; pointer-events: none; }
     .raw-editor-highlight mark { padding: 1px 0; border-radius: 3px; color: inherit; }
     .raw-editor-highlight mark[data-mode="replace"] { background: #d9f2e5; box-shadow: inset 0 -2px #38a169; }
+    .raw-editor-highlight mark[data-mode="text-only"] { background: #dceaff; box-shadow: inset 0 -2px #4779c4; }
     .raw-editor-highlight mark[data-mode="soften"] { background: #fff1cc; box-shadow: inset 0 -2px #d99a16; }
     .raw-editor-wrap .raw-editor { z-index: 1; display: block; min-height: 0; max-height: none; overflow: auto; resize: none; outline: 0; background: transparent; color: transparent; caret-color: #173c60; }
     .raw-editor-wrap .raw-editor::selection { background: rgba(57, 132, 219, .35); color: transparent; }
@@ -311,6 +312,7 @@
     .raw-mark-toolbar button { min-height: 32px; padding: 6px 10px; border: 1px solid #c7d9e8; border-radius: 8px; background: #fff; color: #315f89; font-size: 12px; font-weight: 700; }
     .raw-mark-toolbar button:disabled { opacity: .45; cursor: not-allowed; }
     .raw-mark-toolbar .raw-mark-apply[data-mode="replace"] { border-color: #8cc8a5; background: #edf9f1; color: #216b3b; }
+    .raw-mark-toolbar .raw-mark-apply[data-mode="text-only"] { border-color: #8db2e5; background: #edf4ff; color: #285b9b; }
     .raw-mark-toolbar .raw-mark-apply[data-mode="soften"] { border-color: #e6c36a; background: #fff8e5; color: #8b6410; }
     .raw-mark-help { position: relative; }
     .raw-mark-help-popover { position: absolute; z-index: 5; top: calc(100% + 7px); right: 0; width: min(340px, calc(100vw - 48px)); padding: 12px 14px; border: 1px solid #cbdced; border-radius: 10px; background: #fff; color: #526f88; box-shadow: 0 8px 24px rgba(30,72,112,.15); font-size: 12px; line-height: 1.6; }
@@ -320,6 +322,7 @@
     .raw-mark-item { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 8px; padding: 6px 9px; border-radius: 7px; background: #f3f7fa; color: #526f88; font-size: 11px; }
     .raw-mark-quote { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .raw-mark-item[data-mode="replace"] { background: #edf9f1; }
+    .raw-mark-item[data-mode="text-only"] { background: #edf4ff; }
     .raw-mark-item[data-mode="soften"] { background: #fff8e5; }
     .raw-mark-item[data-stale="true"] { background: #fff1f0; color: #a63b32; }
     .raw-mark-mode { white-space: nowrap; font-weight: 700; }
@@ -1114,22 +1117,37 @@
 
     function extractContentGroupLabels(raw) {
       const lines = String(raw || '').replace(/^\uFEFF/, '').split(/\r?\n/);
-      let sectionIndex = -1, sectionLevel = 0;
-      for (let i = 0; i < lines.length; i++) {
-        const match = lines[i].match(/^(#{1,6})\s*页面内容\s*#*\s*$/);
-        if (match) { sectionIndex = i; sectionLevel = match[1].length; break; }
-      }
-      if (sectionIndex < 0) return ['页面内容'];
+      const headings = lines.flatMap((line, index) => {
+        const match = line.match(/^(#{1,6})\s+(.+?)\s*#*\s*$/);
+        return match ? [{ index, level: match[1].length, label: match[2].replace(/\*\*/g, '').trim() }] : [];
+      });
+      const excluded = new Set(['标题', '主标题', '副标题', '页面标注', '页面布局建议', '生成图片要求', '图片提示词草案', '原文核对']);
+      const endOf = heading => headings.find(item => item.index > heading.index && item.level <= heading.level)?.index ?? lines.length;
+      const hasBody = (start, end) => lines.slice(start, end).some(line => line.trim() && !/^[-_]{3,}$/.test(line.trim()));
       const labels = [];
-      const groupLevel = sectionLevel + 1;
-      for (let i = sectionIndex + 1; i < lines.length; i++) {
-        const heading = lines[i].match(/^(#{1,6})\s+(.+?)\s*#*\s*$/);
-        if (!heading) continue;
-        const level = heading[1].length;
-        if (level <= sectionLevel) break;
-        if (level === groupLevel) labels.push(heading[2].replace(/\*\*/g, '').trim());
+      const content = headings.find(item => item.label === '页面内容');
+      const contentEnd = content ? endOf(content) : -1;
+      if (content) {
+        const children = headings.filter(item => item.index > content.index && item.index < contentEnd && item.level === content.level + 1);
+        if (hasBody(content.index + 1, children[0]?.index ?? contentEnd)) labels.push('页面内容');
+        labels.push(...children.map(item => item.label));
       }
-      return [...new Set(labels.filter(Boolean))].length ? [...new Set(labels.filter(Boolean))] : ['页面内容'];
+      const pageHeading = headings.find(item => /^(?:第\s*\d+\s*页|slide\s*\d+|page\s*\d+|p\s*\d+)/i.test(item.label));
+      const pageStart = (pageHeading?.index ?? -1) + 1;
+      const firstSection = headings.find(item => item.index >= pageStart && item.level >= 3);
+      if (hasBody(pageStart, firstSection?.index ?? lines.length)) labels.push('未设小标题的页面内容');
+      for (const heading of headings) {
+        if (heading.level < 3 || heading.label === '页面内容' || excluded.has(heading.label)) continue;
+        if (content && heading.index > content.index && heading.index < contentEnd) continue;
+        const parent = [...headings].reverse().find(item => item.index < heading.index && item.level < heading.level);
+        if (parent && excluded.has(parent.label)) continue;
+        if (parent && parent.level >= 3 && parent.label !== '页面用途') continue;
+        const end = endOf(heading);
+        const children = headings.filter(item => item.index > heading.index && item.index < end && item.level === heading.level + 1 && !excluded.has(item.label));
+        if (children.length) labels.push(...children.map(item => item.label));
+        else if (hasBody(heading.index + 1, end)) labels.push(heading.label);
+      }
+      return [...new Set(labels.filter(Boolean))];
     }
 
     function normalizeGroupLabel(label) {
@@ -1609,14 +1627,16 @@
       markReplace.type = 'button'; markReplace.dataset.mode = 'replace'; markReplace.disabled = true;
       const markSoften = el('button', 'raw-mark-apply', '文字弱化＋图示');
       markSoften.type = 'button'; markSoften.dataset.mode = 'soften'; markSoften.disabled = true;
+      const markTextOnly = el('button', 'raw-mark-apply', '仅保留原文分点');
+      markTextOnly.type = 'button'; markTextOnly.dataset.mode = 'text-only'; markTextOnly.disabled = true;
       const markRemove = el('button', '', '取消选中文字标记'); markRemove.type = 'button'; markRemove.disabled = true;
       const markHelp = el('div', 'raw-mark-help');
       const markHelpButton = el('button', '', '?');
       markHelpButton.type = 'button'; markHelpButton.setAttribute('aria-label', '文字呈现标记说明'); markHelpButton.setAttribute('aria-expanded', 'false');
       const markHelpPopover = el('div', 'raw-mark-help-popover'); markHelpPopover.hidden = true;
-      markHelpPopover.textContent = '先在 Markdown 编辑区选中一段原文，再选择呈现方式。“图示替代”要求生成图用图标或示意表达该内容，不显示所选文字；“文字弱化＋图示”保留文字但降低视觉权重，并配合图示。标记只影响生成呈现，不修改原文。真实品牌或赛事 Logo 需使用你提供或确认的素材；否则使用通用示意图。';
+      markHelpPopover.textContent = '先在 Markdown 编辑区选中一段原文，再选择呈现方式。“图示替代”要求生成图用图标或示意表达该内容，不显示所选文字；“文字弱化＋图示”完整保留原文、降低视觉权重并配合图示；“仅保留原文分点”按原文和顺序呈现，不加总结句或专门配图。未标记的分点默认采用文字弱化＋图示；取消标记即回到默认。标记只影响生成呈现，不修改原文。真实品牌或赛事 Logo 需使用你提供或确认的素材；否则使用通用示意图。';
       markHelp.append(markHelpButton, markHelpPopover);
-      markToolbar.append(markReplace, markSoften, markRemove, markHelp);
+      markToolbar.append(markReplace, markSoften, markTextOnly, markRemove, markHelp);
       const markList = el('div', 'raw-mark-list');
       markList.style.display = 'none';
 
@@ -1665,7 +1685,7 @@
         markState.raw_visual_marks.forEach(mark => {
           const row = el('div', 'raw-mark-item'); row.dataset.mode = mark.mode; row.dataset.stale = String(!!mark.needsReview);
           const quote = el('span', 'raw-mark-quote', `“${mark.quote}”`); quote.title = mark.quote;
-          const modeLabel = mark.needsReview ? '需要重新标记' : mark.mode === 'replace' ? '图示替代' : '文字弱化＋图示';
+          const modeLabel = mark.needsReview ? '需要重新标记' : mark.mode === 'replace' ? '图示替代' : mark.mode === 'text-only' ? '仅保留原文分点' : '文字弱化＋图示';
           const label = el('span', 'raw-mark-mode', modeLabel);
           const remove = el('button', 'raw-mark-remove', '移除'); remove.type = 'button'; remove.setAttribute('aria-label', `移除标记：${mark.quote}`);
           remove.addEventListener('click', () => { markState.raw_visual_marks = markState.raw_visual_marks.filter(item => item.id !== mark.id); renderMarkOverlay(); markChanged(); });
@@ -1695,19 +1715,21 @@
         const start = editor.selectionStart, end = editor.selectionEnd;
         selectedRange = end > start ? { start, end, quote: editor.value.slice(start, end) } : null;
         const overlaps = selectedRange && markState.raw_visual_marks.some(mark => selectedRange.start < mark.end && selectedRange.end > mark.start);
-        markReplace.disabled = !selectedRange; markSoften.disabled = !selectedRange; markRemove.disabled = !overlaps;
+        markReplace.disabled = !selectedRange; markSoften.disabled = !selectedRange; markTextOnly.disabled = !selectedRange; markRemove.disabled = !overlaps;
       };
       const applyMark = mode => {
         if (!selectedRange) return;
         const { start, end, quote } = selectedRange;
         markState.raw_visual_marks = markState.raw_visual_marks.filter(mark => !(start < mark.end && end > mark.start));
+        if (mode === 'replace' && /\d|[%％]|(?:至少|至多|必须|不得|仅限|型号|版本|不超过)/.test(quote)) alert('所选内容含数字或限定信息。图示可能无法准确传达，请在生成后重点核对。');
         markState.raw_visual_marks.push({ id: `mark-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`, quote, start, end, prefix: editor.value.slice(Math.max(0, start - 24), start), suffix: editor.value.slice(end, end + 24), mode, needsReview: false });
         markState.raw_visual_marks.sort((a, b) => a.start - b.start);
         renderMarkOverlay(); syncSelectedRange(); markChanged();
       };
-      [markReplace, markSoften, markRemove].forEach(button => button.addEventListener('mousedown', event => event.preventDefault()));
+      [markReplace, markSoften, markTextOnly, markRemove].forEach(button => button.addEventListener('mousedown', event => event.preventDefault()));
       markReplace.addEventListener('click', () => applyMark('replace'));
       markSoften.addEventListener('click', () => applyMark('soften'));
+      markTextOnly.addEventListener('click', () => applyMark('text-only'));
       markRemove.addEventListener('click', () => {
         if (!selectedRange) return;
         const { start, end } = selectedRange;
@@ -1866,7 +1888,7 @@
       const groups = s.information_groups || getInformationGroups(slide);
       const diff = contentGroupDiff(slide, s);
       const wrap = el('div', 'content-group');
-      wrap.innerHTML = `<div class="group-head"><div class="weight-title-group"><h3>信息组权重</h3><details class="weight-help"><summary aria-label="查看内容处理说明" title="查看处理说明">?</summary><div class="weight-help-popover" role="note"><div class="weight-help-item"><strong>主重点</strong><span>核心信息，优先保证内容完整、醒目；不自动代表版面最大，也不改变原文顺序。</span></div><div class="weight-help-item"><strong>次重点</strong><span>重要支撑信息，保留主要内容，视觉层级略低于主重点。</span></div><div class="weight-help-item"><strong>图示化</strong><span>优先用图标、Logo、示意图或融入主视觉呈现，只保留必要短标签，不放说明性段落。</span></div><div class="weight-help-item"><strong>不显示</strong><span>从本页生成内容中排除该组，即使原始材料或旧分组里仍有它；不修改源材料。</span></div></div></details></div><span class="hint">每项对应“本页原始材料”中的同名小标题；新增或改名后先同步，再为新标题分配处理方式。</span></div>`;
+      wrap.innerHTML = `<div class="group-head"><div class="weight-title-group"><h3>信息组权重</h3><details class="weight-help"><summary aria-label="查看内容处理说明" title="查看处理说明">?</summary><div class="weight-help-popover" role="note"><div class="weight-help-item"><strong>主重点</strong><span>核心信息，优先保证内容完整、醒目；不自动代表版面最大，也不改变原文顺序。</span></div><div class="weight-help-item"><strong>次重点</strong><span>重要支撑信息，保留主要内容，视觉层级略低于主重点。</span></div><div class="weight-help-item"><strong>图示化</strong><span>优先用图标、Logo、示意图或融入主视觉呈现，只保留必要短标签，不放说明性段落。</span></div><div class="weight-help-item"><strong>不显示</strong><span>从本页生成内容中排除该组，即使原始材料或旧分组里仍有它；不修改源材料。</span></div></div></details></div><span class="hint">对应本页实际内容小标题；没有小标题的正文或表格会单列。材料变化后先同步，再设置新增项。</span></div>`;
       const table = el('div', 'weight-table');
       groups.forEach(group => {
         const row = el('div', 'weight-row');
@@ -2012,12 +2034,14 @@
           const files = Array.from(event.clipboardData?.files || []).filter(file => file.type.startsWith('image/'));
           if (!files.length) return;
           event.preventDefault();
+          event.stopPropagation();
           addFiles(slide.id, asset.id, files);
         });
         pasteTarget.addEventListener('dragover', event => { event.preventDefault(); pasteTarget.classList.add('drag'); });
         pasteTarget.addEventListener('dragleave', () => pasteTarget.classList.remove('drag'));
         pasteTarget.addEventListener('drop', event => {
           event.preventDefault();
+          event.stopPropagation();
           pasteTarget.classList.remove('drag');
           addFiles(slide.id, asset.id, event.dataTransfer.files);
         });

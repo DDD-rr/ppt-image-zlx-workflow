@@ -14,7 +14,7 @@ Before writing page guides, record confirmed `content_handling` (`strict` or `in
 - 母版摘要：见 `Master_Template.md`。
 - 项目配色摘要：按 `references/color-system.md` 写明候选方向、最终选择、来源、色彩占比、组件级色彩规则和禁止组合。
 - 信息优先级摘要：按 `references/information-priority.md` 写明 `page_mode`、`information_groups`、`group_weights`、`primary_emphasis_method`、`required_section_titles` 如何影响阅读顺序、文本保留、视觉锚点、面积分配和辅助内容降级。
-- 选中文字呈现：逐条记录 `raw_visual_marks` 的原文、标记方式和对应视觉表达；标明哪些文字必须隐藏、哪些文字需弱化保留。若存在 `needsReview`，暂停生成并要求重新标记。
+- 选中文字呈现：逐条记录 `raw_visual_marks` 的原文、标记方式和对应视觉表达。`replace` 不显示所选文字；`soften` 完整保留文字但弱化并配图；`text-only` 按原文和顺序呈现分点，不添加总结文字或专门配图。未标记分点默认完整保留原文、弱化视觉权重并配相关图示，同组可共用一图。若存在 `needsReview`，暂停生成并要求重新标记。
 - 视觉表现力度摘要：写明全局 `visual_expressiveness` 与单页覆盖；说明它如何影响材质、光效、装饰线、场景深度和反 AI 约束的松紧。
 - 真实图片规则：按 `references/real-image-policy.md` 写明实际输入方式、dominance role 和缺失图片处理。
 - 标题系统摘要：见 `references/title-style.md` 和项目级 `title_style.json`。
@@ -25,6 +25,7 @@ Before writing page guides, record confirmed `content_handling` (`strict` or `in
 - 页面类型：正文承载页 / 功能概览页 / 混合页 / 证据页 / 架构页 / 流程页 / 封面页 / 总结页等。
 - 页面角色与目标：
 - 信息关系判决：先判定本页主要信息关系，例如因果链、对比缺口、供需压力、系统层级、能力拆解、证据链、流程路径、参数矩阵或机会窗口；说明为什么该关系比单纯场景氛围更适合本页。
+- 流程识别：若材料用箭头、编号、层级或文字关系表示真实流程，列出节点原文、顺序、分支和连接含义，并区分结构记号与需要呈现的文字。依据模块权重决定节点图像、通用图标和连接路径的投入；文字呈现仍由 `content_handling` 与选区标记决定。
 - 论证链条：用 3-5 个节点写清本页从来源信息到核心结论的逻辑，例如“竞争壁垒 -> 国内不足 -> 赛事需求 -> 产品机会”；不得只写“科技感场景 + 信息模块”。
 - 原始输入摘要：
 - 一级信息组与去向：列出定义、背景、应用场景、核心功能、结论、用户重点等一级信息组，并说明保留正文、压缩为模块、转为场景标签、转为视觉对象或轻量化。

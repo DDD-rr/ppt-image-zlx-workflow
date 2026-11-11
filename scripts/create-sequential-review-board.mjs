@@ -75,7 +75,7 @@ const bridge = `      renderAll(false);
             ],
             groups: (s.information_groups || []).map(group => ({ label: group.label, value: s.group_weights?.[group.id] === 'unassigned' ? '待分配' : optionLabel(weightOptions, s.group_weights?.[group.id]), pending: s.group_weights?.[group.id] === 'unassigned' })),
             groupSyncPending: (() => { const diff = contentGroupDiff(slide, s); return diff.added.length > 0 || diff.removed.length > 0; })(),
-            annotations: (s.raw_visual_marks || []).map(mark => ({ label: mark.quote, value: mark.needsReview ? '需要重新标记' : mark.mode === 'replace' ? '图示替代，不呈现所选文字' : '文字弱化并配合图示', effect: mark.needsReview ? '原文编辑后位置不明确，请重新标记。' : '', needsReview: !!mark.needsReview })),
+            annotations: (s.raw_visual_marks || []).map(mark => ({ label: mark.quote, value: mark.needsReview ? '需要重新标记' : mark.mode === 'replace' ? '图示替代，不呈现所选文字' : mark.mode === 'text-only' ? '仅保留原文分点，不加总结或专门配图' : '文字弱化并配合图示', effect: mark.needsReview ? '原文编辑后位置不明确，请重新标记。' : '', needsReview: !!mark.needsReview })),
             global: [
               { label: '全局色系', value: palette?.label || state.palette_direction },
               { label: '原文处理', value: optionLabel(globalControls.content_handling, state.content_handling) },

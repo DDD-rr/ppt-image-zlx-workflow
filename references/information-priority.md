@@ -2,7 +2,7 @@
 
 Use when the decision board, page guide, prompt, or QA mentions `page_mode`, `information_groups`, `group_weights`, `primary_emphasis_method`, `required_section_titles`, dense modules, or anti-flattening.
 
-When `raw_visual_marks` exists, treat each mark as a user-selected instruction for that exact raw-text span. `replace` means translate the span's meaning into a fitting diagram, pictogram, or visual object and do not render its words; `soften` means keep the words readable at lower prominence and pair them with a visual. Unmarked source text follows the page's normal fidelity rules. Stop if a mark has `needsReview`; ask the user to select and mark the span again. Do not invent real brand or event logos: use confirmed image assets or generic pictograms.
+When `raw_visual_marks` exists, treat each mark as a user-selected instruction for that exact raw-text span. `replace` means translate the span's meaning into a fitting diagram, pictogram, or visual object and do not render its words; `soften` means keep every word readable at lower prominence and pair it with a visual; `text-only` means retain the exact original bullet wording and order without added summary text or a dedicated illustration. Unmarked bullet points default to complete original wording at lower prominence with a related illustration; one illustration may support a group. Other unmarked source text follows the page's normal fidelity rules. A mark takes precedence only over its own span; removing it restores the default. Stop if a mark has `needsReview`; ask the user to select and mark the span again. Do not invent real brand or event logos: use confirmed image assets or generic pictograms. Check whether `replace` loses numbers, qualifications, or product names.
 
 ## Core Meaning
 
