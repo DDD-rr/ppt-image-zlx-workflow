@@ -298,6 +298,7 @@
     .raw-tab:hover { transform: none; background: #edf6ff; box-shadow: none; }
     .raw-tab.active { color: #155c9f; background: #e7f3ff; box-shadow: inset 0 -2px #2582df; }
     .raw-sync-status { min-height: 18px; margin: 0 0 0 auto; color: #527494; font-size: 12px; text-align: right; }
+    .raw-material-group[data-source-mode="markdown"] .raw-sync-status::after { content:"已隐藏页面布局建议、生成图片要求和图片提示词草案；材料变化后，将在生成时重建本页指南与提示词。"; display:block; margin-top:3px; color:#71869a; font-weight:400; line-height:1.5; }
     .raw-sync-status[data-state="dirty"] { color: #986112; }
     .raw-sync-status[data-state="error"] { color: #b42318; }
     .raw-preview, .raw-editor { width: 100%; min-height: 208px; height: 260px; max-height: 65vh; margin-top: 8px; overflow: auto; resize: vertical; border: 1px solid #cbdff0; border-radius: 10px; background: #fff; padding: 13px 15px; color: #173c60; line-height: 1.65; }
@@ -707,7 +708,7 @@
       align-items: center;
     }
     .asset-records { color: var(--ok); font-size: 12px; margin-top: 7px; }
-    .asset-records { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); align-items:stretch; gap:10px; margin-top:12px; }
+    .asset-records { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); align-items:stretch; gap:10px; margin-top:12px; }
     .asset-records[hidden] { display:none; }
     .asset-type-grid {
       display: grid;
@@ -778,13 +779,15 @@
     }
     .modal.active { display: grid; }
     .modal-card { width: min(560px, 100%); padding: 22px; border-radius: 8px; background: var(--paper); border: 1px solid var(--line); }
-    .asset-record { display:grid; grid-template-rows:96px minmax(32px,auto) 34px 30px; gap:7px; min-width:0; margin:0; padding:10px; border:1px solid #d7e3ee; border-radius:10px; background:#fff; }
+    .asset-record { display:grid; grid-template-rows:96px minmax(30px,auto) 34px; align-items:stretch; gap:7px; min-width:0; margin:0; padding:9px; border:1px solid #d7e3ee; border-radius:10px; background:#fff; }
     .asset-record img { width:100%; height:96px; object-fit:contain; border-radius:6px; background:#f5f8fb; }
-    .asset-record-name { min-width:0; align-self:center; overflow-wrap:anywhere; display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; overflow:hidden; color:#43596e; font-size:11px; line-height:1.4; }
+    .asset-record-head { display:flex; align-items:center; gap:6px; min-width:0; }
+    .asset-record-name { flex:1; min-width:0; overflow-wrap:anywhere; display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; overflow:hidden; color:#43596e; font-size:11px; line-height:1.35; }
     .asset-record select { width:100%; min-width:0; min-height:32px; padding:4px 24px 4px 8px; border:1px solid #d1deea; border-radius:7px; background:#fff; color:#405972; font-size:11px; }
     .asset-record select:disabled { background:#f1f5f8; color:#8493a1; }
-    .asset-record .asset-record-remove { justify-self:end; min-height:27px; padding:3px 9px; border:1px solid #d9e2ea; border-radius:6px; background:#fff; color:#5e7183; font-size:11px; box-shadow:none; }
+    .asset-record .asset-record-remove { flex:none; min-height:26px; padding:3px 8px; border:1px solid #d9e2ea; border-radius:6px; background:#fff; color:#5e7183; font-size:11px; box-shadow:none; }
     .asset-link-hint { margin-top:8px; color:#6f8294; font-size:11px; line-height:1.5; }
+    @media(max-width:1200px) { .asset-records { grid-template-columns:repeat(3,minmax(0,1fr)); } }
     @media(max-width:900px) { .asset-records { grid-template-columns:repeat(2,minmax(0,1fr)); } }
     @media(max-width:560px) { .asset-records { grid-template-columns:minmax(0,1fr); } }
     /* Light blue review surface: quiet defaults, clear selected controls, generous spacing. */
@@ -1702,7 +1705,46 @@
       document.dispatchEvent(new CustomEvent('generated-image-selected', { detail: image }));
     }
 
+    function materialEditorProjection(source) {
+      const hidden = [];
+      let text = '', fence = '', hidingLevel = 0;
+      for (const line of String(source || '').match(/[^\n]*\n|[^\n]+$/g) || []) {
+        const fenceMatch = line.match(/^\s*(\x60{3,}|~{3,})/);
+        const heading = !fence && line.match(/^\s{0,3}(#{1,6})\s+(.+?)\s*#*\s*$/);
+        if (heading && hidingLevel && heading[1].length <= hidingLevel) hidingLevel = 0;
+        if (heading && /^(页面布局建议|生成图片要求|图片提示词草案)$/.test(heading[2].trim())) hidingLevel = heading[1].length;
+        if (hidingLevel) {
+          const last = hidden[hidden.length - 1];
+          if (last && last.at === text.length) last.text += line;
+          else hidden.push({ at: text.length, text: line });
+        } else text += line;
+        if (fenceMatch) { const marker = fenceMatch[1][0]; if (!fence) fence = marker; else if (fence === marker) fence = ''; }
+      }
+      return {
+        get text() { return text; },
+        toFull(offset, end = false) { return offset + hidden.filter(block => block.at < offset || (!end && block.at === offset)).reduce((sum, block) => sum + block.text.length, 0); },
+        toVisible(offset) {
+          let removed = 0;
+          for (const block of hidden) { const start = block.at + removed; if (offset <= start) break; removed += Math.min(block.text.length, offset - start); }
+          return offset - removed;
+        },
+        update(next) {
+          let prefix = 0, suffix = 0;
+          while (prefix < text.length && prefix < next.length && text[prefix] === next[prefix]) prefix++;
+          while (suffix < text.length - prefix && suffix < next.length - prefix && text[text.length - 1 - suffix] === next[next.length - 1 - suffix]) suffix++;
+          const end = text.length - suffix, delta = next.length - text.length;
+          hidden.forEach(block => { if (block.at >= end) block.at += delta; else if (block.at > prefix) block.at = prefix; block.at = Math.max(0, Math.min(next.length, block.at)); });
+          text = next;
+          hidden.forEach(block => { if (block.at > 0 && text[block.at - 1] !== '\n' && !block.text.startsWith('\n')) block.text = '\n\n' + block.text; });
+          let cursor = 0, full = '';
+          hidden.forEach(block => { full += text.slice(cursor, block.at) + block.text; cursor = block.at; });
+          return full + text.slice(cursor);
+        }
+      };
+    }
+
     function rawBlock(slide) {
+      const projection = materialEditorProjection(slide.raw);
       const wrap = el('div', 'content-group raw-material-group');
       const head = el('div', 'group-head raw-group-head');
       const heading = el('h3', '', '本页原始材料');
@@ -1735,12 +1777,12 @@
       status.setAttribute('aria-live', 'polite');
       toolbar.append(tabs, status);
       const preview = el('div', 'raw-preview markdown-preview');
-      preview.innerHTML = renderMarkdown(slide.raw);
+      preview.innerHTML = renderMarkdown(projection.text);
       const editorWrap = el('div', 'raw-editor-wrap');
       const editorHighlight = el('div', 'raw-editor-highlight');
       const editor = el('textarea', 'raw-editor');
       editor.rows = 12;
-      editor.value = slide.raw || '';
+      editor.value = projection.text;
       editor.setAttribute('aria-label', `${slide.label}原始材料 Markdown 编辑器`);
       editor.wrap = 'soft';
       editorHighlight.setAttribute('aria-hidden', 'true');
@@ -1897,8 +1939,9 @@
       let selectedRange = null;
       const renderMarkOverlay = () => {
         const raw = editor.value;
+        const fullRaw = slide.raw || '';
         const linkedRanges = new Set(markState.real_image_text_marks.map(mark => `${mark.start}:${mark.end}`));
-        const marks = [...markState.raw_visual_marks.map(mark => ({ ...mark, isImageLink: linkedRanges.has(`${mark.start}:${mark.end}`) })), ...markState.real_image_text_marks.map(item => ({ ...item, mode:'image-link', isImageLink:true }))].filter(item => !item.needsReview && Number.isInteger(item.start) && item.end > item.start && raw.slice(item.start, item.end) === item.quote).sort((a, b) => a.start - b.start || b.end - a.end);
+        const marks = [...markState.raw_visual_marks.map(mark => ({ ...mark, isImageLink: linkedRanges.has(`${mark.start}:${mark.end}`) })), ...markState.real_image_text_marks.map(item => ({ ...item, mode:'image-link', isImageLink:true }))].filter(item => Number.isInteger(item.start) && fullRaw.slice(item.start, item.end) === item.quote).map(item => ({ ...item, start: projection.toVisible(item.start), end: projection.toVisible(item.end) })).filter(item => !item.needsReview && Number.isInteger(item.start) && item.end > item.start && raw.slice(item.start, item.end) === item.quote).sort((a, b) => a.start - b.start || b.end - a.end);
         editorHighlight.replaceChildren();
         let cursor = 0;
         marks.forEach(mark => {
@@ -1947,7 +1990,9 @@
       };
       const syncSelectedRange = () => {
         const start = editor.selectionStart, end = editor.selectionEnd;
-        selectedRange = end > start ? { start, end, quote: editor.value.slice(start, end) } : null;
+        const fullStart = projection.toFull(start), fullEnd = projection.toFull(end, true);
+        const quote = editor.value.slice(start, end);
+        selectedRange = end > start && (slide.raw || '').slice(fullStart, fullEnd) === quote ? { start: fullStart, end: fullEnd, quote } : null;
         const overlaps = selectedRange && [...markState.raw_visual_marks, ...markState.real_image_text_marks].some(mark => selectedRange.start < mark.end && selectedRange.end > mark.start);
         [markEmphasize, markReplace, markCondense, markSoften, markTextOnly, markImageLink].forEach(button => { button.disabled = !selectedRange; }); markRemove.disabled = !overlaps;
       };
@@ -1956,7 +2001,7 @@
         const { start, end, quote } = selectedRange;
         markState.raw_visual_marks = markState.raw_visual_marks.filter(mark => !(start < mark.end && end > mark.start));
         if (['replace', 'condense-illustrate'].includes(mode) && /\d|[%％]|(?:至少|至多|必须|不得|仅限|型号|版本|不超过)/.test(quote)) alert('所选内容含数字或限定信息。请在生成后重点核对这些信息是否准确保留。');
-        markState.raw_visual_marks.push({ id: `mark-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`, quote, start, end, prefix: editor.value.slice(Math.max(0, start - 24), start), suffix: editor.value.slice(end, end + 24), mode, needsReview: false });
+        markState.raw_visual_marks.push({ id: `mark-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`, quote, start, end, prefix: (slide.raw || '').slice(Math.max(0, start - 24), start), suffix: (slide.raw || '').slice(end, end + 24), mode, needsReview: false });
         markState.raw_visual_marks.sort((a, b) => a.start - b.start);
         renderMarkOverlay(); syncSelectedRange(); markChanged();
       };
@@ -1972,7 +2017,7 @@
         const replacedIds = markState.real_image_text_marks.filter(mark => start < mark.end && end > mark.start).map(mark => mark.id);
         markState.real_image_text_marks = markState.real_image_text_marks.filter(mark => !(start < mark.end && end > mark.start));
         const id = `image-link-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-        markState.real_image_text_marks.push({ id, quote, start, end, prefix: editor.value.slice(Math.max(0,start-24),start), suffix: editor.value.slice(end,end+24), needsReview:false });
+        markState.real_image_text_marks.push({ id, quote, start, end, prefix: (slide.raw || '').slice(Math.max(0,start-24),start), suffix: (slide.raw || '').slice(end,end+24), needsReview:false });
         Object.keys(markState.real_image_links).forEach(path => { if (replacedIds.includes(markState.real_image_links[path])) delete markState.real_image_links[path]; });
         markState.real_image_text_marks.sort((a,b)=>a.start-b.start); renderMarkOverlay(); syncSelectedRange(); markChanged();
       });
@@ -1991,9 +2036,9 @@
       renderMarkOverlay();
 
       editor.addEventListener('input', () => {
-        slide.raw = editor.value;
-        state.raw_materials[slide.id] = editor.value;
-        reconcileMarks(editor.value);
+        slide.raw = projection.update(editor.value);
+        state.raw_materials[slide.id] = slide.raw;
+        reconcileMarks(slide.raw);
         renderMarkOverlay();
         refreshRealImageLinkSelects(slide.id);
         preview.innerHTML = renderMarkdown(editor.value);
@@ -2044,7 +2089,7 @@
         try {
           const data = await postJson('/api/source/save', {
             slideId: slide.id,
-            raw: editor.value,
+            raw: slide.raw,
             expectedPageHash: sourcePages[slide.id]?.pageHash || ''
           });
           const latestResponse = await fetch('/api/source-document', { cache: 'no-store' });
@@ -2077,8 +2122,8 @@
 
     function coreDesignBlock(slide) {
       const wrap = document.createDocumentFragment();
-      wrap.appendChild(pageModeBlock(slide));
       wrap.appendChild(infoWeightBlock(slide));
+      wrap.appendChild(pageModeBlock(slide));
       wrap.appendChild(emphasisMethodBlock(slide));
       wrap.appendChild(visualOptionBlock(slide, 'visual_direction', organizationOptions, '画面方案', 'visual_direction_notes'));
       return wrap;
@@ -2386,7 +2431,15 @@
 
     function refreshRealImageLinkSelects(slideId) {
       const slideState = state.slides[slideId]; if (!slideState) return;
-      const marks = slideState.source_mode === 'images' ? [] : (slideState.real_image_text_marks || []).filter(mark => !mark.needsReview && slideState.raw.slice(mark.start, mark.end) === mark.quote);
+      slideState.real_image_text_marks ||= [];
+      slideState.real_image_links ||= {};
+      const legacyLinks = (slideState.raw_visual_marks || []).filter(mark => mark.mode === 'image-link');
+      if (legacyLinks.length) {
+        slideState.real_image_text_marks.push(...legacyLinks);
+        slideState.raw_visual_marks = slideState.raw_visual_marks.filter(mark => mark.mode !== 'image-link');
+      }
+      const raw = String(state.raw_materials?.[slideId] ?? slides.find(slide => slide.id === slideId)?.raw ?? '');
+      const marks = slideState.source_mode === 'images' ? [] : slideState.real_image_text_marks.filter(mark => !mark.needsReview && Number.isInteger(mark.start) && mark.end > mark.start && raw.slice(mark.start, mark.end) === mark.quote);
       document.querySelectorAll('.asset-image-link-select').forEach(select => {
         if (select.dataset.slideId !== slideId) return;
         const previous = select.value; select.replaceChildren();
@@ -2446,12 +2499,17 @@
         zone.appendChild(pasteTarget);
         const records = el('div', 'asset-records');
         const items = s.real_images[asset.id];
-        const activeImageMarks = s.source_mode === 'images' ? [] : (s.real_image_text_marks || []).filter(mark => !mark.needsReview && s.raw.slice(mark.start, mark.end) === mark.quote);
+        s.real_image_text_marks ||= [];
+        const legacyLinks = (s.raw_visual_marks || []).filter(mark => mark.mode === 'image-link');
+        if (legacyLinks.length) { s.real_image_text_marks.push(...legacyLinks); s.raw_visual_marks = s.raw_visual_marks.filter(mark => mark.mode !== 'image-link'); }
+        const raw = String(state.raw_materials?.[slide.id] ?? slide.raw ?? '');
+        const activeImageMarks = s.source_mode === 'images' ? [] : (s.real_image_text_marks || []).filter(mark => !mark.needsReview && Number.isInteger(mark.start) && mark.end > mark.start && raw.slice(mark.start, mark.end) === mark.quote);
         s.real_image_links ||= {};
         if (!items.length) records.textContent = '尚未选择图片。';
         items.forEach((record, index) => {
           const row = el('div', 'asset-record');
           const img = document.createElement('img'); img.src = './' + record.path; img.alt = record.name;
+          const head = el('div', 'asset-record-head');
           const name = el('span', 'asset-record-name', record.name); name.title = record.name;
           const link = el('select', 'asset-image-link-select'); link.dataset.slideId = slide.id; link.dataset.imagePath = record.path; link.setAttribute('aria-label', record.name + ' 对应的原文');
           const none = el('option', '', '无'); none.value = ''; link.append(none);
@@ -2463,7 +2521,8 @@
           const remove = el('button', 'asset-record-remove', '移除'); remove.type = 'button';
           remove.setAttribute('aria-label', '移除 ' + record.name);
           remove.addEventListener('click', () => { items.splice(index, 1); delete s.real_image_links[record.path]; renderAll(false); });
-          row.append(img, name, link, remove); records.appendChild(row);
+          head.append(name, remove);
+          row.append(img, head, link); records.appendChild(row);
         });
         zone.appendChild(records);
         zone.appendChild(el('div', 'asset-link-hint', s.source_mode === 'images' ? '当前使用截图材料，图片连接仅在 Markdown 材料模式下可用。' : activeImageMarks.length ? '下拉选择每张图片对应的标记文字；选“无”表示不指定对应文字。' : '先在“编辑 Markdown”中选中原文并点“图片连接”，再到图片卡片中选择对应文字。'));
@@ -2878,11 +2937,12 @@
       }, 6000);
       document.getElementById('copyJson').addEventListener('click', copyJson);
       document.getElementById('saveJson').addEventListener('click', saveJson);
-      document.getElementById('closeModal').addEventListener('click', () => { document.getElementById('savedModal').classList.remove('active'); document.getElementById('saveJson').focus(); });
     }
 
+    document.getElementById('closeModal').addEventListener('click', () => { document.getElementById('savedModal').classList.remove('active'); document.getElementById('saveJson').focus(); });
     bootstrap().catch(error => {
       document.getElementById('saveStatus').textContent = '加载失败';
+      document.getElementById('modalTitle').textContent = '加载失败';
       document.getElementById('modalText').textContent = error.message || '决策板加载失败';
       document.getElementById('savedModal').classList.add('active');
     });
