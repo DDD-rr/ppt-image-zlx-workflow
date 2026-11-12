@@ -94,7 +94,8 @@
     { id: 'primary', label: '主重点', summary: '核心信息，优先保证内容完整、醒目；不自动代表最大版面，也不改变原文顺序。' },
     { id: 'secondary', label: '次重点', summary: '重要支撑信息，保留主要内容，视觉层级略低于主重点。' },
     { id: 'graphic', label: '图示化', summary: '优先使用图标、Logo、示意图或融入主视觉表达，只保留必要短标签，不写说明性段落。' },
-    { id: 'hidden', label: '不显示', summary: '从本页生成内容中排除该信息组；适用于不需要展示或原始材料已删去的内容。' }
+    { id: 'hidden', label: '不显示', summary: '从本页生成内容中排除该信息组；适用于不需要展示或原始材料已删去的内容。' },
+    { id: 'placeholder', label: '占位', summary: '按指定大小和位置预留空白区域，供后续放入素材；该组不生成文字或配图。' }
   ],
   emphasisMethods: [
     { id: 'reading-priority', label: '阅读突出', summary: '主重点在原文顺序中层级最清楚、文本保留最多；不自动前置。' },

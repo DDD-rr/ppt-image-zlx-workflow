@@ -1,6 +1,6 @@
 # PPT_Page_Image_Guide
 
-Before writing page guides, record confirmed `content_handling` (`strict` or `interpret`). For strict sources, list and carry the entire required on-page source text verbatim into each page prompt and check it in the resulting image; do not treat the example keyword limits below as permission to omit text. The sole span-level exception is an explicit `raw_visual_marks` annotation: `replace` expresses only that selected span visually without printing its words, while `soften` retains its words at lower prominence alongside a visual. Keep every unmarked span under the normal strict rule. For interpret sources, map summaries and visual ideas back to source meaning and keep names, numbers, qualifications, and locked wording. If a mark has `needsReview`, stop for user re-marking before generation. If the decision is missing, ask the user before continuing. The choice is independent of visual creativity.
+Before writing page guides, record confirmed `content_handling` and page-level `raw_visual_default` (defaults to `soften`). For strict sources, carry all required text verbatim except spans explicitly marked `replace` or `condense-illustrate`. `emphasize` retains selected wording and strengthens its visual prominence; `replace` expresses only the selected meaning visually without its words; `condense-illustrate` uses shorter source-grounded wording plus a visual while retaining key facts, names, numbers, units, and conditions; `soften` retains every word at lower prominence with a visual; `text-only` preserves exact wording/order without an added summary or dedicated illustration. The default applies to unmarked bullet spans. If a mark has `needsReview`, stop for user re-marking before generation. If the decision is missing, ask the user before continuing. Content handling is independent of visual creativity.
 
 项目：
 来源大纲：
@@ -14,7 +14,8 @@ Before writing page guides, record confirmed `content_handling` (`strict` or `in
 - 母版摘要：见 `Master_Template.md`。
 - 项目配色摘要：按 `references/color-system.md` 写明候选方向、最终选择、来源、色彩占比、组件级色彩规则和禁止组合。
 - 信息优先级摘要：按 `references/information-priority.md` 写明 `page_mode`、`information_groups`、`group_weights`、`primary_emphasis_method`、`required_section_titles` 如何影响阅读顺序、文本保留、视觉锚点、面积分配和辅助内容降级。
-- 选中文字呈现：逐条记录 `raw_visual_marks` 的原文、标记方式和对应视觉表达。`replace` 不显示所选文字；`soften` 完整保留文字但弱化并配图；`text-only` 按原文和顺序呈现分点，不添加总结文字或专门配图。未标记分点默认完整保留原文、弱化视觉权重并配相关图示，同组可共用一图。若存在 `needsReview`，暂停生成并要求重新标记。
+- 选中文字呈现：逐条记录 `raw_visual_marks` 的原文、标记方式和对应视觉表达。`emphasize` 保留原意并突出关键数值或要点，可融入正文或提取为视觉焦点；`replace` 不呈现所选文字，以语义图示传达；`condense-illustrate` 精简所选原文并配图，保留关键事实、数字、单位和条件；`soften` 完整保留文字、降低视觉权重并配图；`text-only` 完整保留原文和顺序，不添加总结文字或专门配图。未标记分点按本页 `raw_visual_default` 处理，默认 `soften`。若存在 `needsReview`，暂停生成并要求重新标记。
+- 内容块占位：逐条读取权重为 `placeholder` 的组及 `group_placeholders`，记录正文可用面积比例与九宫格锚点。该块原文、标题、标记及配图均不出现在生成图内；预留干净空白供后续放素材，不画占位标签或边框。全屏占位仍保留全局标题安全区；与其他可见内容或占位面积冲突时，先返回决策板调整。
 - 视觉表现力度摘要：写明全局 `visual_expressiveness` 与单页覆盖；说明它如何影响材质、光效、装饰线、场景深度和反 AI 约束的松紧。
 - 真实图片规则：按 `references/real-image-policy.md` 写明实际输入方式、dominance role 和缺失图片处理。
 - 标题系统摘要：见 `references/title-style.md` 和项目级 `title_style.json`。
@@ -43,6 +44,7 @@ Before writing page guides, record confirmed `content_handling` (`strict` or `in
 - Alignment Contract：定义一个主内容父框，例如 `content frame x=56-1544, y=165-835`，并说明一级视觉区共享哪些左/右边界、列宽、行高、中心线或基线。
 - Space Budget：标题安全区、定义/说明区、辅助图片区、主内容区、底部安全线的大致高度；标题安全优先局部避让，不默认整体下移。
 - Main Content Comfort：定义主矩阵、核心功能区、对比表、流程图或架构层的最低舒展度。
+- 表格页专项判断：若表格承担主内容，记录读者要查找、比较或记住什么；列明原文行列关系、长说明与短数值的面积分配、确有依据的强调项，以及背景、整体底板、表头、正文色带或列面、框线和分隔线如何配合本页色系与语境。不要套固定表格样式。
 - Auxiliary Degradation：真实图片、应用场景标签、证明图、设备示意带、装饰背景等辅助内容的标准 / 紧凑 / 极简三档。
 - 配色角色：本页背景、主强调、辅助对比、功能色、材质色、青橙判断、组件级色彩分工和视觉强度 S/A/B/C/D。
 - 色彩角色占比：写明本页如何保留全局色彩系统中的背景基底、主强调、辅助深度色、正文/材质中性色；允许比例变化但不得丢失核心色彩角色。
