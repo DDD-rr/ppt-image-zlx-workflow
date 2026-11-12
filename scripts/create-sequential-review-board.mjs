@@ -43,7 +43,7 @@ if (!bridgeAnchor.test(oldHtml)) throw new Error('原决策板结构已变化，
 const bridge = `      renderAll(false);
       window.__PAGE_FLOW_BRIDGE__ = {
         active: () => state.active,
-        rawDirty: () => rawDirty.has(state.active),
+        rawDirty: () => state.slides[state.active]?.source_mode !== 'images' && rawDirty.has(state.active),
         previewData: () => {
           const slide = slides.find(item => item.id === state.active);
           const s = state.slides[state.active];
@@ -73,9 +73,12 @@ const bridge = `      renderAll(false);
               { label: '整体气质', value: restraint?.label || optionLabel(commonOptions.visual_restraint, s.visual_restraint) },
               { label: '视觉强度', value: expressiveness?.label || optionLabel(commonOptions.visual_expressiveness, s.visual_expressiveness) }
             ],
-            groups: (s.information_groups || []).map(group => ({ label: group.label, value: s.group_weights?.[group.id] === 'unassigned' ? '待分配' : optionLabel(weightOptions, s.group_weights?.[group.id]), pending: s.group_weights?.[group.id] === 'unassigned' })),
-            groupSyncPending: (() => { const diff = contentGroupDiff(slide, s); return diff.added.length > 0 || diff.removed.length > 0; })(),
-            annotations: (s.raw_visual_marks || []).map(mark => ({ label: mark.quote, value: mark.needsReview ? '需要重新标记' : mark.mode === 'replace' ? '图示替代，不呈现所选文字' : mark.mode === 'text-only' ? '仅保留原文分点，不加总结或专门配图' : '文字弱化并配合图示', effect: mark.needsReview ? '原文编辑后位置不明确，请重新标记。' : '', needsReview: !!mark.needsReview })),
+            sourceMode: s.source_mode || 'markdown',
+            sourceIssue: pendingUploads ? '图片正在保存，请等待保存完成后生成。' : s.source_mode === 'images' && !(s.source_images || []).length ? '请在本页原始材料的截图材料中添加截图，或切回 Markdown 材料。' : '',
+            groups: (s.source_mode === 'images' ? [] : s.information_groups || []).map(group => ({ label: group.label, value: s.group_weights?.[group.id] === 'unassigned' ? '待分配' : s.group_weights?.[group.id] === 'placeholder' && typeof placeholderSummary === 'function' ? '占位 · ' + placeholderSummary(s, group.id) : optionLabel(weightOptions, s.group_weights?.[group.id]), pending: s.group_weights?.[group.id] === 'unassigned' })),
+            placeholderIssue: s.source_mode === 'images' ? '' : typeof placeholderIssues === 'function' ? placeholderIssues(s) : '',
+            groupSyncPending: s.source_mode === 'images' ? false : (() => { const diff = contentGroupDiff(slide, s); return diff.added.length > 0 || diff.removed.length > 0; })(),
+            annotations: (s.source_mode === 'images' ? [] : s.raw_visual_marks || []).map(mark => ({ label: mark.quote, value: mark.needsReview ? '需要重新标记' : mark.mode === 'replace' ? '图示替代，不呈现所选文字' : mark.mode === 'text-only' ? '仅保留原文分点，不加总结或专门配图' : '文字弱化并配合图示', effect: mark.needsReview ? '原文编辑后位置不明确，请重新标记。' : '', needsReview: !!mark.needsReview })),
             global: [
               { label: '全局色系', value: palette?.label || state.palette_direction },
               { label: '原文处理', value: optionLabel(globalControls.content_handling, state.content_handling) },

@@ -284,6 +284,10 @@
     .raw-file-details span { min-width: 0; max-width: 100%; overflow-wrap: anywhere; word-break: break-word; }
     .raw-actions { flex: 0 0 auto; }
     .raw-actions, .raw-tabs { display: flex; align-items: center; gap: 7px; }
+    .raw-group-head { display:grid; grid-template-columns:minmax(180px, .75fr) minmax(0, 2fr); }
+    .raw-head-tools { flex:none; width:100%; max-width:none; box-sizing:border-box; }
+    .raw-file-details { text-align:right; }
+    .raw-actions { justify-content:flex-end; flex-wrap:wrap; }
     .raw-action { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 7px 11px; font-size: 12px; font-weight: 700; }
     .raw-action.secondary { border: 1px solid #6b9bc2; background: #e9f3fc; color: #174c89; }
     .raw-action svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
@@ -305,6 +309,8 @@
     .raw-editor-highlight mark[data-mode="replace"] { background: #d9f2e5; box-shadow: inset 0 -2px #38a169; }
     .raw-editor-highlight mark[data-mode="text-only"] { background: #dceaff; box-shadow: inset 0 -2px #4779c4; }
     .raw-editor-highlight mark[data-mode="soften"] { background: #fff1cc; box-shadow: inset 0 -2px #d99a16; }
+    .raw-editor-highlight mark[data-mode="emphasize"] { background:#eee7ff; box-shadow:inset 0 -2px #7954c7; }
+    .raw-editor-highlight mark[data-mode="condense-illustrate"] { background:#e2f5f7; box-shadow:inset 0 -2px #328b99; }
     .raw-editor-wrap .raw-editor { z-index: 1; display: block; min-height: 0; max-height: none; overflow: auto; resize: none; outline: 0; background: transparent; color: transparent; caret-color: #173c60; }
     .raw-editor-wrap .raw-editor::selection { background: rgba(57, 132, 219, .35); color: transparent; }
     .raw-mark-toolbar { display: none; justify-content: flex-end; align-items: center; flex-wrap: wrap; gap: 7px; margin: 8px 0 0; }
@@ -314,8 +320,18 @@
     .raw-mark-toolbar .raw-mark-apply[data-mode="replace"] { border-color: #8cc8a5; background: #edf9f1; color: #216b3b; }
     .raw-mark-toolbar .raw-mark-apply[data-mode="text-only"] { border-color: #8db2e5; background: #edf4ff; color: #285b9b; }
     .raw-mark-toolbar .raw-mark-apply[data-mode="soften"] { border-color: #e6c36a; background: #fff8e5; color: #8b6410; }
+    .raw-mark-toolbar .raw-mark-apply[data-mode="emphasize"] { border-color:#a78bfa; background:#f5f1ff; color:#6545a5; }
+    .raw-mark-toolbar .raw-mark-apply[data-mode="condense-illustrate"] { border-color:#72b7c5; background:#eef9fa; color:#286a77; }
+    .raw-mark-default-label { display:inline-flex; align-items:center; gap:6px; margin-left:auto; color:#526f88; font-size:11px; white-space:nowrap; }
+    .raw-mark-default { min-height:32px; padding:5px 24px 5px 8px; border:1px solid #c7d9e8; border-radius:8px; background:#fff; color:#315f89; font:inherit; }
     .raw-mark-help { position: relative; }
     .raw-mark-help-popover { position: absolute; z-index: 5; top: calc(100% + 7px); right: 0; width: min(340px, calc(100vw - 48px)); padding: 12px 14px; border: 1px solid #cbdced; border-radius: 10px; background: #fff; color: #526f88; box-shadow: 0 8px 24px rgba(30,72,112,.15); font-size: 12px; line-height: 1.6; }
+    .raw-mark-help-popover > strong { display:block; margin-bottom:4px; color:#244a67; font-size:13px; }
+    .raw-mark-help-popover p { margin:4px 0 8px; }
+    .raw-mark-help-grid { display:grid; grid-template-columns:86px minmax(0,1fr); gap:5px 9px; padding:8px 9px; border-radius:8px; background:#f5f8fb; }
+    .raw-mark-help-grid span:nth-child(odd) { color:#315f89; font-weight:800; }
+    .raw-mark-help-grid span:nth-child(even) { color:#5d7287; }
+    .raw-mark-help-default { padding-top:7px; border-top:1px solid #e7edf3; }
     .raw-mark-help-popover[hidden] { display: none; }
     .raw-mark-list { display: grid; gap: 6px; margin-top: 7px; }
     .raw-mark-list:empty { display: none; }
@@ -324,6 +340,8 @@
     .raw-mark-item[data-mode="replace"] { background: #edf9f1; }
     .raw-mark-item[data-mode="text-only"] { background: #edf4ff; }
     .raw-mark-item[data-mode="soften"] { background: #fff8e5; }
+    .raw-mark-item[data-mode="emphasize"] { background:#f5f1ff; }
+    .raw-mark-item[data-mode="condense-illustrate"] { background:#eef9fa; }
     .raw-mark-item[data-stale="true"] { background: #fff1f0; color: #a63b32; }
     .raw-mark-mode { white-space: nowrap; font-weight: 700; }
     .raw-mark-remove { padding: 3px 7px; border: 0; border-radius: 5px; background: transparent; color: #71869a; cursor: pointer; }
@@ -398,6 +416,8 @@
     .raw-preview pre { overflow: auto; padding: 10px; border-radius: 7px; background: #eef4f9; }
     .raw-preview pre code { padding: 0; background: none; }
     .raw-preview table { width: 100%; border-collapse: collapse; }
+    .raw-preview .raw-merged-table th, .raw-preview .raw-merged-table td { padding:9px 10px; vertical-align:middle; border:1px solid #d9d9d9; }
+    .raw-preview .raw-merged-table th { background:transparent; text-align:center; }
     .raw-preview th, .raw-preview td { padding: 6px 8px; border: 1px solid #cfdfec; text-align: left; vertical-align: top; }
     .raw-preview th { background: #eaf4fc; }
     .hint { color: var(--muted); font-size: 12px; }
@@ -443,11 +463,15 @@
     .mode-preview { display:flex; flex:1 1 auto; min-height:142px; box-sizing:border-box; flex-direction:column; justify-content:space-between; margin-top:12px; padding:10px; border:1px solid #dfe5eb; border-radius:9px; background:#fff; color:#334155; cursor:inherit; }
     .mode-preview-kicker { display:block; margin-bottom:7px; color:#718096; font-size:10px; font-weight:800; letter-spacing:.03em; }
     .mode-preview small { display:block; margin-top:7px; color:#64748b; font-size:10px; line-height:1.35; }
+    .mode-preview { display:grid; grid-template-rows:auto 108px minmax(1.8em,auto); align-content:start; justify-content:stretch; gap:5px; min-height:0; margin-top:9px; padding:9px; }
+    .mode-preview-kicker, .mode-preview small { margin:0; }
+    .mode-preview > svg, .mode-preview .generated-visual-sprite { display:block; width:100%; max-width:250px; height:108px; aspect-ratio:auto; margin-left:auto; margin-right:auto; }
+    .mode-preview small { align-self:center; text-align:center; }
     .emphasis-grid { grid-template-columns:repeat(4,minmax(0,1fr)); grid-auto-rows:1fr; align-items:stretch; }
-    .emphasis-choice { display:flex; min-height:252px; height:100%; box-sizing:border-box; flex-direction:column; }
-    .emphasis-choice .emphasis-preview { margin-top:auto; padding-top:10px; }
-    .emphasis-preview { display:grid; grid-template-rows:auto auto; gap:6px; }
-    .emphasis-preview small, .mechanism-preview small { color:#718096; font-size:9px; line-height:1.25; }
+    .emphasis-choice, .mechanism-grid .choice { display:flex; min-height:0; height:100%; box-sizing:border-box; flex-direction:column; }
+    .emphasis-choice > span, .mechanism-grid .choice > span { min-height:3.5em; }
+    .emphasis-preview, .mechanism-preview { display:grid; grid-template-rows:auto auto; gap:3px; margin-top:6px; padding:0; }
+    .emphasis-preview small, .mechanism-preview small { display:flex; width:100%; min-height:0; align-items:center; justify-content:center; margin:0; padding:2px 4px 0; color:#718096; font-size:9px; line-height:1.25; text-align:center; }
     .emphasis-read-demo { display:grid; align-content:center; gap:4px; padding:7px 9px; border-left:3px solid #1677ff; border-radius:5px; background:#f2f7fc; }
     .emphasis-read-demo strong { color:#173b5f; font-size:11px; }
     .emphasis-read-demo span { height:4px; border-radius:4px; background:#bfd0df; }
@@ -466,9 +490,9 @@
     .emphasis-flow-demo i { color:#1677ff; font-size:11px; font-style:normal; }
     .mechanism-module { margin-top:24px; padding-top:18px; border-top:1px solid #d9e2ea; }
     .mechanism-grid { grid-template-columns:repeat(4,minmax(0,1fr)); grid-auto-rows:1fr; align-items:stretch; }
-    .mechanism-grid .choice { display:flex; min-height:252px; height:100%; box-sizing:border-box; flex-direction:column; }
-    .mechanism-preview { display:flex; flex-direction:column; align-items:stretch; justify-content:flex-end; margin-top:auto; padding-top:9px; }
-    .mechanism-preview small { display:block; width:100%; margin-top:4px; text-align:center; }
+    .mechanism-grid .choice { min-height:0; }
+
+
     .mech-scene { position:relative; display:grid; width:100%; height:35px; place-items:center; overflow:hidden; border-radius:5px; background:linear-gradient(#d8e8f4,#ecf2f7); }
     .mech-scene i { position:absolute; bottom:-12px; width:90%; height:25px; border:1px solid #7a9db9; border-radius:50%; }
     .mech-scene b { z-index:1; color:#315d83; font-size:9px; }
@@ -491,8 +515,8 @@
     .mech-stage { position:relative; display:flex; width:76px; height:34px; align-items:center; justify-content:center; border-radius:5px; background:linear-gradient(120deg,#183653,#4b89ad); }
     .mech-stage i { width:28px; height:17px; border:1px solid #d8efff; border-radius:50% 50% 4px 4px; }
     .generated-visual-sprite { display:block; width:100%; max-width:200px; aspect-ratio:16/9; margin:0 auto; overflow:hidden; border-radius:8px; background-image:url('visual-previews.jpg'); background-size:400% 400%; background-position:var(--visual-x) var(--visual-y); background-repeat:no-repeat; box-shadow:0 2px 8px #173b5f24; }
-    .emphasis-preview { grid-template-rows:auto auto; }
-    .mechanism-preview { display:flex; flex-direction:column; align-items:stretch; justify-content:flex-end; margin-top:auto; padding-top:9px; }
+
+
     @media (max-width:900px) { .emphasis-grid, .mechanism-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
     @media (max-width: 900px) { .mode-grid { grid-template-columns:1fr; } }
     .mode-meta span,
@@ -550,9 +574,31 @@
     .weight-help-item strong { color: #174c89; }
     .weight-options {
       display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
+      grid-template-columns: repeat(5, minmax(0, 1fr));
       gap: 7px;
     }
+    .placeholder-popover { position:fixed; inset:auto; margin:0; width:min(440px,calc(100vw - 24px)); max-height:calc(100vh - 24px); box-sizing:border-box; overflow:auto; padding:16px; border:1px solid #c7daeb; border-radius:14px; background:#fff; color:#244563; box-shadow:0 14px 48px #163d652b; }
+    .placeholder-popover::backdrop { background:transparent; }
+    .placeholder-popover-heading { display:flex; justify-content:space-between; align-items:center; gap:12px; padding-bottom:12px; font-size:15px; font-weight:800; }
+    .placeholder-popover-heading > span { max-width:65%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:12px; font-weight:500; color:#74869a; }
+    .placeholder-columns { display:grid; grid-template-columns:86px minmax(0,1fr); gap:18px; }
+    .placeholder-columns strong { display:block; margin-bottom:9px; font-size:12px; }
+    .placeholder-size-options { display:grid; gap:6px; }
+    .placeholder-size-options button { width:100%; min-height:32px; padding:5px 8px; border:1px solid #d7e1eb; border-radius:7px; background:#fff; color:#526a80; font-size:12px; box-shadow:none; }
+    .placeholder-size-options button.selected { border-color:#1677ff; background:#eaf3ff; color:#0958d9; font-weight:800; }
+    .placeholder-position-grid { position:relative; isolation:isolate; display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); grid-template-rows:repeat(3,minmax(0,1fr)); gap:3px; width:100%; aspect-ratio:16/9; padding:5px; box-sizing:border-box; overflow:hidden; border:1px solid #cbdced; border-radius:9px; background:#f7fafe; }
+    .placeholder-position-grid button { position:relative; z-index:1; display:grid; place-items:center; min-width:0; min-height:0; padding:0; border:1px solid #d8e3ee; border-radius:5px; background:#ffffff65; box-shadow:none; transform:none; }
+    .placeholder-position-grid button:hover:not(:disabled) { border-color:#76acff; background:#e3efffa6; }
+    .placeholder-position-grid button.selected { border-color:#1677ff; background:#1677ff12; }
+    .placeholder-position-grid button > span { display:grid; place-items:center; width:4px; height:4px; border-radius:50%; background:#a8b9c9; color:#fff; font-size:12px; line-height:1; }
+    .placeholder-position-grid button.selected > span { width:20px; height:20px; background:#1677ff; }
+    .placeholder-position-grid button:disabled { cursor:default; opacity:1; }
+    .placeholder-position-grid[data-full="true"] button:not(.selected) > span { opacity:0; }
+    .placeholder-footprint { position:absolute; z-index:0; pointer-events:none; box-sizing:border-box; border:1.5px dashed #4c94ed; border-radius:6px; background:#1677ff12; }
+    .placeholder-position-label { margin-top:7px; color:#5b7690; font-size:11px; }
+    .placeholder-note { margin:12px 0 0; padding-top:10px; border-top:1px solid #edf1f6; color:#74869a; font-size:11px; line-height:1.6; }
+    .placeholder-actions { display:flex; justify-content:flex-end; gap:8px; margin-top:12px; }
+    .placeholder-actions button { min-height:32px; padding:6px 13px; border-radius:7px; font-size:12px; }
     .weight-option {
       min-height: 36px;
       padding: 7px 8px;
@@ -839,6 +885,41 @@
       .raw-sync-status { margin-left: 0; text-align: left; }
       .raw-preview, .raw-editor-wrap { height: 260px; max-height: 55vh; }
     }
+    @media (max-width: 760px) { .raw-group-head { grid-template-columns:minmax(0,1fr); } .raw-head-tools { grid-template-columns:minmax(0,1fr); } .raw-file-details { text-align:left; } .raw-actions { justify-content:flex-end; } }
+
+    .raw-tabs { align-items:center; flex-wrap:wrap; }
+    .raw-image-tab { margin-left:14px; padding-left:20px; border-left:1px solid #d9e1ec; color:#7654a1; }
+    .raw-image-tab.active { color:#6840ad; border-bottom-color:#8258c2; background:#f5f0fb; }
+    .raw-source-tag { display:inline-block; margin-right:7px; padding:2px 5px; border-radius:4px; background:#eee7f7; font-size:10px; vertical-align:middle; }
+    .raw-image-input { display:grid; grid-template-columns:minmax(0,1.6fr) minmax(230px,1fr); gap:20px; padding:16px; box-sizing:border-box; height:360px; min-height:360px; max-height:360px; border:1px solid #e4dced; border-radius:10px; background:#fcfaff; overflow:hidden; }
+    .raw-image-input[hidden] { display:none; }
+    .raw-material-group[data-source-mode="images"] { border-left-color:#8258c2; }
+    .raw-material-group[data-source-mode="images"] .raw-head-tools { flex:0 0 auto; width:auto; justify-self:end; grid-template-columns:auto; padding:0; border:0; background:transparent; }
+    .raw-image-drop { display:grid; grid-template-rows:minmax(0,1fr) 42px; gap:10px; min-width:0; min-height:0; padding:12px; border:1px dashed #c8b9dc; border-radius:9px; background:#fff; outline:none; }
+    .raw-image-drop:focus, .raw-image-drop.drag { border-color:#8258c2; box-shadow:0 0 0 2px #8258c212; }
+    .raw-image-empty { display:flex; flex-direction:column; justify-content:center; align-items:center; gap:8px; height:100%; color:#8a789f; font-size:12px; text-align:center; cursor:default; }
+    .raw-image-empty svg { width:34px; height:34px; margin-bottom:3px; fill:none; stroke:#a28dbb; stroke-width:1.4; stroke-linecap:round; stroke-linejoin:round; }
+    .raw-image-empty strong { color:#665477; font-size:14px; font-weight:600; }
+    .raw-image-choose { min-height:34px; padding:6px 12px; border:1px solid #bda7d5; border-radius:7px; background:#faf7ff; color:#6840ad; cursor:pointer; white-space:nowrap; }
+    .raw-image-cards { min-height:0; min-width:0; overflow:hidden; }
+    .raw-image-card { height:100%; min-height:0; }
+    .raw-image-card img { display:block; width:100%; height:100%; object-fit:contain; border-radius:5px; }
+    .raw-image-footer { display:flex; align-items:center; justify-content:space-between; gap:10px; min-width:0; padding-top:8px; border-top:1px solid #f0ebf5; }
+    .raw-image-meta { display:flex; align-items:center; gap:8px; min-width:0; color:#82718f; font-size:12px; }
+    .raw-image-name { overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
+    .raw-image-controls { display:flex; flex-shrink:0; align-items:center; gap:5px; }
+    .raw-image-controls button { display:grid; place-items:center; min-width:25px; min-height:25px; padding:2px 6px; border:1px solid #e5dced; border-radius:5px; background:#fff; color:#79658d; font-size:12px; }
+    .raw-image-controls button:disabled { opacity:.35; cursor:default; }
+    .raw-image-count { white-space:nowrap; font-size:11px; color:#9987a9; }
+    .raw-image-side { display:grid; grid-template-rows:auto 120px minmax(0,1fr) 32px; gap:10px; min-width:0; min-height:0; }
+    .raw-image-side label { font-weight:600; font-size:13px; color:#50415f; }
+    .raw-image-notes { width:100%; height:120px; min-height:0; max-height:120px; box-sizing:border-box; margin:0; padding:10px 12px; border:1px solid #ddd3e8; border-radius:8px; background:#fff; font:inherit; font-size:13px; line-height:1.6; resize:none; overflow:auto; scrollbar-width:none; }
+    .raw-image-side textarea.raw-image-notes { height:120px; min-height:120px; }
+    .raw-image-notes::-webkit-scrollbar { display:none; }
+    .raw-image-rules { align-self:start; padding:10px 0 0; border-top:1px solid #e8e0f0; color:#8b7b98; font-size:12px; line-height:1.7; }
+    .raw-image-rules strong { display:block; color:#665277; margin-bottom:5px; font-size:12px; font-weight:600; }
+    .raw-image-feedback { align-self:end; color:#826695; font-size:11px; line-height:1.4; overflow:hidden; }
+    @media(max-width:720px) { .raw-image-input { grid-template-columns:minmax(0,1fr); grid-template-rows:260px minmax(0,1fr); height:540px; min-height:540px; max-height:540px; gap:14px; } .raw-image-side { grid-template-rows:auto 70px minmax(0,1fr) 24px; gap:6px; } .raw-image-side textarea.raw-image-notes { height:70px; min-height:70px; max-height:70px; } }
   </style>
 </head>
 <body>
@@ -1006,6 +1087,7 @@
           information_groups: getInformationGroups(slide),
           group_weights: groupWeights,
           raw_visual_marks: [],
+          raw_visual_default: 'soften',
           checked: false,
           locked_text: [...slide.locked],
           custom_locked_text: [],
@@ -1045,13 +1127,43 @@
       return text;
     }
 
+    function renderMarkdownTableHtml(source) {
+      const table = new DOMParser().parseFromString(source, 'text/html').body.querySelector('table');
+      if (!table) return '';
+      const allowed = new Set(['TABLE', 'THEAD', 'TBODY', 'TFOOT', 'TR', 'TH', 'TD', 'BR', 'STRONG', 'EM', 'CODE']);
+      const render = node => {
+        if (node.nodeType === Node.TEXT_NODE) return escapeMarkdownHtml(node.textContent);
+        if (node.nodeType !== Node.ELEMENT_NODE || !allowed.has(node.tagName)) return '';
+        const tag = node.tagName.toLowerCase();
+        if (tag === 'br') return '<br>';
+        let attributes = tag === 'table' ? ' class="raw-merged-table"' : '';
+        if (tag === 'th' || tag === 'td') {
+          for (const name of ['rowspan', 'colspan']) {
+            const value = node.getAttribute(name);
+            if (/^[1-9]\d?$/.test(value || '')) attributes += ` ${name}="${value}"`;
+          }
+        }
+        return `<${tag}${attributes}>${[...node.childNodes].map(render).join('')}</${tag}>`;
+      };
+      return render(table);
+    }
+
     function renderMarkdown(markdown) {
       const lines = String(markdown || '').replace(/\r\n?/g, '\n').split('\n');
       const html = [];
-      const isBlockStart = line => /^\s*(?:#{1,6}\s|```|[-*+]\s|\d+[.)]\s|>\s?|(?:---+|\*\*\*+)\s*$)/.test(line);
+      const isBlockStart = line => /^\s*(?:<table(?:\s|>)|#{1,6}\s|```|[-*+]\s|\d+[.)]\s|>\s?|(?:---+|\*\*\*+)\s*$)/i.test(line);
       for (let i = 0; i < lines.length;) {
         const line = lines[i];
         if (!line.trim()) { i++; continue; }
+        if (/^\s*<table(?:\s|>)/i.test(line)) {
+          const tableLines = [];
+          while (i < lines.length) {
+            const tableLine = lines[i++];
+            tableLines.push(tableLine);
+            if (/<\/table\s*>/i.test(tableLine)) break;
+          }
+          html.push(renderMarkdownTableHtml(tableLines.join('\n'))); continue;
+        }
         const fence = line.match(/^\s*```\s*([\w-]*)/);
         if (fence) {
           const code = []; i++;
@@ -1623,38 +1735,137 @@
       editorHighlight.setAttribute('aria-hidden', 'true');
       editorWrap.append(editorHighlight, editor);
       const markToolbar = el('div', 'raw-mark-toolbar');
+      const markEmphasize = el('button', 'raw-mark-apply', '信息强化');
+      markEmphasize.type = 'button'; markEmphasize.dataset.mode = 'emphasize'; markEmphasize.disabled = true;
       const markReplace = el('button', 'raw-mark-apply', '图示替代');
       markReplace.type = 'button'; markReplace.dataset.mode = 'replace'; markReplace.disabled = true;
-      const markSoften = el('button', 'raw-mark-apply', '文字弱化＋图示');
+      const markCondense = el('button', 'raw-mark-apply', '精简＋图示');
+      markCondense.type = 'button'; markCondense.dataset.mode = 'condense-illustrate'; markCondense.disabled = true;
+      const markSoften = el('button', 'raw-mark-apply', '弱化＋图示');
       markSoften.type = 'button'; markSoften.dataset.mode = 'soften'; markSoften.disabled = true;
-      const markTextOnly = el('button', 'raw-mark-apply', '仅保留原文分点');
+      const markTextOnly = el('button', 'raw-mark-apply', '完整保留');
       markTextOnly.type = 'button'; markTextOnly.dataset.mode = 'text-only'; markTextOnly.disabled = true;
       const markRemove = el('button', '', '取消选中文字标记'); markRemove.type = 'button'; markRemove.disabled = true;
+      const defaultLabel = el('label', 'raw-mark-default-label', '未标记内容默认');
+      const defaultSelect = el('select', 'raw-mark-default');
+      [['emphasize','信息强化'],['replace','图示替代'],['condense-illustrate','精简＋图示'],['soften','弱化＋图示'],['text-only','完整保留']].forEach(([value,label]) => { const option = el('option','',label); option.value=value; defaultSelect.append(option); });
+      markStateDefault();
+      defaultSelect.addEventListener('change', () => { state.slides[slide.id].raw_visual_default = defaultSelect.value; markChanged(); });
+      defaultLabel.append(defaultSelect);
       const markHelp = el('div', 'raw-mark-help');
       const markHelpButton = el('button', '', '?');
       markHelpButton.type = 'button'; markHelpButton.setAttribute('aria-label', '文字呈现标记说明'); markHelpButton.setAttribute('aria-expanded', 'false');
       const markHelpPopover = el('div', 'raw-mark-help-popover'); markHelpPopover.hidden = true;
-      markHelpPopover.textContent = '先在 Markdown 编辑区选中一段原文，再选择呈现方式。“图示替代”要求生成图用图标或示意表达该内容，不显示所选文字；“文字弱化＋图示”完整保留原文、降低视觉权重并配合图示；“仅保留原文分点”按原文和顺序呈现，不加总结句或专门配图。未标记的分点默认采用文字弱化＋图示；取消标记即回到默认。标记只影响生成呈现，不修改原文。真实品牌或赛事 Logo 需使用你提供或确认的素材；否则使用通用示意图。';
+      markHelpPopover.innerHTML = '<strong>如何使用</strong><p>先在 Markdown 编辑区选中原文，再点一种呈现方式。标记只改变生成时的表达，不修改原始材料。</p><div class="raw-mark-help-grid"><span>信息强化</span><span>突出关键数值或要点，可用颜色、字号、图形或配图呈现；位置由语境决定。此处标记的是你要求强化的内容，不限制系统继续识别其他重点。</span><span>图示替代</span><span>用语义图示表达所选内容，不显示所选文字。</span><span>精简＋图示</span><span>理解原意后缩短文字并配图，保留关键事实、数字和条件。</span><span>弱化＋图示</span><span>完整保留文字，降低视觉权重并配相关图示。</span><span>完整保留</span><span>按原文和顺序呈现，不加总结句或专门配图。</span></div><p class="raw-mark-help-default">未标记内容采用右侧“默认策略”；初始为“弱化＋图示”。取消标记后恢复默认。真实品牌 Logo 仅使用你提供或确认的素材。</p>';
       markHelp.append(markHelpButton, markHelpPopover);
-      markToolbar.append(markReplace, markSoften, markTextOnly, markRemove, markHelp);
+      markToolbar.append(markEmphasize, markReplace, markCondense, markSoften, markTextOnly, markRemove, markHelp, defaultLabel);
       const markList = el('div', 'raw-mark-list');
       markList.style.display = 'none';
 
-      const setMode = mode => {
-        const editing = mode === 'edit';
-        preview.style.display = editing ? 'none' : 'block';
+
+      const imageTab = el('button', 'raw-tab raw-image-tab'); imageTab.type = 'button';
+      imageTab.append(el('span','raw-source-tag','图片'), document.createTextNode('截图材料'));
+      tabs.append(imageTab);
+      const imagePanel = el('div','raw-image-input'); imagePanel.hidden = true;
+      const imageDrop = el('div','raw-image-drop'); imageDrop.tabIndex = 0;
+      imageDrop.setAttribute('aria-label','本页截图材料，支持粘贴或拖入图片');
+      const imageCards = el('div','raw-image-cards');
+      const imagePicker = el('input'); imagePicker.type='file'; imagePicker.accept='image/png,image/jpeg,image/webp,image/gif'; imagePicker.multiple=true; imagePicker.hidden=true;
+      const imageChoose = el('button','raw-image-choose','上传图片'); imageChoose.type='button'; imageChoose.onclick=()=>imagePicker.click();
+      const imageFeedback = el('div','raw-image-feedback'); imageFeedback.setAttribute('role','status');
+      const imageSide = el('div','raw-image-side');
+      const imageNotesLabel = el('label','','补充说明（可选）');
+      const imageNotes = el('textarea','raw-image-notes'); imageNotes.id='source-image-notes-'+slide.id; imageNotesLabel.htmlFor=imageNotes.id;
+      imageNotes.placeholder='例如：保留表格合并关系；右下角批注不作为正文。';
+      imageNotes.value=state.slides[slide.id].source_image_notes || '';
+      const imageRules = el('div','raw-image-rules');
+      imageRules.innerHTML='<strong>读取内容与关系 · 视觉按决策板设计</strong>自动理解文字、数据、分组、流程及表格关系。<br>本页 Markdown 暂不参与，不沿用截图的视觉样式。';
+      imageSide.append(imageNotesLabel,imageNotes,imageRules,imageFeedback);
+      const imageFooter=el('div','raw-image-footer'), imageMeta=el('div','raw-image-meta');
+      imageFooter.append(imageMeta,imageChoose);
+      imageDrop.append(imageCards,imagePicker,imageFooter); imagePanel.append(imageDrop,imageSide);
+      imageDrop.addEventListener('click',event=>{if (!event.target.closest('button')) imageDrop.focus();});
+      let imageUploading=false;
+      let sourceImageIndex=0;
+      const drawSourceImages=()=>{
+        imageCards.replaceChildren(); imageMeta.replaceChildren();
+        const records=state.slides[slide.id].source_images || [];
+        sourceImageIndex=Math.max(0,Math.min(sourceImageIndex,records.length-1));
+        if (!records.length) {
+          const empty=el('div','raw-image-empty');
+          empty.innerHTML='<svg viewBox="0 0 32 32" aria-hidden="true"><rect x="4" y="5" width="24" height="22" rx="3"/><circle cx="11" cy="12" r="2"/><path d="m6 24 7-8 5 5 4-5 4 7"/></svg><strong>粘贴或拖入截图</strong><span>点击选中此区域后粘贴，或使用右下角按钮上传</span>';
+          imageCards.append(empty); imageMeta.append(el('span','raw-image-name','尚未添加截图'));
+        } else {
+          const record=records[sourceImageIndex];
+          const card=el('div','raw-image-card'), image=el('img'); image.src=record.path; image.alt='截图材料 '+(sourceImageIndex+1);
+          card.append(image); imageCards.append(card);
+          const name=el('span','raw-image-name',record.name); name.title=record.name; imageMeta.append(name);
+          const controls=el('div','raw-image-controls');
+          if (records.length>1) {
+            const prev=el('button','','‹'),next=el('button','','›'); prev.type=next.type='button';
+            prev.setAttribute('aria-label','上一张截图');next.setAttribute('aria-label','下一张截图');
+            prev.disabled=sourceImageIndex===0;next.disabled=sourceImageIndex===records.length-1;
+            prev.onclick=()=>{sourceImageIndex--;drawSourceImages();};next.onclick=()=>{sourceImageIndex++;drawSourceImages();};
+            controls.append(prev,el('span','raw-image-count',(sourceImageIndex+1)+' / '+records.length),next);
+          }
+          const remove=el('button','','移除'); remove.type='button';remove.setAttribute('aria-label','移除当前截图');
+          remove.onclick=()=>{state.slides[slide.id].source_images.splice(sourceImageIndex,1);drawSourceImages();markChanged();document.dispatchEvent(new Event('page-source-changed'));};
+          controls.append(remove);imageMeta.append(controls);
+        }
+      };
+      const addSourceImages=async fileList=>{
+        const files=Array.from(fileList || []).filter(file=>/^image\/(png|jpeg|webp|gif)$/.test(file.type));
+        if (!files.length || imageUploading) return;
+        imageUploading=true; pendingUploads++; imageChoose.disabled=true; imageFeedback.textContent='正在保存截图…';
+        try {
+          for (const file of files) {
+            if (file.size>12*1024*1024) throw new Error('单张截图不能超过 12 MB');
+            const dataUrl=await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=reject;reader.readAsDataURL(file);});
+            const response=await fetch('/api/upload',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:file.name,type:file.type,data:dataUrl.split(',')[1]})});
+            const record=await response.json(); if (!response.ok) throw new Error(record.error || '截图保存失败');
+            state.slides[slide.id].source_images ||= []; state.slides[slide.id].source_images.push(record); sourceImageIndex=state.slides[slide.id].source_images.length-1;
+            drawSourceImages(); markChanged();
+          }
+          imageFeedback.textContent='截图已保存；生成时将直接读取截图内容。';
+        } catch(error) { imageFeedback.textContent=error.message; }
+        finally { imageUploading=false;pendingUploads--;imageChoose.disabled=false;imagePicker.value='';document.dispatchEvent(new Event('page-source-changed')); }
+      };
+      imagePicker.onchange=()=>addSourceImages(imagePicker.files);
+      imageDrop.addEventListener('paste',event=>{const files=Array.from(event.clipboardData?.files || []);if (!files.length)return;event.preventDefault();event.stopPropagation();addSourceImages(files);});
+      imageDrop.addEventListener('dragover',event=>{event.preventDefault();imageDrop.classList.add('drag');});
+      imageDrop.addEventListener('dragleave',()=>imageDrop.classList.remove('drag'));
+      imageDrop.addEventListener('drop',event=>{event.preventDefault();event.stopPropagation();imageDrop.classList.remove('drag');addSourceImages(event.dataTransfer.files);});
+      imageNotes.addEventListener('input',()=>{state.slides[slide.id].source_image_notes=imageNotes.value;markChanged();});
+      drawSourceImages();
+
+      const setMode = (mode, initial = false) => {
+        const editing = mode === 'edit', images = mode === 'images';
+        imagePanel.hidden = !images;
+        wrap.dataset.sourceMode = images ? 'images' : 'markdown';
+        updateButton.disabled = images || !sourceDocumentAvailable; updateButton.style.display=images ? 'none' : '';
+        fileDetails.hidden = images; fileDetails.style.display=images ? 'none' : '';
+        imageTab.classList.toggle('active', images);
+        if (!initial) {
+          state.slides[slide.id].source_mode = images ? 'images' : 'markdown';
+          markChanged();
+          document.dispatchEvent(new Event('page-source-changed'));
+        }
+        preview.style.display = editing || images ? 'none' : 'block';
         editorWrap.style.display = editing ? 'block' : 'none';
         markToolbar.classList.toggle('active', editing);
         markList.style.display = editing ? 'grid' : 'none';
-        previewTab.classList.toggle('active', !editing);
+        previewTab.classList.toggle('active', !editing && !images);
         editTab.classList.toggle('active', editing);
+        if (images) { status.textContent='当前使用截图材料 · Markdown 暂不参与本页生成'; status.dataset.state=''; }
+        else if (!initial) { status.textContent=rawDirty.has(slide.id) ? 'Markdown 有未保存更改，请保存后生成。' : '当前使用 Markdown 材料'; status.dataset.state=rawDirty.has(slide.id) ? 'dirty' : ''; }
         if (editing) editor.focus();
       };
       previewTab.addEventListener('click', () => setMode('preview'));
       editTab.addEventListener('click', () => setMode('edit'));
+      imageTab.addEventListener('click', () => setMode('images'));
 
       const setStatus = (message, kind = '') => {
-        status.textContent = message;
+        status.textContent = state.slides[slide.id].source_mode === 'images' ? '当前使用截图材料 · Markdown 暂不参与本页生成' : message;
         status.dataset.state = kind;
       };
       const sourcePage = sourcePages[slide.id];
@@ -1666,6 +1877,8 @@
 
       const markState = state.slides[slide.id];
       markState.raw_visual_marks ||= [];
+      markState.raw_visual_default ||= 'soften';
+      function markStateDefault() { defaultSelect.value = state.slides[slide.id]?.raw_visual_default || 'soften'; }
       const markChanged = () => { markState.checked = false; markState._checked_signature = null; renderNav(); updateOutput(false); queueDraft(); };
       let selectedRange = null;
       const renderMarkOverlay = () => {
@@ -1685,7 +1898,7 @@
         markState.raw_visual_marks.forEach(mark => {
           const row = el('div', 'raw-mark-item'); row.dataset.mode = mark.mode; row.dataset.stale = String(!!mark.needsReview);
           const quote = el('span', 'raw-mark-quote', `“${mark.quote}”`); quote.title = mark.quote;
-          const modeLabel = mark.needsReview ? '需要重新标记' : mark.mode === 'replace' ? '图示替代' : mark.mode === 'text-only' ? '仅保留原文分点' : '文字弱化＋图示';
+          const modeLabel = mark.needsReview ? '需要重新标记' : mark.mode === 'emphasize' ? '信息强化' : mark.mode === 'replace' ? '图示替代' : mark.mode === 'condense-illustrate' ? '精简＋图示' : mark.mode === 'text-only' ? '完整保留' : '弱化＋图示';
           const label = el('span', 'raw-mark-mode', modeLabel);
           const remove = el('button', 'raw-mark-remove', '移除'); remove.type = 'button'; remove.setAttribute('aria-label', `移除标记：${mark.quote}`);
           remove.addEventListener('click', () => { markState.raw_visual_marks = markState.raw_visual_marks.filter(item => item.id !== mark.id); renderMarkOverlay(); markChanged(); });
@@ -1715,19 +1928,21 @@
         const start = editor.selectionStart, end = editor.selectionEnd;
         selectedRange = end > start ? { start, end, quote: editor.value.slice(start, end) } : null;
         const overlaps = selectedRange && markState.raw_visual_marks.some(mark => selectedRange.start < mark.end && selectedRange.end > mark.start);
-        markReplace.disabled = !selectedRange; markSoften.disabled = !selectedRange; markTextOnly.disabled = !selectedRange; markRemove.disabled = !overlaps;
+        [markEmphasize, markReplace, markCondense, markSoften, markTextOnly].forEach(button => { button.disabled = !selectedRange; }); markRemove.disabled = !overlaps;
       };
       const applyMark = mode => {
         if (!selectedRange) return;
         const { start, end, quote } = selectedRange;
         markState.raw_visual_marks = markState.raw_visual_marks.filter(mark => !(start < mark.end && end > mark.start));
-        if (mode === 'replace' && /\d|[%％]|(?:至少|至多|必须|不得|仅限|型号|版本|不超过)/.test(quote)) alert('所选内容含数字或限定信息。图示可能无法准确传达，请在生成后重点核对。');
+        if (['replace', 'condense-illustrate'].includes(mode) && /\d|[%％]|(?:至少|至多|必须|不得|仅限|型号|版本|不超过)/.test(quote)) alert('所选内容含数字或限定信息。请在生成后重点核对这些信息是否准确保留。');
         markState.raw_visual_marks.push({ id: `mark-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`, quote, start, end, prefix: editor.value.slice(Math.max(0, start - 24), start), suffix: editor.value.slice(end, end + 24), mode, needsReview: false });
         markState.raw_visual_marks.sort((a, b) => a.start - b.start);
         renderMarkOverlay(); syncSelectedRange(); markChanged();
       };
-      [markReplace, markSoften, markTextOnly, markRemove].forEach(button => button.addEventListener('mousedown', event => event.preventDefault()));
+      [markEmphasize, markReplace, markCondense, markSoften, markTextOnly, markRemove].forEach(button => button.addEventListener('mousedown', event => event.preventDefault()));
+      markEmphasize.addEventListener('click', () => applyMark('emphasize'));
       markReplace.addEventListener('click', () => applyMark('replace'));
+      markCondense.addEventListener('click', () => applyMark('condense-illustrate'));
       markSoften.addEventListener('click', () => applyMark('soften'));
       markTextOnly.addEventListener('click', () => applyMark('text-only'));
       markRemove.addEventListener('click', () => {
@@ -1782,6 +1997,13 @@
       });
 
       saveButton.addEventListener('click', async () => {
+        if (state.slides[slide.id].source_mode === 'images') {
+          saveButton.disabled=true;
+          try { await postJson('/api/decision',currentDecision()); queueDraft(); imageFeedback.textContent='本页截图材料和说明已保存。'; }
+          catch(error) { imageFeedback.textContent=error.message; }
+          finally { saveButton.disabled=false; }
+          return;
+        }
         if (!sourceDocumentAvailable) return;
         saveButton.disabled = true;
         try {
@@ -1807,9 +2029,16 @@
         finally { saveButton.disabled = false; }
       });
 
-      wrap.append(head, toolbar, preview, markToolbar, editorWrap, markList);
+      wrap.append(head, toolbar, preview, markToolbar, editorWrap, markList, imagePanel);
+      setMode(state.slides[slide.id].source_mode === 'images' ? 'images' : 'preview', true);
       return wrap;
     }
+
+    document.addEventListener('page-source-changed',()=>{
+      const slide=slides.find(item=>item.id===state.active);
+      const old=document.querySelector('#slidePanel .weight-table')?.closest('.content-group') || document.querySelector('#slidePanel [data-source-groups]');
+      const next=infoWeightBlock(slide); next.dataset.sourceGroups='true'; old?.replaceWith(next);
+    });
 
     function coreDesignBlock(slide) {
       const wrap = document.createDocumentFragment();
@@ -1883,13 +2112,128 @@
       return wrap;
     }
 
+    const placeholderSizes = [
+      { id: 'full', label: '全屏', area: 1 },
+      { id: 'half', label: '1/2', area: 1 / 2 },
+      { id: 'third', label: '1/3', area: 1 / 3 },
+      { id: 'quarter', label: '1/4', area: 1 / 4 }
+    ];
+    const placeholderPositions = [
+      { id: 'top-left', label: '左上' }, { id: 'top-center', label: '上方居中' }, { id: 'top-right', label: '右上' },
+      { id: 'middle-left', label: '左侧居中' }, { id: 'center', label: '正中' }, { id: 'middle-right', label: '右侧居中' },
+      { id: 'bottom-left', label: '左下' }, { id: 'bottom-center', label: '下方居中' }, { id: 'bottom-right', label: '右下' }
+    ];
+    function groupPlaceholder(slideState, groupId) {
+      const saved = slideState.group_placeholders?.[groupId] || {};
+      const size = placeholderSizes.some(item => item.id === saved.size) ? saved.size : 'half';
+      const position = size === 'full' ? 'center' : placeholderPositions.some(item => item.id === saved.position) ? saved.position : 'center';
+      return { size, position };
+    }
+    function placeholderSummary(slideState, groupId) {
+      const config = groupPlaceholder(slideState, groupId);
+      const size = placeholderSizes.find(item => item.id === config.size).label;
+      const position = placeholderPositions.find(item => item.id === config.position).label;
+      return config.size === 'full' ? '全屏' : size + ' · ' + position;
+    }
+    function placeholderIssues(slideState) {
+      const groups = slideState.information_groups || [];
+      const placeholders = groups.filter(group => slideState.group_weights?.[group.id] === 'placeholder');
+      const configs = placeholders.map(group => groupPlaceholder(slideState, group.id));
+      if (configs.reduce((sum, config) => sum + placeholderSizes.find(item => item.id === config.size).area, 0) > 1.000001) return '占位总面积超过一页，请到“每块内容怎么处理”缩小或取消部分占位。';
+      if (configs.some(config => config.size === 'full') && groups.some(group => !['hidden', 'placeholder'].includes(slideState.group_weights?.[group.id]))) return '全屏占位已预留整个正文区域，请将其他内容设为“不显示”，或缩小占位。';
+      return '';
+    }
+    function openGroupPlaceholder(anchor, group, slideState) {
+      document.querySelectorAll('.placeholder-popover').forEach(item => item.remove());
+      let { size, position } = groupPlaceholder(slideState, group.id);
+      const popup = el('div', 'placeholder-popover');
+      popup.setAttribute('popover', 'auto');
+      popup.setAttribute('role', 'dialog');
+      popup.setAttribute('aria-label', group.label + '占位设置');
+      const heading = el('div', 'placeholder-popover-heading', '占位设置');
+      heading.appendChild(el('span', '', group.label));
+      const columns = el('div', 'placeholder-columns');
+      const sizeColumn = el('div', 'placeholder-size-column');
+      const positionColumn = el('div', 'placeholder-position-column');
+      sizeColumn.appendChild(el('strong', '', '占位大小'));
+      positionColumn.appendChild(el('strong', '', '占位位置'));
+      const sizeOptions = el('div', 'placeholder-size-options');
+      sizeOptions.setAttribute('role', 'group'); sizeOptions.setAttribute('aria-label', '占位大小');
+      const canvas = el('div', 'placeholder-position-grid');
+      canvas.setAttribute('role', 'group'); canvas.setAttribute('aria-label', '16:9 九宫格占位位置');
+      const footprint = el('div', 'placeholder-footprint');
+      const positionLabel = el('div', 'placeholder-position-label');
+      const draw = () => {
+        sizeOptions.replaceChildren(); canvas.replaceChildren(footprint);
+        placeholderSizes.forEach(option => {
+          const choice = el('button', size === option.id ? 'selected' : '', option.label);
+          choice.type = 'button'; choice.setAttribute('aria-pressed', String(size === option.id));
+          choice.onclick = () => { size = option.id; if (size === 'full') position = 'center'; draw(); sizeOptions.querySelector('[aria-pressed="true"]')?.focus(); };
+          sizeOptions.appendChild(choice);
+        });
+        placeholderPositions.forEach((option, index) => {
+          const choice = el('button', position === option.id ? 'selected' : '');
+          choice.type = 'button'; choice.disabled = size === 'full';
+          choice.setAttribute('aria-label', option.label); choice.title = option.label;
+          choice.setAttribute('aria-pressed', String(position === option.id));
+          choice.appendChild(el('span', '', position === option.id ? '✓' : ''));
+          choice.onclick = () => { position = option.id; draw(); canvas.querySelector('[aria-pressed="true"]')?.focus(); };
+          choice.onkeydown = event => {
+            const offsets = { ArrowLeft: -1, ArrowRight: 1, ArrowUp: -3, ArrowDown: 3 };
+            if (!(event.key in offsets) || size === 'full') return;
+            event.preventDefault();
+            const next = index + offsets[event.key];
+            if (next < 0 || next > 8 || (event.key === 'ArrowLeft' && index % 3 === 0) || (event.key === 'ArrowRight' && index % 3 === 2)) return;
+            position = placeholderPositions[next].id; draw(); canvas.querySelector('[aria-pressed="true"]')?.focus();
+          };
+          canvas.appendChild(choice);
+        });
+        const scale = Math.sqrt(placeholderSizes.find(item => item.id === size).area);
+        const index = placeholderPositions.findIndex(item => item.id === position);
+        footprint.style.width = footprint.style.height = scale * 100 + '%';
+        footprint.style.left = ((index % 3) / 2) * (1 - scale) * 100 + '%';
+        footprint.style.top = Math.floor(index / 3) / 2 * (1 - scale) * 100 + '%';
+        canvas.dataset.full = String(size === 'full');
+        positionLabel.textContent = size === 'full' ? '整页正文留空，无需选择位置' : '当前：' + placeholderPositions[index].label;
+      };
+      sizeColumn.appendChild(sizeOptions);
+      positionColumn.append(canvas, positionLabel);
+      columns.append(sizeColumn, positionColumn);
+      const note = el('p', 'placeholder-note', '按正文可用面积预留空白，不生成该块文字或配图；保留全局标题区域。蓝色范围示意大小和位置，实际形状随页面排版调整。');
+      const footer = el('div', 'placeholder-actions');
+      const cancel = el('button', 'secondary', '取消'); cancel.type = 'button'; cancel.onclick = () => popup.hidePopover();
+      const apply = el('button', 'primary', '应用占位'); apply.type = 'button';
+      apply.onclick = () => {
+        slideState.group_placeholders ||= {};
+        slideState.group_placeholders[group.id] = { size, position };
+        slideState.group_weights[group.id] = 'placeholder';
+        popup.hidePopover(); renderAll(false);
+      };
+      footer.append(cancel, apply);
+      popup.append(heading, columns, note, footer);
+      popup.addEventListener('toggle', event => { if (event.newState === 'closed') popup.remove(); });
+      draw(); document.body.appendChild(popup); popup.showPopover();
+      const bounds = anchor.getBoundingClientRect(), rect = popup.getBoundingClientRect();
+      popup.style.left = Math.max(12, Math.min(bounds.right - rect.width, window.innerWidth - rect.width - 12)) + 'px';
+      popup.style.top = Math.max(12, Math.min(bounds.bottom + 8, window.innerHeight - rect.height - 12)) + 'px';
+      sizeOptions.querySelector('[aria-pressed="true"]')?.focus();
+    }
+
     function infoWeightBlock(slide) {
       const s = state.slides[slide.id];
+      if (s.source_mode === 'images') {
+        const wrap=el('div','content-group'); wrap.dataset.sourceGroups='true';
+        wrap.append(el('h3','','每块内容怎么处理'),el('p','hint','当前按截图中的内容分组与信息关系自动组织。Markdown 分组设置暂不参与本页生成；可在截图补充说明中指定重点。'));
+        return wrap;
+      }
       const groups = s.information_groups || getInformationGroups(slide);
       const diff = contentGroupDiff(slide, s);
       const wrap = el('div', 'content-group');
       wrap.innerHTML = `<div class="group-head"><div class="weight-title-group"><h3>信息组权重</h3><details class="weight-help"><summary aria-label="查看内容处理说明" title="查看处理说明">?</summary><div class="weight-help-popover" role="note"><div class="weight-help-item"><strong>主重点</strong><span>核心信息，优先保证内容完整、醒目；不自动代表版面最大，也不改变原文顺序。</span></div><div class="weight-help-item"><strong>次重点</strong><span>重要支撑信息，保留主要内容，视觉层级略低于主重点。</span></div><div class="weight-help-item"><strong>图示化</strong><span>优先用图标、Logo、示意图或融入主视觉呈现，只保留必要短标签，不放说明性段落。</span></div><div class="weight-help-item"><strong>不显示</strong><span>从本页生成内容中排除该组，即使原始材料或旧分组里仍有它；不修改源材料。</span></div></div></details></div><span class="hint">对应本页实际内容小标题；没有小标题的正文或表格会单列。材料变化后先同步，再设置新增项。</span></div>`;
       const table = el('div', 'weight-table');
+      const placeholderHelp = el('div', 'weight-help-item');
+      placeholderHelp.innerHTML = '<strong>占位</strong><span>按大小和九宫格位置预留空白，不生成这块文字或配图。再次点击“占位”可修改；选择其他选项可取消。</span>';
+      wrap.querySelector('.weight-help-popover')?.appendChild(placeholderHelp);
       groups.forEach(group => {
         const row = el('div', 'weight-row');
         const name = el('div', 'weight-name-row');
@@ -1900,11 +2244,15 @@
         row.appendChild(name);
         const options = el('div', 'weight-options');
         weightOptions.forEach(option => {
-          const button = el('button', 'weight-option' + (s.group_weights[group.id] === option.id ? ' selected' : ''), option.label);
+          const button = el('button', 'weight-option' + (s.group_weights[group.id] === option.id ? ' selected' : ''), option.id === 'placeholder' && s.group_weights[group.id] === 'placeholder' ? '占位：' + placeholderSummary(s, group.id) : option.label);
           button.type = 'button';
           button.title = option.summary;
           button.setAttribute('aria-pressed', String(s.group_weights[group.id] === option.id));
-          button.addEventListener('click', () => { s.group_weights[group.id] = option.id; renderAll(false); });
+          if (option.id === 'placeholder') {
+            button.setAttribute('aria-haspopup', 'dialog');
+            button.title = s.group_weights[group.id] === 'placeholder' ? '占位：' + placeholderSummary(s, group.id) + '，点击修改' : option.summary;
+            button.addEventListener('click', () => openGroupPlaceholder(button, group, s));
+          } else button.addEventListener('click', () => { s.group_weights[group.id] = option.id; if (s.group_placeholders) delete s.group_placeholders[group.id]; renderAll(false); });
           options.appendChild(button);
         });
         row.appendChild(options);
@@ -2224,9 +2572,24 @@
       const first = state.slides[firstSlideId] || {};
       const decisionSlides = JSON.parse(JSON.stringify(state.slides));
       for (const slideState of Object.values(decisionSlides)) {
+        if (slideState.source_mode === 'images') {
+          // Screenshot content is the sole page source. Keep inactive Markdown settings only in the editable draft.
+          for (const key of ['information_groups','group_weights','group_placeholders','placeholder_information_groups','excluded_information_groups','required_section_titles','locked_text','raw_visual_marks','information_group_weights_notes']) delete slideState[key];
+          slideState.source_image_policy = 'content-and-relations-only';
+          continue;
+        }
+        delete slideState.source_images; delete slideState.source_image_notes; delete slideState.source_image_policy; delete slideState.source_mode;
         normalizeGroupWeights(slideState);
         const excluded = (slideState.information_groups || []).filter(group => slideState.group_weights[group.id] === 'hidden');
-        const excludedLabels = new Set(excluded.map(group => group.label));
+        const placeholders = (slideState.information_groups || []).filter(group => slideState.group_weights[group.id] === 'placeholder');
+        if (placeholders.length) {
+          slideState.placeholder_information_groups = placeholders.map(({ id, label }) => ({ id, label, ...groupPlaceholder(slideState, id) }));
+          slideState.group_placeholders = Object.fromEntries(placeholders.map(group => [group.id, groupPlaceholder(slideState, group.id)]));
+        } else {
+          delete slideState.placeholder_information_groups;
+          delete slideState.group_placeholders;
+        }
+        const excludedLabels = new Set([...excluded, ...placeholders].map(group => group.label));
         slideState.excluded_information_groups = excluded.map(({ id, label }) => ({ id, label }));
         slideState.required_section_titles = (slideState.required_section_titles || []).filter(title => !excludedLabels.has(title));
         slideState.locked_text = (slideState.locked_text || []).filter(text => !excludedLabels.has(text));

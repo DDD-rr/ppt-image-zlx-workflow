@@ -114,6 +114,7 @@
     }
   `;
   document.head.append(style);
+  document.addEventListener('page-source-changed', () => render());
   let snapshot = null, busy = false, error = '', lastPage = null;
   const shownVersion = new Map();
   const bridge = () => window.__PAGE_FLOW_BRIDGE__;
@@ -194,6 +195,10 @@
     busy = false; render();
   }
   async function request(retry = false) {
+    const sourceIssue = bridge().previewData?.().sourceIssue;
+    if (sourceIssue) throw new Error(sourceIssue);
+    const placeholderIssue = bridge().previewData?.().placeholderIssue;
+    if (placeholderIssue) throw new Error(placeholderIssue);
     if (bridge().rawDirty()) throw new Error('本页原文尚未保存，请先使用原有的“保存”按钮。');
     if ((bridge().previewData?.().annotations || []).some(mark => mark.needsReview)) throw new Error('有选中文字标记因原文修改需要重新确认，请回到编辑区重新标记或移除后再生成。');
     if ((bridge().previewData?.().groups || []).some(group => group.pending)) throw new Error('请先为新增的材料小标题分配权重，再生成本页。');
@@ -263,11 +268,12 @@
     const groupPending = (preview?.groups || []).some(group => group.pending);
     const currentRequestActive = ['queued', 'running'].includes(requestStatus);
     let generationBlock = '';
-    if (!activeOnPage && activeRequests.length >= 2) generationBlock = '已有两个页面任务并行处理，请等其中一页完成或验收后再生成。';
-    else if (!page.sourceMatches) generationBlock = '请到本页“页面审阅 → 本页原始材料”点击“更新”，同步后重新检查本页。';
+    if (preview?.sourceIssue) generationBlock = preview.sourceIssue;
+    else if (!page.sourceMatches && preview?.sourceMode !== 'images') generationBlock = '请到本页“页面审阅 → 本页原始材料”点击“更新”，同步后重新检查本页。';
     else if (bridge().rawDirty()) generationBlock = '本页材料有未保存修改，请到“页面审阅 → 本页原始材料”点击“保存”。';
     else if (preview?.groupSyncPending) generationBlock = '材料小标题还未同步，请到“每页内容怎么处理 → 信息组权重”点击“同步材料小标题”。删除或修改的小标题会移入历史分组。';
     else if (groupPending) generationBlock = '新增的小标题还没有设置权重，请到“每页内容怎么处理 → 信息组权重”分配后再生成。';
+    else if (preview?.placeholderIssue) generationBlock = preview.placeholderIssue;
     else if (annotationPending) generationBlock = '部分选中文字标记需要重新确认，请到“本页原始材料”的 Markdown 编辑区重新标记或移除。';
     else if (currentRequestActive) generationBlock = requestStatus === 'queued' ? '本页生成任务已排队；请在当前 Codex 对话中处理，完成后回到本页验收。' : '本页正在生成，请等待候选图片出现后验收。';
     else if (requestStatus === 'ready') generationBlock = '图片已经生成，请先采用、重做或暂不采用，再开始下一次生成。';
@@ -277,10 +283,9 @@
       const activePageNumber = Number(active.pageId.replace(/\D/g, ''));
       const label = active.status === 'queued' ? '等待会话处理' : active.status === 'running' ? '正在生成' : '候选图待验收';
       info.append(element('span', '', `第 ${activePageNumber} 页：${label}。`));
-      if (active.status === 'queued') controls.append(button(`复制第 ${activePageNumber} 页指令`, () => copySessionInstruction(active)));
     });
     if (requestStatus === 'queued') {
-      controls.append(button('复制会话指令', () => copySessionInstruction(page.lastRequest)));
+      controls.append(button(`复制第 ${Number(page.id.replace(/\D/g, ''))} 页指令`, () => copySessionInstruction(page.lastRequest)));
     }
     else if (manualCandidate) {
       if (page.adopted?.id === version.id) controls.append(button('取消采用', () => action(() => api(flow('/candidate/unmark'), { pageId: page.id, versionId: version.id }))));
@@ -297,7 +302,6 @@
       // Keep the active request visible without offering duplicate actions.
     } else if (page.adopted) {
       controls.append(button('取消采用', () => action(() => api(flow('/unaccept'), { requestId: page.adoptedVersion.requestId }))));
-      controls.append(button('重新生成', () => action(() => request()), true));
     }
     if (!['queued', 'running'].includes(requestStatus)) info.append(noteDetails);
     const guide = element('details', 'page-flow-guide');
@@ -393,9 +397,13 @@
   }
   function installBottomLink() {
     if (document.querySelector('.page-flow-bottom-link')) return;
-    const link = element('button', 'page-flow-bottom-link', '↑ 回到本页生成与验收');
+    const link = element('button', 'page-flow-bottom-link', '前往生成');
     link.type = 'button';
-    link.onclick = () => document.getElementById('page-flow-panel')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    link.onclick = () => {
+      const target = document.querySelector('#slidePanel .generated-image-group');
+      if (!target) return;
+      window.scrollTo({ top: Math.max(0, window.scrollY + target.getBoundingClientRect().top - 20), behavior: 'smooth' });
+    };
     document.body.append(link);
     window.addEventListener('scroll', () => { link.hidden = window.scrollY < 500; }, { passive: true });
     link.hidden = window.scrollY < 500;

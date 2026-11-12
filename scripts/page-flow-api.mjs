@@ -22,7 +22,13 @@ async function atomic(file, value) {
   await rename(temp, file);
 }
 async function state() {
-  try { return await readJson(statePath); }
+  try {
+    const saved = await readJson(statePath);
+    for (const request of Object.values(saved.requests)) {
+      if (request.status === 'ready' && saved.pages[request.pageId]?.adopted?.id === request.finalVersionId) request.status = 'accepted';
+    }
+    return saved;
+  }
   catch (error) { if (error.code === 'ENOENT') return { schemaVersion: 1, pages: {}, requests: {}, versions: {} }; throw error; }
 }
 async function input(req) {
@@ -52,7 +58,9 @@ async function context(id) {
   const decision = await readJson(path.join(board, 'style_decision.json'));
   const slide = data.slides?.find(item => item.id === id);
   if (!slide || !pageNumber(id)) throw new Error('找不到该页');
-  const sourceRelative = data.sourceDocument?.path;
+  const decisionPage = decision.slides?.[id] || {};
+  const imageSource = decisionPage.source_mode === 'images';
+  const sourceRelative = imageSource ? null : data.sourceDocument?.path;
   let sourceMatches = true;
   if (sourceRelative) {
     const file = path.resolve(project, sourceRelative);
@@ -60,8 +68,8 @@ async function context(id) {
     sourceMatches = sourcePage(await readFile(file, 'utf8'), pageNumber(id)) === slide.raw;
   }
   const { slides, _review_session, _board_sha256, confirmed_at, ...global } = decision;
-  const decisionPage = slides?.[id] || {};
-  return { slide, decisionPage, sourceMatches, sourceHash: sha(slide.raw || ''), decisionHash: sha(JSON.stringify({ global, page: decisionPage })), decision };
+  const sourceInput = imageSource ? { mode: 'images', images: decisionPage.source_images || [], notes: decisionPage.source_image_notes || '', policy: 'content-and-relations-only' } : null;
+  return { slide, decisionPage, sourceInput, sourceMatches, sourceHash: sha(sourceInput ? JSON.stringify(sourceInput) : slide.raw || ''), decisionHash: sha(JSON.stringify({ global, page: decisionPage })), decision };
 }
 function inside(root, target) {
   const relative = path.relative(root, target);
@@ -74,11 +82,10 @@ function current(page, ctx) {
   return page?.adopted && page.adopted.sourceHash === ctx.sourceHash && page.adopted.decisionHash === ctx.decisionHash;
 }
 function guidePending(page, ctx) {
-  return !!ctx.slide.guidePromptRebuildPending && !(page?.rebuiltFor?.sourceHash === ctx.sourceHash && page?.rebuiltFor?.decisionHash === ctx.decisionHash);
+  return (!!ctx.sourceInput || !!ctx.slide.guidePromptRebuildPending) && !(page?.rebuiltFor?.sourceHash === ctx.sourceHash && page?.rebuiltFor?.decisionHash === ctx.decisionHash);
 }
 const blocking = new Set(['queued', 'running', 'ready']);
-const maxActiveRequests = 2;
-function activeRequests(saved) { return Object.values(saved.requests).filter(item => blocking.has(item.status)).sort((a, b) => a.createdAt.localeCompare(b.createdAt)); }
+function activeRequests(saved) { return Object.values(saved.requests).filter(item => blocking.has(item.status) && !(item.status === 'ready' && saved.pages[item.pageId]?.adopted?.id === item.finalVersionId)).sort((a, b) => a.createdAt.localeCompare(b.createdAt)); }
 function activeRequest(saved) { return activeRequests(saved)[0]; }
 async function images(id, saved) {
   const number = pageNumber(id);
@@ -149,7 +156,8 @@ async function handlePost(route, body) {
         page.markedCandidateVersionId = version.id;
         page.adopted = { id: version.id, sourceHash: ctx.sourceHash, decisionHash: ctx.decisionHash, acceptedAt: new Date().toISOString() };
         page.review = { sourceHash: ctx.sourceHash, decisionHash: ctx.decisionHash, reviewedAt: new Date().toISOString() };
-        if (version.requestId && saved.requests[version.requestId]?.status === 'ready') saved.requests[version.requestId].status = 'accepted';
+        const adoptedRequestId = saved.versions[version.id].requestId || (last?.finalVersionId === version.id ? last.id : null);
+        if (adoptedRequestId && saved.requests[adoptedRequestId]?.status === 'ready') saved.requests[adoptedRequestId].status = 'accepted';
         await atomic(statePath, saved);
         return [200, { markedCandidate: saved.versions[version.id] }];
       }
@@ -178,13 +186,17 @@ async function handlePost(route, body) {
     }
     if (route === '/api/request') {
       const ctx = await context(body.pageId);
+      if (ctx.sourceInput && !ctx.sourceInput.images.length) return [409, { error: '请先添加本页截图材料。' }];
+      if (ctx.sourceInput) for (const image of ctx.sourceInput.images) {
+        if (typeof image.path !== 'string' || !/^uploads\/[a-f0-9-]+\.(png|jpg|webp|gif)$/.test(image.path)) return [400, { error: '截图材料路径无效，请重新上传。' }];
+        await stat(path.join(board,image.path));
+      }
       if (!ctx.sourceMatches) return [409, { error: '本页原文与决策版本不一致，请先在原决策板同步。' }];
       const page = saved.pages[body.pageId] ||= {};
       const active = activeRequests(saved);
       const samePage = active.find(item => item.pageId === body.pageId);
       const replacingReady = !!(body.retry && samePage?.status === 'ready');
       if (samePage && !replacingReady) return [409, { error: `第 ${pageNumber(body.pageId)} 页已有待处理或验收任务，请先完成该页。` }];
-      if (active.length >= maxActiveRequests && !replacingReady) return [409, { error: `已有 ${maxActiveRequests} 个页面任务并行处理，请等其中一个页面完成或验收后再开始。` }];
       if (!reviewed(page, ctx) && !body.confirmReview) return [409, { error: '请先确认本页原文和视觉决策。' }];
       if (body.confirmReview) page.review = { sourceHash: ctx.sourceHash, decisionHash: ctx.decisionHash, reviewedAt: new Date().toISOString() };
       if (replacingReady) {
@@ -194,6 +206,7 @@ async function handlePost(route, body) {
       }
       const id = randomUUID();
       const item = { id, pageId: body.pageId, status: 'queued', createdAt: new Date().toISOString(), sourceHash: ctx.sourceHash, decisionHash: ctx.decisionHash, note: String(body.note || '').slice(0, 2000), sourceDocument: (await readJson(path.join(board, 'board-data.json'))).sourceDocument?.path || null, guidePromptRebuildPending: !!ctx.slide.guidePromptRebuildPending };
+      if (ctx.sourceInput) { item.sourceDocument=null; item.sourceInput={...ctx.sourceInput,images:ctx.sourceInput.images.map(image=>({...image,absolutePath:path.join(board,image.path)}))}; item.guidePromptRebuildPending=true; }
       saved.requests[id] = item;
       page.lastRequestId = id;
       await atomic(path.join(board, 'page-flow-requests', `${id}.json`), item);
@@ -265,7 +278,7 @@ export async function handlePageFlow(req, res, url) {
         const markedCandidate = saved.versions[page.markedCandidateVersionId] || null;
         const markedCurrent = !!markedCandidate && markedCandidate.sourceHash === ctx.sourceHash && markedCandidate.decisionHash === ctx.decisionHash;
         const confirmed = ctx.sourceMatches && !!current(page, ctx);
-        return { id: slide.id, label: slide.label, title: slide.title, role: slide.role, summary: slide.summary, raw: slide.raw, checked: confirmed, confirmed, reviewedForGeneration: reviewed(page, ctx), sourceMatches: ctx.sourceMatches, needsReview: !!page.adopted && !current(page, ctx), guidePromptRebuildPending: guidePending(page, ctx), decision: ctx.decisionPage, sourceHash: ctx.sourceHash, decisionHash: ctx.decisionHash, adopted: page.adopted || null, adoptedVersion: saved.versions[page.adopted?.id] || null, markedCandidate, lastRequest: last || null, candidate: markedCandidate || saved.versions[last?.finalVersionId] || null };
+        return { id: slide.id, label: slide.label, title: slide.title, role: slide.role, summary: slide.summary, raw: ctx.sourceInput ? '' : slide.raw, sourceInput: ctx.sourceInput, checked: confirmed, confirmed, reviewedForGeneration: reviewed(page, ctx), sourceMatches: ctx.sourceMatches, needsReview: !!page.adopted && !current(page, ctx), guidePromptRebuildPending: guidePending(page, ctx), decision: ctx.decisionPage, sourceHash: ctx.sourceHash, decisionHash: ctx.decisionHash, adopted: page.adopted || null, adoptedVersion: saved.versions[page.adopted?.id] || null, markedCandidate, lastRequest: last || null, candidate: markedCandidate || saved.versions[last?.finalVersionId] || null };
       }));
       const active = activeRequests(saved);
       return json(res, 200, { projectName: data.projectName, contentHandling: decision.content_handling, palette: decision.global_palette?.palette_label || decision.palette_direction, titleMode: decision.title_overlay?.label || decision.title_overlay?.mode, pages, activeRequest: active[0] || null, activeRequests: active });

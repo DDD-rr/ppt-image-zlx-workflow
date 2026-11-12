@@ -325,7 +325,7 @@ createServer(async (req, res) => {
             return json(res, 400, { error: '请先选择原始内容处理方式。' });
           }
           if (await currentBoardHash() !== boardHash) return json(res, 409, { error: '源文档已变化，请先点“更新”同步本页材料。' });
-      const sourceMismatches = await sourceOutOfSyncIds();
+      const sourceMismatches = (await sourceOutOfSyncIds()).filter(id => decision.slides?.[id]?.source_mode !== 'images');
       if (sourceMismatches.length) return json(res, 409, { error: `决策版本中还有 ${sourceMismatches.length} 页材料未同步，请分别点击对应页面的“更新”。` });
           decision._review_session = session;
           decision._board_sha256 = boardHash;
