@@ -305,6 +305,7 @@
     .raw-editor-highlight mark[data-mode="replace"] { background: #d9f2e5; box-shadow: inset 0 -2px #38a169; }
     .raw-editor-highlight mark[data-mode="text-only"] { background: #dceaff; box-shadow: inset 0 -2px #4779c4; }
     .raw-editor-highlight mark[data-mode="soften"] { background: #fff1cc; box-shadow: inset 0 -2px #d99a16; }
+    .raw-editor-highlight mark[data-image-link="true"] { border-bottom:2px dashed #7650a5; }
     .raw-editor-wrap .raw-editor { z-index: 1; display: block; min-height: 0; max-height: none; overflow: auto; resize: none; outline: 0; background: transparent; color: transparent; caret-color: #173c60; }
     .raw-editor-wrap .raw-editor::selection { background: rgba(57, 132, 219, .35); color: transparent; }
     .raw-mark-toolbar { display: none; justify-content: flex-end; align-items: center; flex-wrap: wrap; gap: 7px; margin: 8px 0 0; }
@@ -314,6 +315,7 @@
     .raw-mark-toolbar .raw-mark-apply[data-mode="replace"] { border-color: #8cc8a5; background: #edf9f1; color: #216b3b; }
     .raw-mark-toolbar .raw-mark-apply[data-mode="text-only"] { border-color: #8db2e5; background: #edf4ff; color: #285b9b; }
     .raw-mark-toolbar .raw-mark-apply[data-mode="soften"] { border-color: #e6c36a; background: #fff8e5; color: #8b6410; }
+    .raw-mark-toolbar .raw-mark-apply[data-mode="image-link"] { border-color:#9278b2; background:#f4eff9; color:#63458a; }
     .raw-mark-help { position: relative; }
     .raw-mark-help-popover { position: absolute; z-index: 5; top: calc(100% + 7px); right: 0; width: min(340px, calc(100vw - 48px)); padding: 12px 14px; border: 1px solid #cbdced; border-radius: 10px; background: #fff; color: #526f88; box-shadow: 0 8px 24px rgba(30,72,112,.15); font-size: 12px; line-height: 1.6; }
     .raw-mark-help-popover[hidden] { display: none; }
@@ -728,8 +730,17 @@
     }
     .modal.active { display: grid; }
     .modal-card { width: min(560px, 100%); padding: 22px; border-radius: 8px; background: var(--paper); border: 1px solid var(--line); }
-    .asset-record { display:flex; align-items:center; gap:10px; margin:8px 0; flex-wrap:wrap; }
-    .asset-record img { width:64px; height:48px; object-fit:cover; border-radius:4px; }
+    .asset-records { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); align-items:stretch; gap:10px; margin-top:12px; }
+    .asset-records[hidden] { display:none; }
+    .asset-record { display:grid; grid-template-rows:96px minmax(32px,auto) 34px 30px; gap:7px; min-width:0; margin:0; padding:10px; border:1px solid #d7e3ee; border-radius:10px; background:#fff; }
+    .asset-record img { width:100%; height:96px; object-fit:contain; border-radius:6px; background:#f5f8fb; }
+    .asset-record-name { min-width:0; align-self:center; overflow-wrap:anywhere; display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; overflow:hidden; color:#43596e; font-size:11px; line-height:1.4; }
+    .asset-record select { width:100%; min-width:0; min-height:32px; padding:4px 24px 4px 8px; border:1px solid #d1deea; border-radius:7px; background:#fff; color:#405972; font-size:11px; }
+    .asset-record select:disabled { background:#f1f5f8; color:#8493a1; }
+    .asset-record .asset-record-remove { justify-self:end; min-height:27px; padding:3px 9px; border:1px solid #d9e2ea; border-radius:6px; background:#fff; color:#5e7183; font-size:11px; box-shadow:none; }
+    .asset-link-hint { margin-top:8px; color:#6f8294; font-size:11px; line-height:1.5; }
+    @media(max-width:900px) { .asset-records { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+    @media(max-width:560px) { .asset-records { grid-template-columns:minmax(0,1fr); } }
     /* Light blue review surface: quiet defaults, clear selected controls, generous spacing. */
     header { padding: 17px 28px; border-bottom-color: #cfe4f6; box-shadow: 0 4px 20px rgba(36, 105, 172, .05); }
     header h1 { color: #143b68; }
@@ -1629,14 +1640,17 @@
       markSoften.type = 'button'; markSoften.dataset.mode = 'soften'; markSoften.disabled = true;
       const markTextOnly = el('button', 'raw-mark-apply', '仅保留原文分点');
       markTextOnly.type = 'button'; markTextOnly.dataset.mode = 'text-only'; markTextOnly.disabled = true;
+      const markImageLink = el('button', 'raw-mark-apply', '图片连接');
+      markImageLink.type = 'button'; markImageLink.dataset.mode = 'image-link'; markImageLink.disabled = true;
+      markImageLink.title = '选中文字后标记，再到真实图片卡片中选择对应文字';
       const markRemove = el('button', '', '取消选中文字标记'); markRemove.type = 'button'; markRemove.disabled = true;
       const markHelp = el('div', 'raw-mark-help');
       const markHelpButton = el('button', '', '?');
       markHelpButton.type = 'button'; markHelpButton.setAttribute('aria-label', '文字呈现标记说明'); markHelpButton.setAttribute('aria-expanded', 'false');
       const markHelpPopover = el('div', 'raw-mark-help-popover'); markHelpPopover.hidden = true;
-      markHelpPopover.textContent = '先在 Markdown 编辑区选中一段原文，再选择呈现方式。“图示替代”要求生成图用图标或示意表达该内容，不显示所选文字；“文字弱化＋图示”完整保留原文、降低视觉权重并配合图示；“仅保留原文分点”按原文和顺序呈现，不加总结句或专门配图。未标记的分点默认采用文字弱化＋图示；取消标记即回到默认。标记只影响生成呈现，不修改原文。真实品牌或赛事 Logo 需使用你提供或确认的素材；否则使用通用示意图。';
+      markHelpPopover.textContent = '先在 Markdown 编辑区选中一段原文，再选择呈现方式。“图示替代”要求生成图用图标或示意表达该内容，不显示所选文字；“文字弱化＋图示”完整保留原文、降低视觉权重并配合图示；“仅保留原文分点”按原文和顺序呈现，不加总结句或专门配图。“图片连接”用于把一张真实图片指定给一段原文，不改变文字呈现方式。未标记的分点默认采用文字弱化＋图示；取消标记即回到默认。标记只影响生成呈现，不修改原文。真实品牌或赛事 Logo 需使用你提供或确认的素材；否则使用通用示意图。';
       markHelp.append(markHelpButton, markHelpPopover);
-      markToolbar.append(markReplace, markSoften, markTextOnly, markRemove, markHelp);
+      markToolbar.append(markReplace, markSoften, markTextOnly, markImageLink, markRemove, markHelp);
       const markList = el('div', 'raw-mark-list');
       markList.style.display = 'none';
 
@@ -1666,34 +1680,37 @@
 
       const markState = state.slides[slide.id];
       markState.raw_visual_marks ||= [];
-      const markChanged = () => { markState.checked = false; markState._checked_signature = null; renderNav(); updateOutput(false); queueDraft(); };
+      markState.real_image_text_marks ||= []; markState.real_image_links ||= {};
+      const markChanged = () => { markState.checked = false; markState._checked_signature = null; renderNav(); updateOutput(false); queueDraft(); refreshRealImageLinkSelects(slide.id); };
       let selectedRange = null;
       const renderMarkOverlay = () => {
         const raw = editor.value;
-        const marks = [...markState.raw_visual_marks].filter(item => !item.needsReview && Number.isInteger(item.start) && item.end > item.start && raw.slice(item.start, item.end) === item.quote).sort((a, b) => a.start - b.start);
+        const marks = [...markState.raw_visual_marks, ...markState.real_image_text_marks.map(item => ({ ...item, mode:'image-link', isImageLink:true }))].filter(item => !item.needsReview && Number.isInteger(item.start) && item.end > item.start && raw.slice(item.start, item.end) === item.quote).sort((a, b) => a.start - b.start || b.end - a.end);
         editorHighlight.replaceChildren();
         let cursor = 0;
         marks.forEach(mark => {
           if (mark.start < cursor) return;
           editorHighlight.append(document.createTextNode(raw.slice(cursor, mark.start)));
-          const tag = el('mark'); tag.dataset.mode = mark.mode; tag.textContent = mark.quote; editorHighlight.append(tag);
+          const tag = el('mark'); tag.dataset.mode = mark.mode; if (mark.isImageLink) tag.dataset.imageLink = 'true'; tag.textContent = mark.quote; editorHighlight.append(tag);
           cursor = mark.end;
         });
         editorHighlight.append(document.createTextNode(raw.slice(cursor)));
         editorHighlight.scrollTop = editor.scrollTop; editorHighlight.scrollLeft = editor.scrollLeft;
         markList.replaceChildren();
-        markState.raw_visual_marks.forEach(mark => {
-          const row = el('div', 'raw-mark-item'); row.dataset.mode = mark.mode; row.dataset.stale = String(!!mark.needsReview);
+        const renderMarkItem = (mark, imageLink = false) => {
+          const row = el('div', 'raw-mark-item'); row.dataset.mode = imageLink ? 'image-link' : mark.mode; row.dataset.stale = String(!!mark.needsReview);
           const quote = el('span', 'raw-mark-quote', `“${mark.quote}”`); quote.title = mark.quote;
-          const modeLabel = mark.needsReview ? '需要重新标记' : mark.mode === 'replace' ? '图示替代' : mark.mode === 'text-only' ? '仅保留原文分点' : '文字弱化＋图示';
+          const modeLabel = mark.needsReview ? '需要重新标记' : imageLink ? '图片连接' : mark.mode === 'replace' ? '图示替代' : mark.mode === 'text-only' ? '仅保留原文分点' : '文字弱化＋图示';
           const label = el('span', 'raw-mark-mode', modeLabel);
-          const remove = el('button', 'raw-mark-remove', '移除'); remove.type = 'button'; remove.setAttribute('aria-label', `移除标记：${mark.quote}`);
-          remove.addEventListener('click', () => { markState.raw_visual_marks = markState.raw_visual_marks.filter(item => item.id !== mark.id); renderMarkOverlay(); markChanged(); });
+          const remove = el('button', 'raw-mark-remove', '移除'); remove.type = 'button'; remove.setAttribute('aria-label', `移除${imageLink ? '图片连接' : '标记'}：${mark.quote}`);
+          remove.addEventListener('click', () => { if (imageLink) { markState.real_image_text_marks = markState.real_image_text_marks.filter(item => item.id !== mark.id); Object.keys(markState.real_image_links).forEach(path => { if (markState.real_image_links[path] === mark.id) delete markState.real_image_links[path]; }); } else markState.raw_visual_marks = markState.raw_visual_marks.filter(item => item.id !== mark.id); renderMarkOverlay(); markChanged(); });
           row.append(quote, label, remove); markList.append(row);
-        });
+        };
+        markState.raw_visual_marks.forEach(mark => renderMarkItem(mark));
+        markState.real_image_text_marks.forEach(mark => renderMarkItem(mark, true));
       };
       const reconcileMarks = raw => {
-        markState.raw_visual_marks = markState.raw_visual_marks.map(mark => {
+        const reconcile = marks => marks.map(mark => {
           if (raw.slice(mark.start, mark.end) === mark.quote) return { ...mark, needsReview: false };
           const hits = []; let from = 0;
           while (mark.quote && (from = raw.indexOf(mark.quote, from)) !== -1) { hits.push(from); from += mark.quote.length; }
@@ -1710,12 +1727,16 @@
           if (ranked.length && ranked[0].score > 0 && ranked[0].score > (ranked[1]?.score ?? -1)) return { ...mark, start: ranked[0].start, end: ranked[0].start + mark.quote.length, needsReview: false };
           return { ...mark, needsReview: true };
         });
+        markState.raw_visual_marks = reconcile(markState.raw_visual_marks);
+        markState.real_image_text_marks = reconcile(markState.real_image_text_marks);
+        const validIds = new Set(markState.real_image_text_marks.filter(mark => !mark.needsReview).map(mark => mark.id));
+        Object.keys(markState.real_image_links).forEach(path => { if (!validIds.has(markState.real_image_links[path])) delete markState.real_image_links[path]; });
       };
       const syncSelectedRange = () => {
         const start = editor.selectionStart, end = editor.selectionEnd;
         selectedRange = end > start ? { start, end, quote: editor.value.slice(start, end) } : null;
-        const overlaps = selectedRange && markState.raw_visual_marks.some(mark => selectedRange.start < mark.end && selectedRange.end > mark.start);
-        markReplace.disabled = !selectedRange; markSoften.disabled = !selectedRange; markTextOnly.disabled = !selectedRange; markRemove.disabled = !overlaps;
+        const overlaps = selectedRange && [...markState.raw_visual_marks, ...markState.real_image_text_marks].some(mark => selectedRange.start < mark.end && selectedRange.end > mark.start);
+        markReplace.disabled = !selectedRange; markSoften.disabled = !selectedRange; markTextOnly.disabled = !selectedRange; markImageLink.disabled = !selectedRange; markRemove.disabled = !overlaps;
       };
       const applyMark = mode => {
         if (!selectedRange) return;
@@ -1726,14 +1747,27 @@
         markState.raw_visual_marks.sort((a, b) => a.start - b.start);
         renderMarkOverlay(); syncSelectedRange(); markChanged();
       };
-      [markReplace, markSoften, markTextOnly, markRemove].forEach(button => button.addEventListener('mousedown', event => event.preventDefault()));
+      [markReplace, markSoften, markTextOnly, markImageLink, markRemove].forEach(button => button.addEventListener('mousedown', event => event.preventDefault()));
       markReplace.addEventListener('click', () => applyMark('replace'));
       markSoften.addEventListener('click', () => applyMark('soften'));
       markTextOnly.addEventListener('click', () => applyMark('text-only'));
+      markImageLink.addEventListener('click', () => {
+        if (!selectedRange) return;
+        const { start, end, quote } = selectedRange;
+        const replacedIds = markState.real_image_text_marks.filter(mark => start < mark.end && end > mark.start).map(mark => mark.id);
+        markState.real_image_text_marks = markState.real_image_text_marks.filter(mark => !(start < mark.end && end > mark.start));
+        const id = `image-link-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+        markState.real_image_text_marks.push({ id, quote, start, end, prefix: editor.value.slice(Math.max(0,start-24),start), suffix: editor.value.slice(end,end+24), needsReview:false });
+        Object.keys(markState.real_image_links).forEach(path => { if (replacedIds.includes(markState.real_image_links[path])) delete markState.real_image_links[path]; });
+        markState.real_image_text_marks.sort((a,b)=>a.start-b.start); renderMarkOverlay(); syncSelectedRange(); markChanged();
+      });
       markRemove.addEventListener('click', () => {
         if (!selectedRange) return;
         const { start, end } = selectedRange;
         markState.raw_visual_marks = markState.raw_visual_marks.filter(mark => !(start < mark.end && end > mark.start));
+        const removedIds = markState.real_image_text_marks.filter(mark => start < mark.end && end > mark.start).map(mark => mark.id);
+        markState.real_image_text_marks = markState.real_image_text_marks.filter(mark => !(start < mark.end && end > mark.start));
+        Object.keys(markState.real_image_links).forEach(path => { if (removedIds.includes(markState.real_image_links[path])) delete markState.real_image_links[path]; });
         renderMarkOverlay(); syncSelectedRange(); markChanged();
       });
       markHelpButton.addEventListener('click', () => { markHelpPopover.hidden = !markHelpPopover.hidden; markHelpButton.setAttribute('aria-expanded', String(!markHelpPopover.hidden)); });
@@ -1746,6 +1780,7 @@
         state.raw_materials[slide.id] = editor.value;
         reconcileMarks(editor.value);
         renderMarkOverlay();
+        refreshRealImageLinkSelects(slide.id);
         preview.innerHTML = renderMarkdown(editor.value);
         rawDirty.add(slide.id);
         sourceFeedback[slide.id] = '有未保存更改：点击“保存”写回决策版本文档。';
@@ -2001,6 +2036,23 @@
       return `<div class="organization-preview"><svg viewBox="0 0 240 125" role="img" aria-label="${label}布局示意" xmlns="http://www.w3.org/2000/svg"><rect width="240" height="125" fill="#eef6fd"/><g font-family="Microsoft YaHei, sans-serif" font-size="10" font-weight="700" fill="#285e91">${shapes}</g></svg></div>`;
     }
 
+    function refreshRealImageLinkSelects(slideId) {
+      const slideState = state.slides[slideId];
+      if (!slideState) return;
+      const marks = slideState.source_mode === 'images' ? [] : (slideState.real_image_text_marks || []).filter(mark => !mark.needsReview && slideState.raw.slice(mark.start,mark.end) === mark.quote);
+      document.querySelectorAll('.asset-image-link-select').forEach(select => {
+        if (select.dataset.slideId !== slideId) return;
+        const previous = select.value;
+        select.replaceChildren();
+        const none = el('option', '', '无'); none.value = ''; select.append(none);
+        marks.forEach(mark => { const option = el('option', '', `“${mark.quote}”`); option.value = mark.id; option.title = mark.quote; select.append(option); });
+        select.value = marks.some(mark => mark.id === previous) ? previous : '';
+        if (!select.value && slideState.real_image_links) delete slideState.real_image_links[select.dataset.imagePath];
+        select.disabled = slideState.source_mode === 'images' || !marks.length;
+        select.title = slideState.source_mode === 'images' ? '图片连接适用于 Markdown 材料' : !marks.length ? '先在 Markdown 编辑区标记图片对应文字' : '选择该图片对应的原文';
+      });
+    }
+
     function realImageBlock(slide) {
       const s = state.slides[slide.id];
       const wrap = el('div', 'content-group');
@@ -2008,7 +2060,7 @@
       slide.assets.forEach(asset => {
         const zone = el('div', 'asset-zone');
         zone.tabIndex = 0;
-        zone.innerHTML = `<div class="asset-top"><div><h4>${asset.label}</h4><p>${asset.detail}</p><p class="hint">缺失时跳过真实图片，不生成伪真实证据。</p></div></div>`;
+        zone.innerHTML = `<div class="asset-top"><div><h4>${asset.label}</h4><p>${asset.detail} 本页最多上传 5 张图片。</p><p class="hint">缺失时跳过真实图片，不生成伪真实证据。</p></div></div>`;
         const input = document.createElement('input');
         input.type = 'file';
         input.multiple = true;
@@ -2048,17 +2100,27 @@
         zone.appendChild(pasteTarget);
         const records = el('div', 'asset-records');
         const items = s.real_images[asset.id];
+        const activeImageMarks = s.source_mode === 'images' ? [] : (s.real_image_text_marks || []).filter(mark => !mark.needsReview && s.raw.slice(mark.start,mark.end) === mark.quote);
+        s.real_image_links ||= {};
         if (!items.length) records.textContent = '尚未选择图片。';
         items.forEach((record, index) => {
           const row = el('div', 'asset-record');
           const img = document.createElement('img'); img.src = './' + record.path; img.alt = record.name;
-          row.appendChild(img); row.appendChild(el('span', '', record.name + '（已保存）'));
-          const remove = el('button', 'secondary', '移除'); remove.type = 'button';
+          const name = el('span', 'asset-record-name', record.name); name.title = record.name;
+          const link = el('select', 'asset-image-link-select'); link.dataset.slideId = slide.id; link.dataset.imagePath = record.path; link.setAttribute('aria-label', record.name + ' 对应的原文');
+          const none = el('option', '', '无'); none.value = ''; link.append(none);
+          activeImageMarks.forEach(mark => { const option = el('option', '', `“${mark.quote}”`); option.value = mark.id; option.title = mark.quote; link.append(option); });
+          link.value = s.real_image_links[record.path] || '';
+          link.disabled = s.source_mode === 'images' || !activeImageMarks.length;
+          link.title = s.source_mode === 'images' ? '图片连接适用于 Markdown 材料' : !activeImageMarks.length ? '先在 Markdown 编辑区标记图片对应文字' : '选择该图片对应的原文';
+          link.addEventListener('change', () => { if (link.value) s.real_image_links[record.path] = link.value; else delete s.real_image_links[record.path]; s.checked = false; s._checked_signature = null; renderNav(); updateOutput(false); queueDraft(); });
+          const remove = el('button', 'asset-record-remove', '移除'); remove.type = 'button';
           remove.setAttribute('aria-label', '移除 ' + record.name);
-          remove.addEventListener('click', () => { items.splice(index, 1); renderAll(false); });
-          row.appendChild(remove); records.appendChild(row);
+          remove.addEventListener('click', () => { items.splice(index, 1); delete s.real_image_links[record.path]; renderAll(false); });
+          row.append(img, name, link, remove); records.appendChild(row);
         });
         zone.appendChild(records);
+        zone.appendChild(el('div', 'asset-link-hint', s.source_mode === 'images' ? '当前使用截图材料，图片连接仅在 Markdown 材料模式下可用。' : activeImageMarks.length ? '下拉选择每张图片对应的标记文字；选“无”表示不指定对应文字。' : '先在“编辑 Markdown”中选中原文并点“图片连接”，再到图片卡片中选择对应文字。'));
         zone.appendChild(el('h4', 'asset-role-title', '图片用途'));
         const grid = el('div', 'asset-type-grid');
         const roleOptions = (asset.roleOptions && asset.roleOptions.length ? asset.roleOptions : imageTypes);
@@ -2075,8 +2137,17 @@
     }
 
     let pendingUploads = 0;
+    const pendingRealImageCounts = {};
     async function addFiles(slideId, assetId, fileList) {
-      const files = Array.from(fileList || []).filter(file => !file.type || file.type.startsWith('image/'));
+      const selectedFiles = Array.from(fileList || []).filter(file => !file.type || file.type.startsWith('image/'));
+      if (!selectedFiles.length) return;
+      const targetState = state.slides[slideId];
+      const currentCount = Object.values(targetState.real_images || {}).reduce((sum, items) => sum + (items || []).length, 0);
+      const alreadyPending = pendingRealImageCounts[slideId] || 0;
+      const capacity = Math.max(0, 5 - currentCount - alreadyPending);
+      const files = selectedFiles.slice(0, capacity);
+      pendingRealImageCounts[slideId] = alreadyPending + files.length;
+      if (selectedFiles.length > capacity) alert(capacity ? `本页最多上传 5 张图片；本次只添加前 ${capacity} 张。` : '本页已达到 5 张真实图片上限，请先移除一张再上传。');
       if (!files.length) return;
       pendingUploads++;
       document.getElementById('saveStatus').textContent = '图片正在保存…';
@@ -2095,7 +2166,7 @@
           }
         }
       } catch (error) { alert('图片未保存：' + error.message + '。请通过本地服务打开网页后重试。'); }
-      finally { pendingUploads--; renderAll(false); }
+      finally { pendingRealImageCounts[slideId] = Math.max(0, (pendingRealImageCounts[slideId] || 0) - files.length); pendingUploads--; renderAll(false); }
     }
 
     function recordsText(records) {
@@ -2224,6 +2295,10 @@
       const first = state.slides[firstSlideId] || {};
       const decisionSlides = JSON.parse(JSON.stringify(state.slides));
       for (const slideState of Object.values(decisionSlides)) {
+        slideState.real_image_text_marks ||= [];
+        slideState.real_image_links ||= {};
+        const linkMarks = new Map(slideState.real_image_text_marks.filter(mark => !mark.needsReview).map(mark => [mark.id, mark.quote]));
+        slideState.real_image_links_resolved = Object.entries(slideState.real_image_links).flatMap(([imagePath, markId]) => linkMarks.has(markId) ? [{ image_path: imagePath, marked_text: linkMarks.get(markId) }] : []);
         normalizeGroupWeights(slideState);
         const excluded = (slideState.information_groups || []).filter(group => slideState.group_weights[group.id] === 'hidden');
         const excludedLabels = new Set(excluded.map(group => group.label));
