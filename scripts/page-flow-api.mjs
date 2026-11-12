@@ -192,6 +192,11 @@ async function handlePost(route, body) {
         await stat(path.join(board,image.path));
       }
       if (!ctx.sourceMatches) return [409, { error: '本页原文与决策版本不一致，请先在原决策板同步。' }];
+      const paletteReference = ctx.decisionPage.palette_reference;
+      if (paletteReference) {
+        if (typeof paletteReference.path !== 'string' || !/^uploads\/[a-f0-9-]+\.(png|jpg|webp|gif)$/.test(paletteReference.path)) return [400, { error: '参考图路径无效，请重新上传。' }];
+        await stat(path.join(board, paletteReference.path));
+      }
       const page = saved.pages[body.pageId] ||= {};
       const active = activeRequests(saved);
       const samePage = active.find(item => item.pageId === body.pageId);
@@ -207,6 +212,7 @@ async function handlePost(route, body) {
       const id = randomUUID();
       const item = { id, pageId: body.pageId, status: 'queued', createdAt: new Date().toISOString(), sourceHash: ctx.sourceHash, decisionHash: ctx.decisionHash, note: String(body.note || '').slice(0, 2000), sourceDocument: (await readJson(path.join(board, 'board-data.json'))).sourceDocument?.path || null, guidePromptRebuildPending: !!ctx.slide.guidePromptRebuildPending };
       if (ctx.sourceInput) { item.sourceDocument=null; item.sourceInput={...ctx.sourceInput,images:ctx.sourceInput.images.map(image=>({...image,absolutePath:path.join(board,image.path)}))}; item.guidePromptRebuildPending=true; }
+      if (paletteReference) { item.paletteReference = { ...paletteReference, absolutePath: path.join(board, paletteReference.path), notes: String(ctx.decisionPage.palette_reference_notes || '').slice(0, 2000), policy: 'colors-only' }; item.guidePromptRebuildPending = true; }
       saved.requests[id] = item;
       page.lastRequestId = id;
       await atomic(path.join(board, 'page-flow-requests', `${id}.json`), item);

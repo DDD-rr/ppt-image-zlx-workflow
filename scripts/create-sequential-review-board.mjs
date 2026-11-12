@@ -82,7 +82,7 @@ const bridge = `      renderAll(false);
             imageTextLinks: s.source_mode === 'images' ? [] : Object.entries(s.real_image_links || {}).flatMap(([imagePath, markId]) => { const mark = (s.real_image_text_marks || []).find(item => item.id === markId && !item.needsReview); const image = Object.values(s.real_images || {}).flat().find(item => item.path === imagePath); return mark && image ? [{ image: image.name, text: mark.quote }] : []; }),
             annotations: (s.source_mode === 'images' ? [] : s.raw_visual_marks || []).map(mark => ({ label: mark.quote, value: mark.needsReview ? '需要重新标记' : mark.mode === 'replace' ? '图示替代，不呈现所选文字' : mark.mode === 'text-only' ? '仅保留原文分点，不加总结或专门配图' : '文字弱化并配合图示', effect: mark.needsReview ? '原文编辑后位置不明确，请重新标记。' : '', needsReview: !!mark.needsReview })),
             global: [
-              { label: '全局色系', value: palette?.label || state.palette_direction },
+              { label: s.palette_reference ? '本页色系' : '全局色系', value: s.palette_reference ? '参考图 · ' + s.palette_reference.name : palette?.label || state.palette_direction },
               { label: '原文处理', value: optionLabel(globalControls.content_handling, state.content_handling) },
               { label: '标题策略', value: optionLabel(globalControls.title_overlay, state.title_overlay) },
               { label: '真实素材', value: usedImages.length ? usedImages.join('、') : '未启用' }

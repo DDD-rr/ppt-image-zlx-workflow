@@ -934,6 +934,28 @@
     .raw-image-rules strong { display:block; color:#665277; margin-bottom:5px; font-size:12px; font-weight:600; }
     .raw-image-feedback { align-self:end; color:#826695; font-size:11px; line-height:1.4; overflow:hidden; }
     @media(max-width:720px) { .raw-image-input { grid-template-columns:minmax(0,1fr); grid-template-rows:260px minmax(0,1fr); height:540px; min-height:540px; max-height:540px; gap:14px; } .raw-image-side { grid-template-rows:auto 70px minmax(0,1fr) 24px; gap:6px; } .raw-image-side textarea.raw-image-notes { height:70px; min-height:70px; max-height:70px; } }
+    .palette-reference.mini-module { margin-top:10px; padding:16px; }
+    .palette-reference-head { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:10px; }
+    .palette-reference-head h3 { margin:0; font-size:15px; color:inherit; }
+    .palette-reference-head > span { color:#8190a0; font-size:11px; }
+    .palette-reference-body { display:grid; grid-template-columns:220px minmax(0,1fr); gap:16px; align-items:stretch; }
+    .palette-reference-drop { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:7px; width:100%; height:146px; box-sizing:border-box; padding:8px; border:1px dashed #bdcad6; border-radius:8px; background:#fff; color:#607b94; font-size:12px; cursor:default; overflow:hidden; }
+    .palette-reference-drop:focus-visible, .palette-reference-drop.drag { border-color:#5795ca; outline:2px solid #d7eaff; outline-offset:2px; background:#f7fbff; }
+    .palette-reference-drop img { display:block; width:100%; height:100%; object-fit:contain; }
+    .palette-reference-drop svg { width:24px; height:24px; fill:none; stroke:currentColor; stroke-width:1.5; }
+    .palette-reference-drop small { color:#93a0ac; font-size:11px; font-weight:400; }
+    .palette-reference-controls { display:flex; align-items:center; gap:8px; min-width:0; }
+    .palette-reference-controls button { flex:none; min-height:30px; padding:4px 11px; border:1px solid #cad7e3; border-radius:6px; background:#fff; color:#356994; font-size:12px; line-height:20px; font-weight:600; box-shadow:none; }
+    .palette-reference-controls button:hover { transform:none; border-color:#7da5ca; }
+    .palette-reference-controls .palette-reference-remove { padding:4px 6px; border-color:transparent; background:transparent; color:#7a8793; font-weight:400; }
+    .palette-reference-controls .palette-reference-remove[hidden] { display:none; }
+    .palette-reference-name { min-width:0; flex:1; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; color:#8a97a3; font-size:11px; }
+    .palette-reference-notes { min-width:0; }
+    .palette-reference-notes label { display:block; margin:8px 0 5px; color:#50677e; font-size:12px; }
+    .palette-reference-notes textarea { display:block; width:100%; height:56px; min-height:56px; max-height:56px; box-sizing:border-box; margin:0; padding:8px 10px; border:1px solid #d1deea; border-radius:7px; background:#fff; font:inherit; font-size:12px; line-height:1.5; resize:none; }
+    .palette-reference-hint { margin:6px 0 0; color:#7b8d9e; font-size:11px; line-height:1.5; }
+    .palette-reference-status { min-height:16px; margin-top:3px; color:#8d6b33; font-size:11px; line-height:1.4; }
+    @media(max-width:600px) { .palette-reference-body { grid-template-columns:120px minmax(0,1fr); gap:12px; } .palette-reference-controls { flex-wrap:wrap; } .palette-reference-name { flex-basis:100%; } .palette-reference-drop { height:170px; } }
   </style>
 </head>
 <body>
@@ -2542,6 +2564,7 @@
     }
 
     let pendingUploads = 0;
+    const pendingPaletteUploads = new Set();
     const pendingRealImageCounts = {};
     async function addFiles(slideId, assetId, fileList) {
       const selectedFiles = Array.from(fileList || []).filter(file => !file.type || file.type.startsWith('image/'));
@@ -2600,6 +2623,65 @@
       return wrap;
     }
 
+    function paletteReferenceBlock(slide) {
+      const s = state.slides[slide.id];
+      const wrap = el('section', 'mini-module palette-reference');
+      wrap.innerHTML = '<div class="palette-reference-head"><h3>参考图</h3><span>仅本页 · 1 张</span></div>';
+      const body = el('div', 'palette-reference-body');
+      const left = el('div');
+      const picker = document.createElement('input'); picker.type = 'file'; picker.accept = 'image/*'; picker.hidden = true;
+      const drop = el('div', 'palette-reference-drop'); drop.tabIndex = 0; drop.setAttribute('role', 'region'); drop.setAttribute('aria-label', '点击后粘贴本页配色参考图');
+      const controls = el('div', 'palette-reference-controls');
+      const uploadButton = el('button', 'palette-reference-upload', '上传图片'); uploadButton.type = 'button';
+      const name = el('span', 'palette-reference-name');
+      const remove = el('button', 'palette-reference-remove', '移除'); remove.type = 'button';
+      controls.append(uploadButton, remove, name); left.append(drop, picker);
+      const right = el('div', 'palette-reference-notes');
+      const label = el('label', '', '对参考图的想法（可选）'); label.htmlFor = 'palette-reference-notes-' + slide.id;
+      const notes = document.createElement('textarea'); notes.id = label.htmlFor; notes.value = s.palette_reference_notes || ''; notes.maxLength = 2000;
+      notes.placeholder = '例如：保留浅色背景，以绿色为主，橙色只用于重点。';
+      const hint = el('p', 'palette-reference-hint', '仅提取背景色、主色、强调色及比例，不参考内容与布局。');
+      const status = el('div', 'palette-reference-status'); status.setAttribute('role', 'status'); status.setAttribute('aria-live', 'polite');
+      right.append(controls, hint, label, notes, status); body.append(left, right); wrap.append(body);
+      const changed = () => { s.checked = false; s._checked_signature = null; renderNav(); updateOutput(false); };
+      const draw = () => {
+        drop.replaceChildren(); const record = s.palette_reference; const busy = pendingPaletteUploads.has(slide.id);
+        drop.setAttribute('aria-busy', String(busy)); picker.disabled = busy; uploadButton.disabled = busy; remove.disabled = busy; remove.hidden = !record;
+        uploadButton.textContent = busy ? '上传中…' : record ? '替换图片' : '上传图片';
+        if (record) { const image = document.createElement('img'); image.src = './' + record.path; image.alt = '本页配色参考：' + record.name; drop.append(image); drop.title = '点击聚焦后粘贴可替换图片，也可使用右侧替换图片按钮'; }
+        else { drop.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8" cy="9" r="1.5"/><path d="m4 18 6-6 4 3 3-4 3 4"/></svg><span>点击此处后粘贴图片</span><small>或拖拽图片到此处</small>'; drop.title = '点击此处聚焦后按 Ctrl+V 粘贴图片；上传请使用右侧按钮'; }
+        name.textContent = record?.name || ''; name.title = record?.name || '';
+        if (busy) status.textContent = '参考图正在保存…';
+      };
+      const upload = async fileList => {
+        const files = Array.from(fileList || []).filter(file => file.type.startsWith('image/'));
+        if (!files.length) { status.textContent = '请选择一张图片。'; return; }
+        if (files.length !== 1) { status.textContent = '每页仅支持一张参考图，请选择一张。'; return; }
+        if (pendingPaletteUploads.has(slide.id)) return;
+        pendingPaletteUploads.add(slide.id); pendingUploads++; draw();
+        try {
+          const file = files[0];
+          const dataUrl = await new Promise((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(reader.result); reader.onerror = () => reject(new Error('图片读取失败')); reader.readAsDataURL(file); });
+          const response = await fetch('/api/upload', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ name:file.name, type:file.type, data:dataUrl.split(',')[1] }) });
+          const record = await response.json();
+          if (!response.ok) throw new Error(record.error || '上传失败');
+          s.palette_reference = record; changed(); status.textContent = '已保存，生成时提取本页色系。';
+        } catch (error) { status.textContent = '未保存：' + error.message; }
+        finally { pendingPaletteUploads.delete(slide.id); pendingUploads--; picker.value = ''; if (wrap.isConnected !== false) draw(); else if (state.active === slide.id) renderAll(false); }
+      };
+      drop.addEventListener('click', () => drop.focus());
+      uploadButton.addEventListener('click', () => picker.click());
+      picker.addEventListener('change', () => upload(picker.files));
+      drop.addEventListener('paste', event => { if (!event.clipboardData?.files.length) return; event.preventDefault(); event.stopPropagation(); upload(event.clipboardData.files); });
+      drop.addEventListener('dragover', event => { event.preventDefault(); drop.classList.add('drag'); });
+      drop.addEventListener('dragleave', () => drop.classList.remove('drag'));
+      drop.addEventListener('drop', event => { event.preventDefault(); event.stopPropagation(); drop.classList.remove('drag'); upload(event.dataTransfer.files); });
+      remove.addEventListener('click', () => { if (pendingPaletteUploads.has(slide.id)) return; s.palette_reference = null; changed(); status.textContent = '已移除，本页恢复使用全局色系。'; draw(); });
+      notes.addEventListener('input', () => { s.palette_reference_notes = notes.value; changed(); });
+      draw();
+      return wrap;
+    }
+
     function advancedBlock(slide) {
       const s = state.slides[slide.id];
       const wrap = el('div', 'content-group');
@@ -2621,6 +2703,7 @@
       note.placeholder = '高级视觉补充说明，一行即可。';
       note.value = s.design_notes;
       note.addEventListener('input', () => { s.design_notes = note.value; updateOutput(false); });
+      wrap.appendChild(paletteReferenceBlock(slide));
       wrap.appendChild(note);
       return wrap;
     }

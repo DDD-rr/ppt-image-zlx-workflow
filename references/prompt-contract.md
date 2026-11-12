@@ -59,6 +59,8 @@ Every body-image prompt must include:
 
 ## Must Carry Through From Page Guide
 
+For a page with `palette_reference` (or request `paletteReference`), inspect the actual image and extract background, dominant, support and accent color roles and approximate proportions. Apply `palette_reference_notes` for this page only, overriding the global color direction locally. Carry the resulting color roles into the prompt; preserve all other board choices and readable contrast. Do not use the reference's content, layout, imagery, typography or style as generation instructions. This reference is independent of real-image uploads and screenshot content inputs. Without this reference, retain the global palette.
+
 When these fields exist in `PPT_Page_Image_Guide.md`, carry them into the prompt rather than re-deciding them:
 
 - page type and page role;
