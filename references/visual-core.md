@@ -104,6 +104,12 @@ High expressiveness must be visible through space, objects, material, narrative,
 - Image-generated Chinese text is risky when long, dense, small, narrow, or perspective-warped. Reduce line density and use short front-facing text areas.
 - Use charts only when real data exists. Do not invent data panels, KPI values, axes, trends, logos, or watermarks.
 
+## Table Design Reasoning
+
+- Derive a table's visual organization from its current reading task, semantic relationships, density, topic and confirmed palette. A useful design may have no single focal value: exact-lookup tables can rely on grouping, rhythm and typography instead of a highlighted winner. Do not manufacture importance from numeric size, model order or an earlier example.
+- Design expressive ambition positively. Decide where material, gradient, local contrast, spacing or depth improves this table's organization; then constrain competing effects. Anti-decoration rules must not silently reduce every table to neutral cells and uniform grid lines. Conversely, high-impact does not require stronger glow, extra frames or a highlighted column.
+- Prior successful tables calibrate quality, not a default appearance or mandatory image input. Retain useful principles only when they fit the current page; do not automatically import an old canvas, removed content or historical assets. A user-requested visual continuation or focused repair of the current candidate may use its image without making that treatment a general template.
+
 ## Avoid
 
 - Unrelated people, handshakes, city scenes, generic abstract backgrounds, decorative business photos, fake UI, and fake charts.

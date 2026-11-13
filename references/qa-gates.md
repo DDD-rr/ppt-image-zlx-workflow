@@ -19,6 +19,12 @@ Check each body image and final overlaid image:
 - Chinese text does not show high-impact glyph deformation: horizontal squeezing, vertical stretching, condensed/narrow fake font behavior, perspective distortion in body copy, sticky strokes, or pseudo-text replacing required content.
 - No watermark, unrelated logo, unrelated stock imagery, fake chart, or fake KPI appears.
 
+## Table Outcome Record
+
+For a table-led candidate, record content compliance and visual completion independently, including after a text or cell repair. At presentation size, check whether the reader can perform the guide's actual lookup/comparison task without cramped long text, ambiguous mapping or competing imagery. At thumbnail size, check whether the intended grouping and hierarchy survive through coherent surfaces, spacing, typography and accent distribution. Judge visible results against the current page decision record, not similarity to a preferred sample or the presence of a fashionable effect.
+
+Visual completion needs observable evidence for the reading hierarchy, component/surface separation, header/divider weight and actual image role. A readable, aligned table can still fail when it is visually unresolved, flat or generic for the selected page treatment. State the failed treatment and repair that treatment; do not automatically repeat a whole style, weaken confirmed expressiveness or certify a failed item merely because a retry was used. Text accuracy cannot compensate for visual failure, and attractive styling cannot compensate for missing required text.
+
 ## Visual QA
 
 Check each body image and final overlaid image:

@@ -57,6 +57,12 @@ Every body-image prompt must include:
 - Semantic decoration contract: state what each major decorative or atmospheric element means, such as connection, time, gap, pressure, growth, stability, contrast, transformation, evidence, or hierarchy. Forbid decoration that has no semantic role.
 - Replace aesthetic adjectives with layout verdicts. Use words like "three-layer pressure structure", "left-to-right causality path", "supply-demand gap bridge", "capability orbit around product core", or "evidence wall feeding conclusion" before words like premium, cinematic, futuristic, or high-impact.
 
+## Table Decision Carry-through
+
+For a table-led page, carry the existing guide's table decision record into the exact saved prompt: reader task and cell relationships; source-supported emphasis or an explicit choice of no single focal value; concrete component treatments and color/material roles; long-text space and alignment; and real-image correspondence and dominance. Resolve these choices internally before generation without adding a user approval step. Generic adjectives and prohibitions do not replace a missing positive design instruction.
+
+Check the actual prompt against the current record rather than trusting that a prior prompt or successful image retained those choices. Preserve meaning and palette continuity while allowing the table's form to change with its content; do not require a fixed header, rounded frame, row band, accent column, color ratio or reference canvas. In a repair prompt, preserve only treatments that were actually checked and passed; restate any unresolved visual issue alongside the text/cell repair.
+
 ## Must Carry Through From Page Guide
 
 When these fields exist in `PPT_Page_Image_Guide.md`, carry them into the prompt rather than re-deciding them:
