@@ -7,6 +7,8 @@ description: Generate reviewed 16:9 PPT slide images with the user's personal vi
 
 Create style-consistent PPT slide images with staged review and low retry cost.
 
+For table-led pages, also read [Table Visual Art Direction](references/table-visual-art-direction.md) when planning the page, writing its image prompt, and judging visual completion. Apply its semantic design commitments within the existing page guide and review flow.
+
 ## Cost-Aware Model Reminder
 
 - At the start of each major stage, briefly tell the user when a lower-cost model is enough.
