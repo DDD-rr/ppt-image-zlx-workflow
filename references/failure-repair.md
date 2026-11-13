@@ -2,6 +2,10 @@
 
 Use only after QA finds a high-impact failure. Preserve successful composition, material depth, and topic specificity whenever possible; repair the failure directly instead of flattening the page into generic cards.
 
+## Preserve Confirmed Decisions During Repair
+
+Use the failed QA item and its visible evidence to limit the revision. Retain effective composition, color, typography, and semantic carriers outside that failure. A hierarchy failure calls for hierarchy repair; an image-treatment failure calls for image-treatment repair. Do not compensate by changing confirmed emphasis, group weights, span treatments, source order, or image roles, and do not turn a rich composition into a conservative template. An image generator may redraw more than requested, so recheck the retained strengths after repair as well as the failed item.
+
 ## Repair Order
 
 1. Name the failed gate: title collision, major-zone drift, cramped main content, weak visual anchor, generic modules, invented evidence, text fidelity loss, color sameness, or real-image replacement.

@@ -2,6 +2,14 @@
 
 Use after generating a body image and again after the title overlay. Run both compliance and visual QA. Passing compliance alone is not a visual approval.
 
+## Evidence And Candidate Outcome
+
+Use the existing page guide's compact decision-to-treatment record as the page-specific QA basis. Record compliance and visual completion separately in the existing QA note or sequential completion field; no extra user review or separate approval artifact is required.
+
+- Compliance: cite visible evidence for current content fidelity, source order/relationships, span treatment, and the identity, correspondence, and selected role of real images. Actual reference input alone does not prove the output preserved the image correctly; compare with the original at a useful scale. State uncertainty rather than certifying an unverified product identity.
+- Visual completion: cite what the actual image shows for text-role hierarchy, semantic support of bullet groups, reading comfort, composition, and meaningful atmosphere. Larger/bolder headings alone do not establish the required visual identity. Text presence, file dimensions, and lack of overlap alone do not establish visual completion.
+- For each applicable high-impact gate, record pass, fail, or unresolved with a brief observable reason. Do not report a passing/ready candidate while a high-impact failure or required-fidelity uncertainty remains. Follow the existing repair/limitation path; do not invent another aesthetic standard, fixed quota, template, or approval gate.
+
 ## Compliance QA
 
 Check each body image and final overlaid image:

@@ -315,6 +315,12 @@
     .raw-editor-highlight mark[data-image-link="true"] { border-bottom:2px dashed #7650a5; }
     .raw-editor-wrap .raw-editor { z-index: 1; display: block; min-height: 0; max-height: none; overflow: auto; resize: none; outline: 0; background: transparent; color: transparent; caret-color: #173c60; }
     .raw-editor-wrap .raw-editor::selection { background: rgba(57, 132, 219, .35); color: transparent; }
+    .raw-editor-wrap:focus-within .raw-editor-highlight { visibility: hidden; }
+    .raw-editor-wrap .raw-editor:focus { background: #fff; color: #173c60; }
+    .raw-editor-wrap .raw-editor:focus::selection { background: rgba(57, 132, 219, .32); color: #173c60; }
+    .raw-editor-wrap:focus-within .raw-editor-highlight { visibility: hidden; }
+    .raw-editor-wrap .raw-editor:focus { background: #fff; color: #173c60; }
+    .raw-editor-wrap .raw-editor:focus::selection { background: rgba(57, 132, 219, .32); color: #173c60; }
     .raw-mark-toolbar { display: none; justify-content: flex-end; align-items: center; flex-wrap: wrap; gap: 7px; margin: 8px 0 0; }
     .raw-mark-toolbar.active { display: flex; }
     .raw-mark-toolbar button { min-height: 32px; padding: 6px 10px; border: 1px solid #c7d9e8; border-radius: 8px; background: #fff; color: #315f89; font-size: 12px; font-weight: 700; }
