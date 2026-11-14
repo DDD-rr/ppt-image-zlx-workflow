@@ -76,10 +76,10 @@ function inside(root, target) {
   return relative && relative !== '..' && !relative.startsWith(`..${path.sep}`) && !path.isAbsolute(relative);
 }
 function reviewed(page, ctx) {
-  return !!ctx.decisionPage.checked || (page?.review?.sourceHash === ctx.sourceHash && page?.review?.decisionHash === ctx.decisionHash);
+  return !!ctx.decisionPage.checked || page?.review?.sourceHash === ctx.sourceHash;
 }
 function current(page, ctx) {
-  return page?.adopted && page.adopted.sourceHash === ctx.sourceHash && page.adopted.decisionHash === ctx.decisionHash;
+  return page?.adopted && page.adopted.sourceHash === ctx.sourceHash;
 }
 function guidePending(page, ctx) {
   return (!!ctx.sourceInput || !!ctx.slide.guidePromptRebuildPending) && !(page?.rebuiltFor?.sourceHash === ctx.sourceHash && page?.rebuiltFor?.decisionHash === ctx.decisionHash);
@@ -192,6 +192,11 @@ async function handlePost(route, body) {
         await stat(path.join(board,image.path));
       }
       if (!ctx.sourceMatches) return [409, { error: '本页原文与决策版本不一致，请先在原决策板同步。' }];
+      const paletteReference = ctx.decisionPage.palette_reference;
+      if (paletteReference) {
+        if (typeof paletteReference.path !== 'string' || !/^uploads\/[a-f0-9-]+\.(png|jpg|webp|gif)$/.test(paletteReference.path)) return [400, { error: '参考图路径无效，请重新上传。' }];
+        await stat(path.join(board, paletteReference.path));
+      }
       const page = saved.pages[body.pageId] ||= {};
       const active = activeRequests(saved);
       const samePage = active.find(item => item.pageId === body.pageId);
@@ -207,6 +212,7 @@ async function handlePost(route, body) {
       const id = randomUUID();
       const item = { id, pageId: body.pageId, status: 'queued', createdAt: new Date().toISOString(), sourceHash: ctx.sourceHash, decisionHash: ctx.decisionHash, note: String(body.note || '').slice(0, 2000), sourceDocument: (await readJson(path.join(board, 'board-data.json'))).sourceDocument?.path || null, guidePromptRebuildPending: !!ctx.slide.guidePromptRebuildPending };
       if (ctx.sourceInput) { item.sourceDocument=null; item.sourceInput={...ctx.sourceInput,images:ctx.sourceInput.images.map(image=>({...image,absolutePath:path.join(board,image.path)}))}; item.guidePromptRebuildPending=true; }
+      if (paletteReference) { item.paletteReference = { ...paletteReference, absolutePath: path.join(board, paletteReference.path), notes: String(ctx.decisionPage.palette_reference_notes || '').slice(0, 2000), policy: 'colors-only' }; item.guidePromptRebuildPending = true; }
       saved.requests[id] = item;
       page.lastRequestId = id;
       await atomic(path.join(board, 'page-flow-requests', `${id}.json`), item);
@@ -224,7 +230,7 @@ async function handlePost(route, body) {
         const final = await fileRecord(body.final, 'final_image', pageNumber(request.pageId));
         const imageBody = body.body ? await fileRecord(body.body, 'body_image', pageNumber(request.pageId)) : null;
         const ctx = await context(request.pageId);
-        request.status = request.sourceHash === ctx.sourceHash && request.decisionHash === ctx.decisionHash && ctx.sourceMatches ? 'ready' : 'stale';
+        request.status = request.sourceHash === ctx.sourceHash && ctx.sourceMatches ? 'ready' : 'stale';
         request.completedAt = new Date().toISOString(); request.finalVersionId = final.id;
         if (body.guideHash && body.promptHash) page.rebuiltFor = { sourceHash: request.sourceHash, decisionHash: request.decisionHash };
         for (const version of [final, imageBody].filter(Boolean)) saved.versions[version.id] = { ...version, requestId: request.id, pageId: request.pageId, sourceHash: request.sourceHash, decisionHash: request.decisionHash, guideHash: String(body.guideHash || ''), promptHash: String(body.promptHash || ''), status: request.status === 'ready' ? 'candidate' : 'invalidated', qa: String(body.qa || '').slice(0, 2000) };
@@ -234,7 +240,7 @@ async function handlePost(route, body) {
       } else if (route === '/api/accept') {
         if (request.status !== 'ready') return [409, { error: '该图尚未等待确认' }];
         const ctx = await context(request.pageId);
-        if (!ctx.sourceMatches || request.sourceHash !== ctx.sourceHash || request.decisionHash !== ctx.decisionHash) return [409, { error: '原文或决策已变化，请先重审。' }];
+        if (!ctx.sourceMatches || request.sourceHash !== ctx.sourceHash) return [409, { error: '本页原文已变化，请先重审原文。' }];
         const version = saved.versions[request.finalVersionId];
         if (!version || version.status !== 'candidate') return [409, { error: '找不到可采用的最终图' }];
         if ((await fileRecord(version.path, 'final_image', pageNumber(request.pageId))).id !== version.id) return [409, { error: '图片文件已变化，请重新登记生成结果。' }];
@@ -246,7 +252,7 @@ async function handlePost(route, body) {
         if (request.status !== 'accepted' || page.adopted?.id !== request.finalVersionId) return [409, { error: '该版本当前并未采用' }];
         const version = saved.versions[request.finalVersionId];
         const ctx = await context(request.pageId);
-        const isCurrent = !!version && ctx.sourceMatches && request.sourceHash === ctx.sourceHash && request.decisionHash === ctx.decisionHash;
+        const isCurrent = !!version && ctx.sourceMatches && request.sourceHash === ctx.sourceHash;
         request.status = isCurrent ? 'ready' : 'stale';
         if (version) version.status = isCurrent ? 'candidate' : 'invalidated';
         delete page.adopted;
@@ -276,7 +282,7 @@ export async function handlePageFlow(req, res, url) {
         const page = saved.pages[slide.id] || {};
         const last = saved.requests[page.lastRequestId];
         const markedCandidate = saved.versions[page.markedCandidateVersionId] || null;
-        const markedCurrent = !!markedCandidate && markedCandidate.sourceHash === ctx.sourceHash && markedCandidate.decisionHash === ctx.decisionHash;
+        const markedCurrent = !!markedCandidate && markedCandidate.sourceHash === ctx.sourceHash;
         const confirmed = ctx.sourceMatches && !!current(page, ctx);
         return { id: slide.id, label: slide.label, title: slide.title, role: slide.role, summary: slide.summary, raw: ctx.sourceInput ? '' : slide.raw, sourceInput: ctx.sourceInput, checked: confirmed, confirmed, reviewedForGeneration: reviewed(page, ctx), sourceMatches: ctx.sourceMatches, needsReview: !!page.adopted && !current(page, ctx), guidePromptRebuildPending: guidePending(page, ctx), decision: ctx.decisionPage, sourceHash: ctx.sourceHash, decisionHash: ctx.decisionHash, adopted: page.adopted || null, adoptedVersion: saved.versions[page.adopted?.id] || null, markedCandidate, lastRequest: last || null, candidate: markedCandidate || saved.versions[last?.finalVersionId] || null };
       }));

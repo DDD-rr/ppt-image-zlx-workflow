@@ -1,62 +1,56 @@
-# Table Visual Art Direction
+# Table Visual Design
 
-Read this complete file for a table-led page at planning, prompt construction and QA. It is the table-specific execution contract within the existing workflow, not a new approval gate or a fixed visual template. Use the current source, confirmed decisions and active assets; do not need conversation history or a successful example to apply it.
+Revision: 2026-11-14-r2. This is the single source for table-specific design rules. Read it for table-led pages and apply it through the existing guide, saved prompt and QA; no extra approval or document is needed. Use the current source, confirmed decisions and permitted assets.
 
-## Resolve meaning and constraints first
+## 1. Establish the reading task
 
-Identify the reader's task: lookup, comparison, hierarchy, sequence, ranking or a supported conclusion. Map required wording, source order, every row/column association, parent headers and merged spans. Do not invent winners, categories, circuitry, status or functionality to make a page dramatic. A specification list can have no focal number.
+Determine whether the reader needs lookup, comparison, hierarchy, sequence or a supported conclusion. Preserve required wording, values, qualifiers, source order and exact row/column associations. Parse HTML `rowspan`/`colspan` explicitly; tags are structure, not slide copy. Pipe tables cannot encode spans: retain shared values on every applicable source row, merging visually only where scope is unambiguous. Never infer inheritance from unexplained blanks or merge across differing values.
 
-Content fidelity constrains facts and associations, not the appearance of spreadsheet cells. Keep a continuous matrix when it serves comparison; use another organization only when it preserves the reading task and source order. Readability is a controlling constraint, not an instruction to replace the selected expressive ambition with a generic flat table. If fidelity and a treatment conflict, revise that treatment rather than silently deleting copy or calling a less ambitious result equivalent to the confirmed decision.
+Emphasize only source-supported importance; a specification list may have no winning model or focal number. Content fidelity governs facts and associations, leaving freedom to design their visual form. If a treatment harms fidelity or reading comfort, revise the treatment while retaining the confirmed expressive ambition.
 
-## Choose a whole-page language
+## 2. Choose a contextual design idea
 
-Choose physical, graphic/editorial or hybrid treatment from the current subject, audience, expression mode, palette, notes and actual asset roles. Scene depth, explicit foreground/background choices and scene-related assets can support physical treatment. With no such cue or contextual need, do not automatically build a device, monitor, metal panel or photographic scene. A flat graphic table can belong beside photography through compatible geometry, type rhythm, temperature, contrast, scale and spacing. Physical treatment must also share plausible light, material and anchoring; a similar hue alone is insufficient.
+Decide how the subject and confirmed visual decisions should shape the information itself. Consider whether a continuous matrix best serves the task or another arrangement preserves the same relationships and source order. Compare structural possibilities when useful; changing fills or corners alone is not a different structure. Compose information, assets and background together, respecting each asset's selected dominance.
 
-Before choosing a table shell, compare suitable structural ideas internally in the existing guide. Compare silhouette, first/second reading stops, row tracking, long-copy capacity and the relation to assets. Alternatives differing only in fill or corner style are not structurally different. Keep this proportional; no mandatory number of sketches, extra image generation or user approval. Compose information, product and scene together rather than completing a table and then finding a gap for a photograph. Keep each asset's selected dominance. Do not connect a parameter to a physical control without evidence.
+Choose between two table design types from the current context and confirmed decisions:
 
-## Make concrete component choices
+- **Flat graphic:** a graphic information display that is not embedded in a scene-related physical object. Its backing still responds to the subject/scene through color, imagery or other fitting graphic elements. Surface effects and expressive typography do not by themselves make it physical.
+- **Physical-object integration:** embed and visually integrate the table into a suitable scene-related object. Choose the object for its contextual fit and compose it with plausible material, light, perspective and anchoring while keeping data readable. A textured panel floating beside a scene does not establish this integration.
 
-Work through the relevant roles as a coordinated system. Do not merely name a material or assign a color to each column.
+The defining difference is object integration. Both types may share header, typography, color, ornament and separation techniques. Scene depth, foreground/background decisions or scene-related assets can favor object integration; without contextual need, use graphic treatment. Never invent product evidence or connect specifications to controls without evidence.
 
-| Role | Design choice to resolve | Evidence to seek in the image |
-| --- | --- | --- |
-| Horizontal/group headers | How form, position and type establish fields or parent/child scope; their relation to the reading surface | Grouping and the entry into data are visible, not just a filled strip |
-| Vertical identifiers | How the reader locates and tracks a row; identity distinct from explanations | Consistent lookup axis without arbitrary bright buttons or giant labels |
-| Data/shared fields | Width, wrapping, alignment and calm type; exact scope of common values | Comfortable reading and unambiguous associations/spans |
-| Separation | What lets the eye perceive boundaries: space, object edges, material joints, relief/shadow, surface transitions, restrained ornaments or lines | Boundaries track the true scope without clutter or false relationships |
-| Color/material | Which component carries each confirmed palette role, brightness and surface behavior, and why it fits this page | Useful contrast and context correspondence within the table as well as the whole page |
-| Background/assets | How the information relates spatially and stylistically to the current context and genuine evidence | One coherent composition with the specified image dominance |
+For enhanced/high-impact work, state how this idea will visibly change the table's structure, headers, separation or spatial relationships. A related backdrop plus restyled cells is insufficient evidence of that ambition. Restrained work can succeed through precise typography and relationships; no unusual silhouette, material or motif is mandatory.
 
-Header craft includes type character/weight, normal-proportion letterforms, optical spacing, baseline, inset, breathing room and joining geometry. Coordinate any type decoration, local color, background detail, edge and light with those choices. Data is usually smaller/calmer than headers or identifiers, with regular/medium weight; choose actual sizes from density and viewing comfort. Do not impose one size ordering between horizontal and vertical headers. Short quantities need not become KPIs. Keep Chinese body copy front-facing, undistorted and uncompressed.
+## 3. Design the components as one system
 
-Separation need not be a flat grid. An object or decorative element can divide information when it actually clarifies scope and belongs to the context. Full grids, partial lines and no-line treatments remain legitimate options. Do not replace every line with a bulky rail, sacrifice row tracking, or cut a merged cell with a divider. Decoration must not imply unsupported flow or functionality.
+Within the table, give the backing the greatest decorative weight, horizontal/group and vertical headers the next greatest, and data a quieter treatment. Decorative weight describes where visual craft and ornament are concentrated; it does not override the page's content priorities or asset dominance. A heavily designed backing can remain low-contrast behind readable data.
 
-No treatment is universal: metal plaques, cut corners, bevels, pale data cells, blue headers, rounded backplates, open registers and borderless layouts are choices, not defaults. Precise typography and meaningful surface/space relationships can make a conventional matrix expressive; unusual silhouettes and effects do not establish quality on their own. An oversized bold heading on a coarse gradient slab is not refinement.
+| Component | Decision |
+| --- | --- |
+| Table backing | Carry the richest contextual visual treatment. For flat graphics, use scene/subject-responsive color, imagery and graphic detail. For physical integration, select and integrate a matching scene object as the carrier. Resolve its shape, surface and relation to the whole page rather than adding a generic slab. |
+| Horizontal/group and vertical headers | Give both the strongest decorative treatment after the backing, with scene-responsive color, form, ornament and typography. Develop a recognizable treatment beyond a single filled rectangle plus text. Preserve group scope and the vertical lookup axis; refine type character/weight, spacing, baseline, inset and edge joins without arbitrary bright buttons or giant labels. The two header directions may share a visual grammar while retaining distinct roles. |
+| Data/shared fields and type scale | Use distinct font sizes for horizontal headers, vertical headers and table data; choose the relative order of the two header sizes from context. Data should be smaller than both and visually quieter, with adequate presentation-size readability. Allocate width, wrapping and alignment to long specifications versus short quantities; preserve shared-value scope and normal, front-facing Chinese text. |
+| Information separation | Prefer perceptual grouping over mechanically drawing a rigid line at every cell boundary. Explore row/column gaps, seams, whitespace, surface differences and Gestalt grouping through proximity, similarity or continuity. Relevant object edges, shadow or ornament may also separate fields. Preserve row tracking and merged spans. Lines can support a justified design, but should not be the automatic organizing device; decoration must not imply unsupported flow or function. |
+| Color, surfaces and assets | Assign the confirmed palette's roles across backing, headers and data. Keep useful brightness/surface separation, selective accents and coherent scene correspondence. Preserve asset identity and dominance; avoid spreading the same accent strength across every component. |
 
-## Carry the decision through to the actual prompt
+No universal header shape, palette, material or separator applies. Oversized bold type on a coarse gradient slab is not header refinement. Reduce auxiliary imagery or decoration before crowding the core table or shrinking data below comfortable readability.
 
-Use the existing page-guide table record, not another document or approval stage. Keep a compact chain for the important design choices:
+## 4. Carry the idea into generation
 
-**Current semantic/decision basis → concrete treatment → expected visible effect → failure signal.**
+In the existing page guide, record the reading task/fidelity map and a compact design explanation: **current semantic/decision basis → concrete treatment → expected visible effect and failure signal**. Cover the important component relationships together, without a separate checklist for every detail.
 
-Record the selected whole-page language and why it suits this page; structural alternatives considered; relevant component choices above; readable text widths/wrapping and asset dominance. Explain how those choices work together. Descriptions such as “steel-blue header, silver cells, fine joints” are insufficient without the intended grouping/reading effect and contextual relationship.
+Translate that explanation into the exact saved tool prompt, including required copy/cell mapping, the selected design type and carrier, backing/header decorative hierarchy, separation mechanism, three distinct text sizes, palette roles, text space and asset role. Material names and adjectives such as refined or cinematic cannot replace positive design instructions. Check consistency with the guide. Rebuild guide/prompt for an explicit redesign or contract update even if body/board hashes are unchanged; record this revision. During repair, preserve only treatments already judged successful.
 
-Translate those positive choices into the exact saved tool prompt. Include the actual fidelity map and current palette roles, not just adjectives or prohibitions. Check that the important treatments are present and mutually consistent before generation. A recorded choice absent from the prompt was not executed. For an explicit redesign or updated design contract, rebuild this page's guide/prompt even if its body and board hashes are unchanged; record the design-contract revision. Unchanged content does not justify reusing the old design for a requested redesign.
+## 5. Judge the actual image
 
-## Judge three outcomes independently
+Record three independent outcomes, each pass/fail/unresolved with visible evidence:
 
-Use pass, fail or unresolved with observable evidence in the existing QA note/completion field:
+- **Content fidelity:** words, values, qualifiers, order, row/column/span scope and genuine asset identity.
+- **Information layout:** lookup/comparison comfort, row tracking, type scale/wrapping, alignment, title safety and asset dominance at presentation size.
+- **Visual execution:** observe whether the selected graphic or object-integrated type is realized, the backing carries the richest contextual decoration, both header directions receive refined secondary decoration, and separation uses the planned perceptual mechanism. Check three distinct text sizes with smaller/quieter data, contextual color/spatial coherence and local craft. Check overall organization at thumbnail size; inspect the table apart from its surrounding background/product, then together, retaining its intended carrier.
 
-1. **Content fidelity:** required words, values, qualifiers, order, row/column/span associations and genuine asset identity.
-2. **Information layout:** actual lookup/comparison comfort, tracking, type scale/wrapping, alignments, collisions, title safety and asset dominance.
-3. **Visual execution:** the chosen whole-page language and important component treatments actually work in the image. Identify the reading entry/path, header/identifier/data identity, separation scope, color relationships and contextual fit. Inspect typography, padding, edge joins and decorative strength at presentation size, and organization at thumbnail size.
+For visual execution state what was planned, what is observed and the judgment. Correct cells, readability, differing fills, a textured backing or a related product photo alone cannot establish visual PASS. A conventional matrix can pass when its component relationships visibly meet the chosen ambition; retaining lines or avoiding physical imitation is not a failure.
 
-For the visual outcome, distinguish **planned**, **observed** and **judgment**. Reading a rule, sending an instruction, passing content checks or naming a technique is not image evidence. Do not report visual PASS based only on correct grouping, readable text, different cell fills, a textured backing or a relevant background. Temporarily ignore the scene/product to inspect the internal table language, then inspect their coherence together. This is a diagnostic, not a requirement that every table be unrecognizable in another industry or use a unique shape.
+If a required outcome fails or is unresolved, identify the missing relationship and follow `failure-repair.md`. Recheck all three outcomes after repair; a retry limit cannot convert failure into a ready candidate. Internal QA does not decide the user's aesthetic preference.
 
-A continuous matrix or a restrained design can pass when its chosen component relationships are visibly effective and meet the confirmed ambition. Mark visual execution fail/unresolved when the planned relationships collapse to generic cells, coarse effects or incompatible local styling. Conversely, never fail a good result simply because it retains lines, avoids physical imitation or does not resemble a sample. Internal QA does not decide the user's aesthetic preference.
-
-If content/layout passes but visual execution fails, retain the confirmed source and decisions, name the missing relationship and follow failure-repair.md. Repair the spatial/component relationship rather than appending decorative effects or flattening the page for “clarity.” Recheck all three outcomes after a repair. Do not claim a passing/ready candidate while a required visual gate is fail/unresolved; reaching a retry limit does not make it pass. Preserve outputs and report the exact limitation through the existing failure path rather than certifying success.
-
-## Maintain and validate transfer
-
-When maintaining this capability, test in independent context using only the skill, raw content, current decisions and permitted assets. Cover meaningfully different tasks such as a lookup list, comparison matrix and shared/grouped fields; do not feed the desired design, earlier feedback or a preferred image as the answer. Check the generated guide-to-prompt choices and how QA handles missing evidence. A planning-only test can validate instruction use and semantic preservation, not image quality. Claim visual transfer only after independent generated images and their actual QA support it. Do not bake a test case's materials, colors, data or silhouette into the general skill.
+When validating skill changes, distinguish planning evidence from generated-image evidence. Use independent cases with different reading tasks when warranted; claim cross-chat visual reliability only when actual generated images and QA support it. Do not turn a test case or successful image into a fixed style, or reuse historical references/assets without current authorization.

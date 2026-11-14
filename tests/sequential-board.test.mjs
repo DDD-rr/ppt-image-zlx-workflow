@@ -55,6 +55,11 @@ test('新版保留原板并按页请求、验收和追踪版本', async () => {
     const first = await api('/api/page-flow/request', { pageId: 'slide01', confirmReview: true }, true);
     assert.equal(first.status, 200);
     const id = first.value.request.id;
+    const second = await api('/api/page-flow/request', { pageId: 'slide02' }, true);
+    assert.equal(second.status, 200);
+    const secondId = second.value.request.id;
+    assert.notEqual(secondId, id);
+    assert.equal((await api('/api/page-flow/request', { pageId: 'slide01' }, true)).status, 409);
     assert.equal((await api('/api/page-flow/request', { pageId: 'slide02' }, true)).status, 409);
     assert.equal((await api('/api/page-flow/run/start', { requestId: id })).status, 200);
     await writeFile(path.join(project, 'final_image', 'slide_01_v001.png'), Buffer.from('file-backed candidate'));
@@ -62,6 +67,9 @@ test('新版保留原板并按页请求、验收和追踪版本', async () => {
     assert.equal((await api('/api/page-flow/request', { pageId: 'slide02' }, true)).status, 409);
     assert.equal((await api('/api/page-flow/accept', { requestId: id }, true)).status, 200);
     assert.ok((await api('/api/page-flow/snapshot')).value.pages[0].adopted);
+    assert.equal((await api('/api/page-flow/request', { pageId: 'slide02' }, true)).status, 409);
+    assert.equal((await api('/api/page-flow/run/start', { requestId: secondId })).status, 200);
+    assert.equal((await api('/api/page-flow/run/fail', { requestId: secondId, error: '测试释放本页任务' })).status, 200);
     assert.equal((await api('/api/page-flow/request', { pageId: 'slide02' }, true)).status, 200);
     assert.deepEqual(JSON.parse(await readFile(path.join(old, 'style_decision.json'))), decision);
     assert.equal(await readFile(path.join(project, 'source_documents', 'source.md'), 'utf8'), source);

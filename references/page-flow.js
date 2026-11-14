@@ -127,16 +127,17 @@
   }
   function status(page) {
     if (!page.sourceMatches) return '原文待同步';
-    const confirmed = page.markedCandidate && page.markedCandidate.sourceHash === page.sourceHash && page.markedCandidate.decisionHash === page.decisionHash;
+    const confirmed = page.markedCandidate && page.markedCandidate.sourceHash === page.sourceHash;
     if (page.markedCandidate && !confirmed) return '需要重审';
     if (confirmed && page.adopted?.id === page.markedCandidate.id) return '已采用';
     const current = page.lastRequest?.status;
     if (current === 'queued') return '等待 Codex 处理';
     if (current === 'running') return '生成中';
     if (current === 'ready') return '待确认';
+    if (page.needsReview) return '需要重审';
+    if (page.adopted && page.adopted.sourceHash === page.sourceHash) return '已采用';
     if (current === 'failed') return '生成失败';
     if (current === 'stale') return '结果已过期';
-    if (page.needsReview) return '需要重审';
     if (page.adopted) return '已采用';
     return '待生成';
   }
@@ -201,6 +202,7 @@
     if (placeholderIssue) throw new Error(placeholderIssue);
     if (bridge().rawDirty()) throw new Error('本页原文尚未保存，请先使用原有的“保存”按钮。');
     if ((bridge().previewData?.().annotations || []).some(mark => mark.needsReview)) throw new Error('有选中文字标记因原文修改需要重新确认，请回到编辑区重新标记或移除后再生成。');
+    if (bridge().previewData?.().imageTextLinksPending) throw new Error('图片对应的原文已修改或无法确认，请在 Markdown 编辑区重新标记，再为图片选择对应文字。');
     if ((bridge().previewData?.().groups || []).some(group => group.pending)) throw new Error('请先为新增的材料小标题分配权重，再生成本页。');
     const pageId = bridge().active();
     const note = document.querySelector('#page-flow-panel textarea')?.value || '';
@@ -250,8 +252,9 @@
     const info = element('div', 'page-flow-info');
     const requestStatus = page.lastRequest?.status;
     const version = page.markedCandidate || (page.lastRequest?.status === 'ready' ? page.candidate : page.adoptedVersion);
-    const manualCandidate = !!page.markedCandidate && page.markedCandidate.sourceHash === page.sourceHash && page.markedCandidate.decisionHash === page.decisionHash;
-    const message = error || (!page.sourceMatches ? '原文与页面决策不一致，请先同步材料。' : page.markedCandidate && !manualCandidate ? '原文或页面决策已变化，请重新采用图片。' : page.adopted && manualCandidate ? `当前采用：${page.adoptedVersion?.path.split('/').at(-1) || '所选图片'}` : requestStatus === 'queued' ? '生成请求已排队，尚未开始。请回到新会话发送处理指令；完成后图片会显示在本页。' : requestStatus === 'running' ? '正在生成一张图片。完成后会显示在下方。' : requestStatus === 'ready' ? '图片已生成，请在下方选择并采用。' : requestStatus === 'failed' ? `生成失败：${page.lastRequest.error || '请重试。'}` : requestStatus === 'stale' ? '采用图片已过期，请重新生成。' : page.needsReview ? '页面决策有变化，原采用图片需要重新确认。' : '尚无采用图片。确认后生成一张。');
+    const manualCandidate = !!page.markedCandidate && page.markedCandidate.sourceHash === page.sourceHash;
+    const adoptedCurrent = !!page.adopted && !page.needsReview && page.adopted.sourceHash === page.sourceHash;
+    const message = error || (!page.sourceMatches ? '原文与页面决策不一致，请先同步材料。' : page.needsReview && requestStatus === 'failed' ? `重新生成失败：${page.lastRequest.error || '请重试。'}；此前采用图片与当前决策不一致，需要重新验收。` : page.needsReview && requestStatus === 'stale' ? '本次结果已过期；此前采用图片与当前决策不一致，需要重新验收。' : page.markedCandidate && !manualCandidate ? '曾采用的图片与当前原文或决策不一致，请重新生成并验收。' : page.needsReview ? '此前采用的图片与当前决策不一致，需要重新验收。' : adoptedCurrent && (requestStatus === 'failed' || requestStatus === 'stale') ? `重新生成${requestStatus === 'failed' ? '失败' : '结果已过期'}：${page.lastRequest.error || '此前采用版本仍有效。'}；当前采用版本仍保留。` : page.adopted && manualCandidate ? `当前采用：${page.adoptedVersion?.path.split('/').at(-1) || '所选图片'}` : requestStatus === 'queued' ? '生成请求已排队，尚未开始。请回到新会话发送处理指令；完成后图片会显示在本页。' : requestStatus === 'running' ? '正在生成一张图片。完成后会显示在下方。' : requestStatus === 'ready' ? '图片已生成，请在下方选择并采用。' : requestStatus === 'failed' ? `生成失败：${page.lastRequest.error || '请重试。'}` : requestStatus === 'stale' ? '采用图片已过期，请重新生成。' : page.adopted ? '此前采用的图片与当前决策不一致，需要重新验收。' : '尚无采用图片。确认后生成一张。');
     info.append(element('strong', error ? 'page-flow-error' : '', message));
     if (version && requestStatus === 'ready') info.append(element('code', '', `候选文件：${version.path.split('/').at(-1)}`));
     const noteDetails = element('details', 'page-flow-note');
@@ -265,6 +268,7 @@
     const otherActive = activeRequests.filter(item => item.pageId !== page.id);
     const preview = bridge().previewData?.();
     const annotationPending = (preview?.annotations || []).some(mark => mark.needsReview);
+    const imageTextLinkPending = !!preview?.imageTextLinksPending;
     const groupPending = (preview?.groups || []).some(group => group.pending);
     const currentRequestActive = ['queued', 'running'].includes(requestStatus);
     let generationBlock = '';
@@ -275,6 +279,7 @@
     else if (groupPending) generationBlock = '新增的小标题还没有设置权重，请到“每页内容怎么处理 → 信息组权重”分配后再生成。';
     else if (preview?.placeholderIssue) generationBlock = preview.placeholderIssue;
     else if (annotationPending) generationBlock = '部分选中文字标记需要重新确认，请到“本页原始材料”的 Markdown 编辑区重新标记或移除。';
+    else if (imageTextLinkPending) generationBlock = '图片对应的原文已修改或无法确认，请到 Markdown 编辑区重新标记，再为图片选择对应文字。';
     else if (currentRequestActive) generationBlock = requestStatus === 'queued' ? '本页生成任务已排队；请在当前 Codex 对话中处理，完成后回到本页验收。' : '本页正在生成，请等待候选图片出现后验收。';
     else if (requestStatus === 'ready') generationBlock = '图片已经生成，请先采用、重做或暂不采用，再开始下一次生成。';
     const generationLabel = currentRequestActive ? (requestStatus === 'queued' ? '等待处理' : '生成中') : requestStatus === 'ready' ? '候选图待验收' : page.lastRequest?.status === 'failed' || page.lastRequest?.status === 'stale' ? '重试生成' : page.adopted ? '重新生成' : '生成本页';
@@ -336,16 +341,20 @@
     const wrap = document.querySelector('#slidePanel .generated-image-group');
     if (!page || !wrap) return;
     const buttons = [...wrap.querySelectorAll('.generated-image-version')];
-    const markedName = page.markedCandidate?.path?.split(/[\\/]/).at(-1);
     const latestName = page.lastRequest?.status === 'ready' ? page.candidate?.path?.split(/[\\/]/).at(-1) : '';
+    const markedCurrent = !!page.markedCandidate && page.markedCandidate.sourceHash === page.sourceHash;
+    const markedName = markedCurrent ? page.markedCandidate.path?.split(/[\\/]/).at(-1) : '';
+    const staleMarkedName = !markedCurrent ? (page.markedCandidate?.path || (page.needsReview ? page.adoptedVersion?.path : ''))?.split(/[\\/]/).at(-1) : '';
     buttons.forEach((item, index) => {
       const name = item.querySelector('.generated-image-thumb')?.src?.split('/').pop()?.split('?')[0];
       const marked = !!markedName && decodeURIComponent(name || '') === markedName;
-      const generated = !markedName && !!latestName && decodeURIComponent(name || '') === latestName;
+      const staleMarked = !!staleMarkedName && decodeURIComponent(name || '') === staleMarkedName;
+      const generated = !!latestName && decodeURIComponent(name || '') === latestName;
       item.toggleAttribute('data-page-flow-candidate', marked);
       item.dataset.pageFlowCandidate = String(marked);
       item.removeAttribute('data-page-flow-mark');
       if (marked) item.dataset.pageFlowMark = '已采用';
+      else if (staleMarked) item.dataset.pageFlowMark = '曾采用 · 需重审';
       else if (generated) item.dataset.pageFlowMark = '刚生成 · 待采用';
     });
     const details = wrap.querySelector('.generated-image-details');
@@ -378,7 +387,7 @@
     actionColumn.dataset.imagePath = imagePath;
     const selected = imagePath.split(/[\\/]/).at(-1);
     const marked = page.markedCandidate?.path?.split(/[\\/]/).at(-1) === selected && !!selected;
-    const currentMark = marked && page.markedCandidate.sourceHash === page.sourceHash && page.markedCandidate.decisionHash === page.decisionHash;
+    const currentMark = marked && page.markedCandidate.sourceHash === page.sourceHash;
     const canMark = /(^|[\\/])final_image[\\/]slide_\d+(?:_[A-Za-z0-9-]+)?\.(png|jpe?g|webp)$/i.test(imagePath);
     const adoptedMark = currentMark && page.adopted?.id === page.markedCandidate.id;
     action.textContent = adoptedMark ? '取消采用' : '采用';
@@ -409,7 +418,8 @@
     link.hidden = window.scrollY < 500;
   }
   async function showPreferred(page) {
-    const version = page.markedCandidate || (page.lastRequest?.status === 'ready' ? page.candidate : page.adoptedVersion);
+    const markedCurrent = !!page.markedCandidate && page.markedCandidate.sourceHash === page.sourceHash;
+    const version = page.lastRequest?.status === 'ready' ? page.candidate : markedCurrent ? page.markedCandidate : page.adoptedVersion;
     if (!version || shownVersion.get(page.id) === version.id) return;
     const list = document.querySelector('#slidePanel .generated-image-version-list');
     if (!list) return;
@@ -419,7 +429,7 @@
     const buttons = list.querySelectorAll('.generated-image-version');
     if (index < 0 || buttons.length !== data.images.length) return;
     buttons.forEach(item => item.removeAttribute('data-page-flow-mark'));
-    buttons[index].dataset.pageFlowMark = page.lastRequest?.status === 'ready' ? '本次候选 · 待确认' : '当前采用';
+    buttons[index].dataset.pageFlowMark = page.lastRequest?.status === 'ready' ? '本次候选 · 待确认' : page.needsReview ? '曾采用 · 需重审' : '当前采用';
     buttons[index].click();
     shownVersion.set(page.id, version.id);
   }

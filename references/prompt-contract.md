@@ -14,6 +14,7 @@ Use before generating each generated body image. This file defines the core prom
 | `page_mode`, `information_groups`, `group_weights`, `raw_visual_marks`, `primary_emphasis_method`, repeated modules, or required section titles exist | `references/information-priority.md` |
 | Palette, material hierarchy, external color source, cyan-orange decision, or component color roles affect the page | `references/color-system.md` |
 | Real images, screenshots, product photos, evidence images, or uploaded references are involved | `references/real-image-policy.md` |
+| Table-led page | `references/table-visual-art-direction.md` |
 | Evidence-heavy page | `references/evidence-scenarios.md`, only the relevant scenario |
 | Focused QA after generation | `references/qa-gates.md` |
 | High-impact failure repair | `references/failure-repair.md` |
@@ -36,8 +37,6 @@ Every body-image prompt must include:
 - Information budget: primary visual system, supporting module count, optional closure or flow system.
 - Content blueprint: title zone, usable body region, primary anchor bounds, module grid, first-module start line, bottom safe line, and module priorities.
 - `raw_visual_marks` and `raw_visual_default`: quote each selected source span and its treatment. For `emphasize`, retain the words and strengthen their visual prominence in context; `replace` omits selected words and names the visual carrier; `condense-illustrate` shortens the selected wording with a relevant visual while preserving precise facts; `soften` retains every word at lower prominence with a visual; `text-only` preserves exact wording/order without an added summary or dedicated graphic. Apply marks only to their selected spans. Apply the saved `raw_visual_default` to unmarked bullet spans; the default value is `soften`.
-- When an outlined Markdown table repeats a category value across adjacent rows, retain every value in the source and prompt. The slide may visually merge those adjacent cells only when they express the same category relationship; never use blank cells in the source as implicit continuations, and never merge across differing values or ambiguous group boundaries.
-- When source Markdown contains an HTML table block, parse `rowspan` and `colspan` into an explicit cell-to-row/column map. Preserve those merged relationships in the prompt and final image; HTML tags and attribute names are structural notation, not visible slide text.
 - `group_weights=placeholder`: explicitly describe the blank reservation from `group_placeholders` (usable-body area fraction plus nine-grid anchor). Suppress that group's source text, headings, span marks and graphics even under strict content handling. Keep other material outside the reservation, preserve the global title-safe region, and do not print labels such as “占位” or draw dummy assets/borders. Use `placeholder_information_groups` as a readable export, not an additional rendered content group. Resolve full-size/content conflicts or total reservation over 100% before calling image generation.
 - Title overlay mode: `overlay-title` or `no-title-reserved`. In both modes, reserve the title-safe region; in `no-title-reserved`, keep that region quiet and usable for manual post-production without adding title text or title-like decoration.
 - Alignment contract: one page-level content frame plus the shared edges, column widths, row heights, centerlines, or baselines that bind major zones together.
@@ -51,27 +50,24 @@ Every body-image prompt must include:
 - Locked text and allowed extensible text.
 - Chinese text shape constraints when in-image Chinese is required: normal proportions, stable line spacing, front-facing 2D text areas, no horizontal compression, no vertical stretching, no narrow fake font, no perspective-warped body copy, no sticky strokes, and no decorative pseudo-text.
 - Typography and semantic-role contract: identify headings, explanations, standalone takeaways, grouped short conclusions, process conclusions, and notes; set their relative size and visual weight from content priority, wording length, density, and viewing distance. Specify a page-appropriate heading identity beyond font size/weight, keeping peer headings coherent without prescribing one motif or restraint level. Keep explanations comparatively plain; attach conclusions to the objects or arguments they summarize, with visual intensity matched to importance. Do not apply one accent mechanically to every role. The approximate 1672×941 bands in `references/visual-core.md` are optional starting points, not fixed limits. Check presentation-size readability and avoid uniform oversized type.
-- For a table-led page, state the reader task, exact row-column mapping, required values, relative importance of long explanations versus short quantities, and any source-supported grouping. Name the value or dimension that merits emphasis and its reason; do not highlight every number automatically.
-- Specify the table visual roles in context: page background, shared backing material, header form and visual weight, body row or column rhythm, divider or frame strategy, text hierarchy, and accent distribution. Explain how these roles fit the selected color system and page subject. Avoid reusing one table treatment or a default blue-cyan technology panel across unrelated pages; forbid any repeated glow, border, or accent that would compete with the data.
 - Page-specific forbidden items.
 - Semantic decoration contract: state what each major decorative or atmospheric element means, such as connection, time, gap, pressure, growth, stability, contrast, transformation, evidence, or hierarchy. Forbid decoration that has no semantic role.
 - Replace aesthetic adjectives with layout verdicts. Use words like "three-layer pressure structure", "left-to-right causality path", "supply-demand gap bridge", "capability orbit around product core", or "evidence wall feeding conclusion" before words like premium, cinematic, futuristic, or high-impact.
 
 ## Table Decision Carry-through
 
-Read the complete [table visual execution contract](table-visual-art-direction.md). Carry the current guide’s semantic basis, chosen component relationships, separation mechanism, header craft, reading effects and fidelity map into the exact saved prompt. Resolve contradictions with the confirmed ambition; neither strict content fidelity nor clarity alone requires conventional filled cells. Rebuild for an explicit redesign or changed design contract, not only changed body/board hashes.
-
-For a table-led page, carry the existing guide's table decision record into the exact saved prompt: reader task and cell relationships; source-supported emphasis or an explicit choice of no single focal value; concrete component treatments and color/material roles; long-text space and alignment; and real-image correspondence and dominance. Resolve these choices internally before generation without adding a user approval step. Generic adjectives and prohibitions do not replace a missing positive design instruction.
-
-Check the actual prompt against the current record rather than trusting that a prior prompt or successful image retained those choices. Preserve meaning and palette continuity while allowing the table's form to change with its content; do not require a fixed header, rounded frame, row band, accent column, color ratio or reference canvas. In a repair prompt, preserve only treatments that were actually checked and passed; restate any unresolved visual issue alongside the text/cell repair.
+Apply [Table Visual Design](table-visual-art-direction.md). Carry the current guide's fidelity map, contextual design idea, concrete component relationships and expected reading effect into the exact saved prompt. Check the saved prompt against that guide before generation; follow the contract's rebuild and repair rules.
 
 ## Must Carry Through From Page Guide
+
+A page may provide one `palette_reference` image and `palette_reference_notes` in advanced visual settings; page-flow requests expose it as `paletteReference` with an absolute path and `policy: colors-only`. Read the actual image before planning, extract only its background, dominant/support/accent colors and approximate distribution, and apply them to this page with the user's notes. This is a page-level color override; other pages retain the global palette. Do not borrow the reference's content, composition, imagery, typography or visual style. Keep the board's other design decisions and text contrast requirements. If no reference is present, use the global palette. Record the extracted color roles in this page's guide and prompt, and check them in QA; do not treat the image as a real-image asset or screenshot content source.
 
 When these fields exist in `PPT_Page_Image_Guide.md`, carry them into the prompt rather than re-deciding them:
 
 - page type and page role;
 - `page_mode`, `information_groups`, `group_weights`, `excluded_information_groups`, `primary_emphasis_method`, `required_section_titles`, source-order first reading zone, and visual-anchor zone;
 - each `raw_visual_marks` entry, including the exact text-rendering rule and its semantic visual carrier;
+- each `real_image_links_resolved` entry, binding the named uploaded image path to its exact `marked_text`; keep this mapping independent from the passage's text-rendering treatment and stop if it is stale or ambiguous;
 - composition pattern and anti-flattening rule;
 - whether reading-first or body-text-carrier still needs a visual anchor, path, document object, product proof, or shared system instead of full-screen flat module tiling;
 - palette brief, page color role, component color roles, and visual intensity scale;

@@ -69,6 +69,8 @@
 
 ## 安装和更新
 
+逐页决策板及独立视觉 V2 的最新版本在 `feature/page-review-board` 分支。V2 保留原版用于回退，包含紧凑模块布局、编辑标记、HEX 拾色面板及自定义色系卡片。现有逐页板可用 `node scripts/create-visual-v2-board.mjs <逐页板目录>` 创建独立 V2，详见 `references/sequential-page-board.md`。
+
 外部用户可以从 GitHub 获取最新版本：
 
 ```powershell
