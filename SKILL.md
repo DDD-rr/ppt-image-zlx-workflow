@@ -67,6 +67,8 @@ Use these defaults unless the user clearly overrides them.
 
 ## Table Design Execution
 
+For table-led pages, follow the complete contract in `references/table-visual-art-direction.md` across planning, the actual saved prompt and three separate QA outcomes: content fidelity, information layout and visual execution. Strict fidelity does not mandate spreadsheet appearance; readability does not waive confirmed expressive ambition. An explicit redesign or updated design contract requires a fresh page guide/prompt even when body and board hashes are unchanged. Do not certify visual completion from rule/prompt presence or content correctness.
+
 For each table-led page, complete the page-specific table decision record in `references/page-guide-template.md`, translate its choices into the actual image prompt, and judge the generated result against that record using `references/qa-gates.md`. This is internal execution within the existing workflow, not a new approval gate. Table quality must follow from the skill's reasoning about the current content and confirmed decisions; neither a prior successful image nor a fixed table style is a prerequisite.
 
 ## Hard Rules

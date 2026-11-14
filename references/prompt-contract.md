@@ -59,6 +59,8 @@ Every body-image prompt must include:
 
 ## Table Decision Carry-through
 
+Read the complete [table visual execution contract](table-visual-art-direction.md). Carry the current guide’s semantic basis, chosen component relationships, separation mechanism, header craft, reading effects and fidelity map into the exact saved prompt. Resolve contradictions with the confirmed ambition; neither strict content fidelity nor clarity alone requires conventional filled cells. Rebuild for an explicit redesign or changed design contract, not only changed body/board hashes.
+
 For a table-led page, carry the existing guide's table decision record into the exact saved prompt: reader task and cell relationships; source-supported emphasis or an explicit choice of no single focal value; concrete component treatments and color/material roles; long-text space and alignment; and real-image correspondence and dominance. Resolve these choices internally before generation without adding a user approval step. Generic adjectives and prohibitions do not replace a missing positive design instruction.
 
 Check the actual prompt against the current record rather than trusting that a prior prompt or successful image retained those choices. Preserve meaning and palette continuity while allowing the table's form to change with its content; do not require a fixed header, rounded frame, row band, accent column, color ratio or reference canvas. In a repair prompt, preserve only treatments that were actually checked and passed; restate any unresolved visual issue alongside the text/cell repair.
