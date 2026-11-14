@@ -1,6 +1,7 @@
 import { createHash, randomUUID } from 'node:crypto';
 import { mkdir, readFile, readdir, rename, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
+import { executionInput, projectFile } from './page-execution-input.mjs';
 
 let project, board, statePath;
 export async function configurePageFlow(projectPath, boardPath) {
@@ -69,7 +70,7 @@ async function context(id) {
   }
   const { slides, _review_session, _board_sha256, confirmed_at, ...global } = decision;
   const sourceInput = imageSource ? { mode: 'images', images: decisionPage.source_images || [], notes: decisionPage.source_image_notes || '', policy: 'content-and-relations-only' } : null;
-  return { slide, decisionPage, sourceInput, sourceMatches, sourceHash: sha(sourceInput ? JSON.stringify(sourceInput) : slide.raw || ''), decisionHash: sha(JSON.stringify({ global, page: decisionPage })), decision };
+  return { slide, decisionPage, sourceInput, sourceDocument: sourceRelative, sourceMatches, sourceHash: sha(sourceInput ? JSON.stringify(sourceInput) : slide.raw || ''), decisionHash: sha(JSON.stringify({ global, page: decisionPage })), decision };
 }
 function inside(root, target) {
   const relative = path.relative(root, target);
@@ -224,15 +225,30 @@ async function handlePost(route, body) {
       const page = saved.pages[request.pageId] ||= {};
       if (route === '/api/run/start') {
         if (request.status !== 'queued' && request.status !== 'running') return [409, { error: '该请求已结束' }];
+        const ctx = await context(request.pageId);
+        if (!ctx.sourceMatches || request.sourceHash !== ctx.sourceHash || request.decisionHash !== ctx.decisionHash) return [409, { error: '本页来源或决策已变化，请重新确认生成请求。' }];
         request.status = 'running'; request.startedAt ||= new Date().toISOString();
       } else if (route === '/api/run/complete') {
         if (request.status !== 'running') return [409, { error: '请先标记开始生成' }];
         const final = await fileRecord(body.final, 'final_image', pageNumber(request.pageId));
         const imageBody = body.body ? await fileRecord(body.body, 'body_image', pageNumber(request.pageId)) : null;
         const ctx = await context(request.pageId);
-        request.status = request.sourceHash === ctx.sourceHash && ctx.sourceMatches ? 'ready' : 'stale';
+        let verifiedRebuild = false;
+        if (body.executionManifest) {
+          const execution = await readJson(await projectFile(project, body.executionManifest));
+          const currentInput = await executionInput({ project, board, request, ctx, reviewed: reviewed(page, ctx), pending: guidePending(page, ctx) });
+          if (execution.requestId !== request.id || execution.input?.boardRoot !== board || execution.input?.baseFingerprint !== currentInput.fingerprint) return [409, { error: '执行输入已变化，候选不能登记为当前结果。' }];
+          for (const key of ['guide', 'prompt']) {
+            const artifact = execution.artifacts?.[key];
+            const actualHash = sha(await readFile(await projectFile(project, artifact?.path)));
+            if (actualHash !== artifact.sha256 || actualHash !== String(body[`${key}Hash`]).toLowerCase() || execution.attempts?.at(-1)?.[key]?.sha256 !== actualHash) return [409, { error: '指南或实际生成提示词校验失败。' }];
+          }
+          if (execution.output?.final !== final.path || execution.output?.finalHash !== final.hash || execution.output?.body !== imageBody?.path || execution.output?.bodyHash !== imageBody?.hash) return [409, { error: '执行记录与候选图片不匹配。' }];
+          verifiedRebuild = true;
+        }
+        request.status = request.sourceHash === ctx.sourceHash && request.decisionHash === ctx.decisionHash && ctx.sourceMatches ? 'ready' : 'stale';
         request.completedAt = new Date().toISOString(); request.finalVersionId = final.id;
-        if (body.guideHash && body.promptHash) page.rebuiltFor = { sourceHash: request.sourceHash, decisionHash: request.decisionHash };
+        if (verifiedRebuild) page.rebuiltFor = { sourceHash: request.sourceHash, decisionHash: request.decisionHash };
         for (const version of [final, imageBody].filter(Boolean)) saved.versions[version.id] = { ...version, requestId: request.id, pageId: request.pageId, sourceHash: request.sourceHash, decisionHash: request.decisionHash, guideHash: String(body.guideHash || ''), promptHash: String(body.promptHash || ''), status: request.status === 'ready' ? 'candidate' : 'invalidated', qa: String(body.qa || '').slice(0, 2000) };
       } else if (route === '/api/run/fail') {
         if (!['queued', 'running'].includes(request.status)) return [409, { error: '该请求已结束' }];
@@ -273,6 +289,15 @@ async function handlePost(route, body) {
 export async function handlePageFlow(req, res, url) {
   try {
     const route = url.pathname.replace(/^\/api\/page-flow/, '/api');
+    if (req.method === 'GET' && route === '/api/execution-input') {
+      const saved = await state();
+      const request = saved.requests[url.searchParams.get('requestId')];
+      if (!request) return json(res, 404, { error: '找不到指定生成请求' });
+      const ctx = await context(request.pageId);
+      const page = saved.pages[request.pageId] || {};
+      return json(res, 200, await executionInput({ project, board, request, ctx,
+        reviewed: reviewed(page, ctx), pending: guidePending(page, ctx) }));
+    }
     if (req.method === 'GET' && route === '/api/snapshot') {
       const data = await readJson(path.join(board, 'board-data.json'));
       const decision = await readJson(path.join(board, 'style_decision.json'));

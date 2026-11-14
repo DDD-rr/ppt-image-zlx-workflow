@@ -1,5 +1,9 @@
 # Sequential Page Board
 
+## Preferred execution for an existing request
+
+Use [Single-Page Execution](single-page-execution.md): `page-execution.mjs prepare/start/record/check/finalize/complete` provides a single-page input package, verified guide/prompt cache, frozen per-attempt input records and deterministic saving/registration. The official image tool and evidence-based QA still run for every candidate. The legacy API sequence below remains available for services that have not loaded the new endpoint. Do not treat a missing new endpoint as permission to change boards, recreate requests, or skip freshness checks.
+
 ## Independent Visual V2
 
 When the user chooses the visual V2 interface, run `node scripts/create-visual-v2-board.mjs <existing-sequential-board-directory>` to create its sibling `decision_board_visual_v2/`. Existing V2 directories are never overwritten. The clone keeps independent source Markdown, uploads, draft, decisions and task records; existing generated images remain available from the project. Start the V2 service with `node scripts/v4-sequential-review-server.mjs <visual-v2-board-directory> <unused-port>`. Use its URL and request IDs for subsequent generation; do not send results to the original board. Interface rules are in [decision-board-visual-v2/DESIGN_SPEC.md](decision-board-visual-v2/DESIGN_SPEC.md). Both board versions retain the same generation and adoption workflow.

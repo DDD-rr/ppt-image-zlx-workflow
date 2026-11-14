@@ -7,6 +7,10 @@ description: Generate reviewed 16:9 PPT slide images with the user's personal vi
 
 Create style-consistent PPT slide images with staged review and low retry cost.
 
+## Fast Path For Existing Single-Page Requests
+
+For an existing board URL plus an exact request ID, read [Single-Page Execution](references/single-page-execution.md) and use `scripts/page-execution.mjs` as the preferred execution path. Fetch only that page's execution input package; reuse a verified guide/prompt only when body, decisions, active asset bytes, relevant rules, project style and active user instructions still match. Rebuild only on an actual invalidation. Let the script perform freshness checks, immutable prompt/input recording, versioned saving, the existing title finalization, and candidate registration. Keep design judgment, actual image inspection, the official image tool, and content/visual QA unchanged. Do not rerun outline/board creation or add a guide/prompt approval pause inside an already-reviewed per-page request. See the reference for older running servers, cache invalidation and QA evidence requirements.
+
 
 ## Cost-Aware Model Reminder
 
