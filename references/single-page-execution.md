@@ -18,8 +18,9 @@ Existing server processes need a restart to load a new API implementation. A 404
 
 ## 2. Reuse or rebuild only this page
 
-- `reuse: true`: reuse the exact verified guide/prompt referenced by the manifest. Still inspect every included active image and run post-generation QA; honor explicit user instructions excluding a reference. Do not reconstruct a new palette, guide, or prompt merely to repeat prior work.
-- `reuse: false`: load only the rules needed by this page. Rebuild its guide and exact prompt from the active body, confirmed decisions, assets, and active user instructions. Table-led pages still load `table-visual-art-direction.md`. Do not use the three hidden legacy production sections.
+- `reuse: true`: reuse only a design validated by an actual generated image that passed all QA outcomes. Still inspect included assets and run new-image QA every time. A cache hit never reuses an image or QA verdict.
+- `reuse: false`: load the page's required rules and rebuild from current inputs. First table designs, redesigns, rule changes and invalidated designs MUST explicitly read `table-visual-art-direction.md`; the input package exposes `requiredReads`. Do not substitute generic fast-path instructions or material adjectives for the specialist design process. Do not use the three hidden legacy production sections.
+- `resumed: true` with `artifactState: recorded` means the same run's frozen inputs are available, not that its design is visually validated. Continue that run without unnecessarily rewriting its saved prompt, then inspect the generated image.
 - Reuse requires the same body, global/page decisions, active request note, asset identities/roles/links/bytes, relevant skill rules, project master/title style, and saved chat overrides. Missing/tampered artifacts or a current pending-rebuild marker prevent reuse. No image, generated candidate, or QA verdict is cached as a substitute for a new generation/QA.
 
 Mark the assigned request running:
@@ -34,7 +35,7 @@ After rebuilding, verify the guide and prompt against the package, then record t
 node scripts/page-execution.mjs record --manifest <execution.json> --guide <project-guide.md> --prompt <exact-prompt.txt> --verified
 ```
 
-`--verified` records the agent's actual comparison; it is not automatic semantic approval. The command freezes immutable per-attempt copies, hashes them, and records the actual image input paths. For a repair, create the corrected guide/prompt, verify them, and run `record` again. It preserves earlier attempts and their original output paths; never overwrite the prior tool prompt.
+`--verified` records the agent's input comparison, not visual approval. The command freezes immutable per-attempt copies, hashes them, and records image inputs; its cache entry remains `recorded` and cannot be reused as a validated design. For a repair, record a distinct corrected attempt. In screenshot-material mode classify table-led content with `record --table`; Markdown/HTML tables are detected automatically. No original prompt is overwritten.
 
 Immediately before each official image call:
 
@@ -46,7 +47,7 @@ Parse the returned JSON and pass its exact `prompt` string and `inputPaths` dire
 
 ## 3. QA, save, and register
 
-Inspect the generated image against the current input and page guide. Content compliance, information layout and visual completion are separate outcomes. Repair actual high-impact failures under the existing rules; no automatic aesthetic retry for a minor preference. Do not certify a failed/unresolved outcome.
+Inspect the generated image against the input and guide. Content compliance, information layout and visual completion remain separate. For tables, inspect the table on its own and in the page, and record planned treatment → actual observation → judgment for the backing, both header directions, separation and type hierarchy using the schema in `table-visual-art-direction.md`. A missing required treatment is a failure, not a minor aesthetic preference. Do not copy plan language into observations or let the background/product compensate for a generic table. Repair required failures before registering a passing candidate; do not retry merely for an optional preference.
 
 Save/finalize only that output with the existing title script:
 
@@ -68,10 +69,16 @@ Inspect the overlaid final for title collisions and alignment. In no-title mode,
 
 Use `fail` or `unresolved` for a failed/unchecked outcome. `complete` refuses them; a retry limit does not turn them into passes. QA JSON is the existing completion evidence in structured form, not another user approval gate.
 
+For a table-led page, add the mandatory `visualCompletion.table` record specified in the specialist reference. Its final-image hash must match the saved output. The script refuses missing component observations, a copied plan/observation, mismatched image versions and failed/unresolved required outcomes. This is structural validation only; the agent must inspect the image and make an honest visual judgment.
+
 ```text
 node scripts/page-execution.mjs complete --manifest <execution.json> --qa-file <qa.json>
 ```
 
 This freshly checks the same inputs and artifact/image hashes, then registers only this request's candidate. The server independently verifies its execution manifest, actual guide/prompt files, and image lineage before clearing the pending-rebuild marker. Legacy nonempty hash strings alone do not establish a verified rebuild. Completion never calls adoption or selects another page. Report the final candidate, title mode, and the body/final folders, then wait for acceptance.
+
+Only successful completion with actual-image QA promotes a schema-v2 cache entry to `approved`. Pre-image records and legacy cache entries cannot be promoted on input checks alone. Source/rule changes still invalidate matching as before. The inspected image file must remain available and match the validation hash. User rejection/replacement invalidates the matching design cache.
+
+If a previously unadopted candidate was incorrectly passed, preserve its image and original QA, inspect it again, and save a failed/unresolved replacement report. Run `page-execution.mjs review --manifest <execution.json> --qa-file <reassessment.json>`. This verifies the exact version, appends the previous/new QA as history, marks that candidate invalidated and the request failed, and invalidates only its corresponding cache. It refuses adopted or different candidates. It does not generate a replacement or create another page request. Load the updated service protocol before using review; old services are rejected before any mutation.
 
 The manifest records preparation/start, per-attempt generation, finalization and completion timestamps. Use these to report observed stage durations. Do not claim a measured production speedup from isolated API/cache tests or guarantee the image service's latency.

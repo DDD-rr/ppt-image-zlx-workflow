@@ -4,7 +4,10 @@ import { spawnSync } from 'node:child_process';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
+import { request as httpRequest } from 'node:http';
 import { hash, projectFile, skillRoot } from './page-execution-input.mjs';
+import { validateQa, tableRequired } from './page-execution-qa.mjs';
+export { validateQa } from './page-execution-qa.mjs';
 
 const readJson = async file => JSON.parse((await readFile(file, 'utf8')).replace(/^\uFEFF/, ''));
 async function save(file, value) {
@@ -14,14 +17,29 @@ async function save(file, value) {
   await rename(temp, file);
 }
 async function api(base, route, body) {
-  const response = await fetch(`${base}/api/page-flow/${route}`, body ? {
-    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body), signal: AbortSignal.timeout(30000)
-  } : { signal: AbortSignal.timeout(30000) });
-  const result = await response.json();
-  if (!response.ok) throw new Error(result.error || `HTTP ${response.status}; restart the board service to load the new single-page execution API`);
-  return result;
+  const url = new URL(`${base}/api/page-flow/${route}`);
+  if (url.protocol !== 'http:' || !['127.0.0.1', 'localhost', '[::1]'].includes(url.hostname)) throw new Error('Only the assigned local HTTP board is allowed');
+  // Fetch rejects port 4190 in some Node versions; native loopback HTTP preserves the exact board URL.
+  return new Promise((resolve, reject) => {
+    const req = httpRequest(url, { method: body ? 'POST' : 'GET', headers: body ? { 'Content-Type': 'application/json' } : {}, signal: AbortSignal.timeout(30000) }, res => {
+      const parts = [];
+      res.on('data', part => parts.push(part));
+      res.on('error', reject);
+      res.on('end', () => {
+        try {
+          const result = JSON.parse(Buffer.concat(parts).toString('utf8'));
+          if (res.statusCode < 200 || res.statusCode >= 300) throw new Error(result.error || `HTTP ${res.statusCode}; restart the board service to load the current execution API`);
+          resolve(result);
+        } catch (error) { reject(error); }
+      });
+    });
+    req.on('error', reject);
+    if (body) req.write(JSON.stringify(body));
+    req.end();
+  });
 }
 export function validateInput(input) {
+  if (input.executionProtocolVersion !== 2) throw new Error('Restart the assigned board service to load the current QA/cache protocol');
   if (!input.sourceMatches || !input.reviewedForGeneration) throw new Error('Source mismatch or page review missing');
   if (input.sourceHash !== input.request.sourceHash || input.decisionHash !== input.request.decisionHash) throw new Error('Request is stale: source or decisions changed');
   if (!['strict', 'interpret'].includes(input.global.content_handling)) throw new Error('Explicit content_handling decision is required');
@@ -30,19 +48,16 @@ export function validateInput(input) {
   if ((page.information_groups || []).some(group => (page.group_weights?.[group.id] || group.defaultWeight) === 'unassigned')) throw new Error('An active information group is unassigned');
 }
 export async function reusable(cache, input) {
-  if (!cache || input.guidePromptRebuildPending || cache.fingerprint !== input.fingerprint) return false;
+  if (!cache || cache.schemaVersion !== 2 || cache.status !== 'approved' || !cache.validation?.imageHash || !cache.validation?.qa || input.guidePromptRebuildPending || cache.fingerprint !== input.fingerprint) return false;
   try {
+    validateQa(cache.validation.qa, { table: tableRequired(input) || cache.tableDesignRequired, imageHash: cache.validation.imageHash });
+    if (hash(await readFile(await projectFile(input.projectRoot, cache.validation.imagePath))) !== cache.validation.imageHash) return false;
     for (const key of ['guide', 'prompt']) {
       const file = await projectFile(input.projectRoot, cache[key].path);
       if (hash(await readFile(file)) !== cache[key].sha256) return false;
     }
     return true;
   } catch { return false; }
-}
-export function validateQa(qa) {
-  for (const key of ['compliance', 'informationLayout', 'visualCompletion']) {
-    if (qa[key]?.status !== 'pass' || typeof qa[key]?.evidence !== 'string' || !qa[key].evidence.trim()) throw new Error(`QA ${key} must have pass status and observable evidence`);
-  }
 }
 function overrides(input, local) {
   return { ...input, baseFingerprint: input.fingerprint, userInstructions: local.instructions,
@@ -64,6 +79,7 @@ async function artifact(root, file) {
   return { path: relative(root, resolved), sha256: hash(bytes) };
 }
 async function verifiedArtifacts(manifest) {
+  if (manifest.designValidation?.status === 'invalidated') throw new Error('Design was invalidated; rebuild and record a new attempt');
   if (!manifest.artifacts) throw new Error('Record verified guide and prompt before generation');
   for (const key of ['guide', 'prompt']) {
     const record = await artifact(manifest.input.projectRoot, manifest.artifacts[key].path);
@@ -91,21 +107,41 @@ export async function run(command, flags) {
       if (previous.input.fingerprint !== normalized.fingerprint) throw new Error('Existing run has different inputs; do not overwrite its manifest');
       await fresh(previous);
       let reuse = false;
-      try { await verifiedArtifacts(previous); reuse = true; } catch {}
-      return { manifest: manifestPath, resumed: true, reuse, input: normalized, artifacts: previous.artifacts };
+      try { await verifiedArtifacts(previous); reuse = previous.designValidation?.status === 'approved'; } catch {}
+      return { manifest: manifestPath, resumed: true, reuse, artifactState: previous.designValidation?.status || 'legacy-recorded', input: normalized, artifacts: previous.artifacts };
     } catch (error) { if (error.code !== 'ENOENT') throw error; }
     const cachePath = path.join(input.boardRoot, 'page-execution-cache', `${input.pageId}.json`);
     let cache;
     try { cache = await readJson(cachePath); } catch (error) { if (error.code !== 'ENOENT') throw error; }
     const reuse = await reusable(cache, normalized);
     const manifest = { schemaVersion: 1, url: base, requestId: input.request.id, preparedAt: new Date().toISOString(), input: normalized,
-      artifacts: reuse ? cache.artifacts : null, attempts: [], timings: {} };
+      artifacts: reuse ? cache.artifacts : null, designValidation: reuse ? { status: 'approved', ...cache.validation } : null,
+      tableDesignRequired: tableRequired(input) || !!(reuse && cache.tableDesignRequired), attempts: [], timings: {} };
     await save(manifestPath, manifest);
     return { manifest: manifestPath, reuse, input: normalized, artifacts: manifest.artifacts };
   }
   if (!flags.manifest) throw new Error('Use --manifest returned by prepare');
   const manifestPath = path.resolve(flags.manifest);
   const manifest = await readJson(manifestPath);
+  if (command === 'review') {
+    const service = await api(manifest.url, `execution-input?requestId=${encodeURIComponent(manifest.requestId)}`);
+    if (!service.capabilities?.includes('visual-reassessment')) throw new Error('Restart the assigned board before visual reassessment; no state was changed');
+    if (!manifest.output || !flags['qa-file']) throw new Error('review requires an exact saved output and --qa-file');
+    const qa = await readJson(path.resolve(flags['qa-file']));
+    validateQa(qa, { table: tableRequired(manifest.input) || manifest.tableDesignRequired, imageHash: manifest.output.finalHash, allowFailure: true });
+    if (qa.visualCompletion.status === 'pass') throw new Error('Use review to record a failed or unresolved visual reassessment');
+    const file = await projectFile(manifest.input.projectRoot, manifest.output.final);
+    if (hash(await readFile(file)) !== manifest.output.finalHash) throw new Error('Reviewed image bytes changed');
+    const versionId = `final_image:${path.basename(manifest.output.final)}:${manifest.output.finalHash}`;
+    const result = await api(manifest.url, 'run/review', { requestId: manifest.requestId, versionId, qaReport: qa });
+    if (JSON.stringify(manifest.qaReviews?.at(-1)?.replacement) !== JSON.stringify(qa)) {
+      (manifest.qaReviews ||= []).push({ previous: manifest.qa, replacement: qa, reviewedAt: new Date().toISOString() });
+    }
+    manifest.qa = qa;
+    manifest.designValidation = { status: 'invalidated', reason: qa.visualCompletion.evidence };
+    await save(manifestPath, manifest);
+    return result;
+  }
   const input = await fresh(manifest, command === 'complete' ? ['running', 'ready'] : ['queued', 'running']);
   const root = input.projectRoot;
   if (command === 'start') {
@@ -118,6 +154,8 @@ export async function run(command, flags) {
     if (!flags.verified || !flags.guide || !flags.prompt) throw new Error('record requires --guide --prompt --verified after checking both against the active input');
     delete manifest.output;
     delete manifest.qa;
+    manifest.designValidation = { status: 'recorded' };
+    manifest.tableDesignRequired = tableRequired(input) || !!flags.table || !!manifest.tableDesignRequired;
     const attemptDirectory = path.join(path.dirname(manifestPath), `attempt-${String(manifest.attempts.length + 1).padStart(3, '0')}`);
     await mkdir(attemptDirectory, { recursive: true });
     const artifacts = {};
@@ -135,7 +173,7 @@ export async function run(command, flags) {
     const inputPaths = input.assets.filter(asset => !manifest.input.omittedAssetKinds.includes(asset.kind)).map(asset => asset.absolutePath);
     manifest.attempts.push({ number: manifest.attempts.length + 1, ...manifest.artifacts, inputPaths, recordedAt: new Date().toISOString() });
     await save(manifestPath, manifest);
-    await save(path.join(input.boardRoot, 'page-execution-cache', `${input.pageId}.json`), { fingerprint: manifest.input.fingerprint, artifacts: manifest.artifacts,
+    await save(path.join(input.boardRoot, 'page-execution-cache', `${input.pageId}.json`), { schemaVersion: 2, status: 'recorded', requestId: manifest.requestId, fingerprint: manifest.input.fingerprint, artifacts: manifest.artifacts,
       guide: manifest.artifacts.guide, prompt: manifest.artifacts.prompt });
     return { artifacts: manifest.artifacts, inputPaths };
   }
@@ -200,23 +238,30 @@ export async function run(command, flags) {
     await verifiedArtifacts(manifest);
     if (!manifest.output || !flags['qa-file']) throw new Error('Finalize output and supply --qa-file after visual QA');
     const qa = await readJson(path.resolve(flags['qa-file']));
-    validateQa(qa);
+    validateQa(qa, { table: tableRequired(input) || manifest.tableDesignRequired, imageHash: manifest.output.finalHash });
     for (const kind of ['body', 'final']) {
       if (hash(await readFile(await projectFile(root, manifest.output[kind]))) !== manifest.output[`${kind}Hash`]) throw new Error('Finalized image bytes changed');
     }
     if (input.request.status === 'ready') {
       const expected = `final_image:${path.basename(manifest.output.final)}:${manifest.output.finalHash}`;
       if (input.request.finalVersionId !== expected) throw new Error('Ready request points to a different candidate');
-      return { request: input.request, alreadyCompleted: true };
+      throw new Error('Request is already complete; do not promote or replace cached QA from a later local edit');
     }
     const qaText = Object.entries(qa).map(([key, value]) => `${key} PASS: ${value.evidence}`).join('\n');
     if (qaText.length > 2000) throw new Error('QA evidence exceeds 2000 characters; shorten without dropping required outcomes');
     const result = await api(manifest.url, 'run/complete', { requestId: manifest.requestId, ...manifest.output, qa: qaText,
       guideHash: manifest.artifacts.guide.sha256, promptHash: manifest.artifacts.prompt.sha256,
-      executionManifest: relative(root, manifestPath) });
+      executionManifest: relative(root, manifestPath), qaReport: qa });
     manifest.qa = qa;
     manifest.timings.completedAt = new Date().toISOString();
+    manifest.designValidation = { status: result.request.status === 'ready' ? 'approved' : 'invalidated', imageHash: manifest.output.finalHash, imagePath: manifest.output.final, qa };
     await save(manifestPath, manifest);
+    if (result.request.status === 'ready') await save(path.join(input.boardRoot, 'page-execution-cache', `${input.pageId}.json`), {
+      schemaVersion: 2, status: 'approved', requestId: manifest.requestId, candidateVersionId: result.request.finalVersionId,
+      fingerprint: manifest.input.fingerprint, tableDesignRequired: manifest.tableDesignRequired,
+      artifacts: manifest.artifacts, guide: manifest.artifacts.guide, prompt: manifest.artifacts.prompt,
+      validation: { imageHash: manifest.output.finalHash, imagePath: manifest.output.final, qa, validatedAt: manifest.timings.completedAt }
+    });
     return result;
   }
   throw new Error(`Unknown command: ${command}`);

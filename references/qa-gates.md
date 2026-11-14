@@ -31,6 +31,8 @@ Check each body image and final overlaid image:
 
 Use the acceptance rules in [Table Visual Design](table-visual-art-direction.md). In the existing QA note/completion field, record content fidelity, information layout and visual execution separately; for visual execution give planned treatment → observed image evidence → pass/fail/unresolved. Apply the same checks after a repair and use the existing repair/failure path for any required outcome that has not passed.
 
+For fast execution, use that reference's structured `visualCompletion.table` observation record, bound to the inspected final-image hash. Inspect the table without relying on the background/product photo to establish its design. Missing required backing/header/separation/type treatment is a design failure, not a minor preference. Functional tests and a filled-in PASS report do not establish actual visual quality. Only a passing actual-image review permits design-cache promotion; a later failed review invalidates it.
+
 ## Visual QA
 
 Check each body image and final overlaid image:

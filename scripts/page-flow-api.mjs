@@ -2,6 +2,7 @@ import { createHash, randomUUID } from 'node:crypto';
 import { mkdir, readFile, readdir, rename, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { executionInput, projectFile } from './page-execution-input.mjs';
+import { validateQa, tableRequired } from './page-execution-qa.mjs';
 
 let project, board, statePath;
 export async function configurePageFlow(projectPath, boardPath) {
@@ -21,6 +22,15 @@ async function atomic(file, value) {
   const temp = `${file}.${randomUUID()}.tmp`;
   await writeFile(temp, JSON.stringify(value, null, 2), 'utf8');
   await rename(temp, file);
+}
+async function invalidateDesignCache(pageId, versionId, reason) {
+  const file = path.join(board, 'page-execution-cache', `${pageId}.json`);
+  try {
+    const cache = await readJson(file);
+    if (cache.candidateVersionId && cache.candidateVersionId !== versionId) return;
+    cache.status = 'invalidated'; cache.reason = reason; cache.invalidatedAt = new Date().toISOString();
+    await atomic(file, cache);
+  } catch (error) { if (error.code !== 'ENOENT') throw error; }
 }
 async function state() {
   try {
@@ -209,6 +219,7 @@ async function handlePost(route, body) {
         samePage.status = 'rejected';
         const previous = saved.versions[samePage.finalVersionId];
         if (previous) previous.status = 'rejected';
+        await invalidateDesignCache(body.pageId, samePage.finalVersionId, 'User requested a replacement candidate');
       }
       const id = randomUUID();
       const item = { id, pageId: body.pageId, status: 'queued', createdAt: new Date().toISOString(), sourceHash: ctx.sourceHash, decisionHash: ctx.decisionHash, note: String(body.note || '').slice(0, 2000), sourceDocument: (await readJson(path.join(board, 'board-data.json'))).sourceDocument?.path || null, guidePromptRebuildPending: !!ctx.slide.guidePromptRebuildPending };
@@ -220,7 +231,7 @@ async function handlePost(route, body) {
       await atomic(statePath, saved);
       return [200, { request: item }];
     }
-    if (route === '/api/accept' || route === '/api/unaccept' || route === '/api/reject' || route.startsWith('/api/run/')) {
+    if (['/api/accept', '/api/unaccept', '/api/reject', '/api/run/start', '/api/run/complete', '/api/run/review', '/api/run/fail'].includes(route)) {
       if (!request) return [404, { error: '找不到生成请求' }];
       const page = saved.pages[request.pageId] ||= {};
       if (route === '/api/run/start') {
@@ -234,6 +245,7 @@ async function handlePost(route, body) {
         const imageBody = body.body ? await fileRecord(body.body, 'body_image', pageNumber(request.pageId)) : null;
         const ctx = await context(request.pageId);
         let verifiedRebuild = false;
+        let needsTableQa = tableRequired({ body: ctx.sourceInput ? '' : ctx.slide.raw });
         if (body.executionManifest) {
           const execution = await readJson(await projectFile(project, body.executionManifest));
           const currentInput = await executionInput({ project, board, request, ctx, reviewed: reviewed(page, ctx), pending: guidePending(page, ctx) });
@@ -244,12 +256,32 @@ async function handlePost(route, body) {
             if (actualHash !== artifact.sha256 || actualHash !== String(body[`${key}Hash`]).toLowerCase() || execution.attempts?.at(-1)?.[key]?.sha256 !== actualHash) return [409, { error: '指南或实际生成提示词校验失败。' }];
           }
           if (execution.output?.final !== final.path || execution.output?.finalHash !== final.hash || execution.output?.body !== imageBody?.path || execution.output?.bodyHash !== imageBody?.hash) return [409, { error: '执行记录与候选图片不匹配。' }];
+          needsTableQa ||= !!execution.tableDesignRequired;
           verifiedRebuild = true;
         }
+        if (needsTableQa || body.qaReport) validateQa(body.qaReport, { table: needsTableQa, imageHash: final.hash });
         request.status = request.sourceHash === ctx.sourceHash && request.decisionHash === ctx.decisionHash && ctx.sourceMatches ? 'ready' : 'stale';
         request.completedAt = new Date().toISOString(); request.finalVersionId = final.id;
         if (verifiedRebuild) page.rebuiltFor = { sourceHash: request.sourceHash, decisionHash: request.decisionHash };
-        for (const version of [final, imageBody].filter(Boolean)) saved.versions[version.id] = { ...version, requestId: request.id, pageId: request.pageId, sourceHash: request.sourceHash, decisionHash: request.decisionHash, guideHash: String(body.guideHash || ''), promptHash: String(body.promptHash || ''), status: request.status === 'ready' ? 'candidate' : 'invalidated', qa: String(body.qa || '').slice(0, 2000) };
+        for (const version of [final, imageBody].filter(Boolean)) saved.versions[version.id] = { ...version, requestId: request.id, pageId: request.pageId, sourceHash: request.sourceHash, decisionHash: request.decisionHash, guideHash: String(body.guideHash || ''), promptHash: String(body.promptHash || ''), status: request.status === 'ready' ? 'candidate' : 'invalidated', qa: String(body.qa || '').slice(0, 2000), ...(body.qaReport ? { qaReport: body.qaReport } : {}) };
+      } else if (route === '/api/run/review') {
+        const version = saved.versions[request.finalVersionId];
+        if (!['ready', 'failed'].includes(request.status) || !version || !['candidate', 'invalidated'].includes(version.status) || page.adopted?.id === version.id || body.versionId !== version.id) return [409, { error: '只可复核指定的未采用候选，不能更改已采用或其他版本。' }];
+        const checked = await fileRecord(version.path, 'final_image', pageNumber(request.pageId));
+        if (checked.id !== version.id) return [409, { error: '复核图片文件已变化。' }];
+        const ctx = await context(request.pageId);
+        validateQa(body.qaReport, { table: tableRequired({ body: ctx.sourceInput ? '' : ctx.slide.raw }) || !!body.qaReport?.visualCompletion?.table, imageHash: version.hash, allowFailure: true });
+        if (body.qaReport.visualCompletion.status === 'pass') return [400, { error: '复核接口用于记录未通过或待核验的视觉结论。' }];
+        if (JSON.stringify(version.qaReviews?.at(-1)?.replacement) !== JSON.stringify(body.qaReport)) {
+          (version.qaReviews ||= []).push({ previous: version.qaReport || version.qa, replacement: body.qaReport, reviewedAt: new Date().toISOString() });
+        }
+        version.qaReport = body.qaReport;
+        version.qa = `Visual QA ${body.qaReport.visualCompletion.status}: ${body.qaReport.visualCompletion.evidence}`;
+        version.status = 'invalidated';
+        for (const linked of Object.values(saved.versions)) if (linked.requestId === request.id && linked.status === 'candidate') linked.status = 'invalidated';
+        request.status = 'failed'; request.error = version.qa;
+        if (page.lastRequestId === request.id) delete page.rebuiltFor;
+        await invalidateDesignCache(request.pageId, version.id, version.qa);
       } else if (route === '/api/run/fail') {
         if (!['queued', 'running'].includes(request.status)) return [409, { error: '该请求已结束' }];
         request.status = 'failed'; request.error = String(body.error || '生成失败').slice(0, 2000);
@@ -278,6 +310,7 @@ async function handlePost(route, body) {
         request.status = 'rejected';
         const version = saved.versions[request.finalVersionId];
         if (version) version.status = 'rejected';
+        await invalidateDesignCache(request.pageId, request.finalVersionId, 'User rejected candidate');
       }
       await atomic(statePath, saved);
       return [200, { request }];

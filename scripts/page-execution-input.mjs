@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import { readFile, realpath, stat } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { tableRequired } from './page-execution-qa.mjs';
 
 export const hash = value => createHash('sha256').update(value).digest('hex');
 export const skillRoot = fileURLToPath(new URL('../', import.meta.url));
@@ -31,7 +32,7 @@ export async function projectFile(root, relative) {
   return target;
 }
 export async function ruleRevision(root = skillRoot) {
-  const names = ['SKILL.md', 'scripts/add_slide_titles.ps1', 'scripts/page-execution.mjs', 'scripts/page-execution-input.mjs', ...[
+  const names = ['SKILL.md', 'scripts/add_slide_titles.ps1', 'scripts/page-execution.mjs', 'scripts/page-execution-input.mjs', 'scripts/page-execution-qa.mjs', ...[
     'single-page-execution', 'sequential-page-board', 'page-guide-template', 'visual-core', 'information-priority',
     'color-system', 'real-image-policy', 'master-template-template', 'title-style',
     'user-color-preference', 'color-preference-sample', 'page-patterns', 'prompt-contract',
@@ -75,10 +76,11 @@ export async function executionInput({ project, board, request, ctx, reviewed, p
     requestNote: request.note || '' };
   // Request IDs and hidden production notes are not design inputs. File bytes and rules are.
   const fingerprint = hash(JSON.stringify(stable(revision)));
-  return { schemaVersion: 1, projectRoot: project, boardRoot: board, request,
+  return { schemaVersion: 1, executionProtocolVersion: 2, capabilities: ['post-image-qa-cache', 'table-observation-qa', 'visual-reassessment'], projectRoot: project, boardRoot: board, request,
     pageId: request.pageId, title: ctx.decisionPage.title || ctx.slide.title,
     sourceDocument: ctx.sourceInput ? null : ctx.sourceDocument,
     body, sourceInput: ctx.sourceInput, global, decision: ctx.decisionPage, assets, rulesRevision, projectStyleRevision, fingerprint,
     sourceHash: ctx.sourceHash, decisionHash: ctx.decisionHash, sourceMatches: ctx.sourceMatches,
-    reviewedForGeneration: reviewed, guidePromptRebuildPending: pending };
+    reviewedForGeneration: reviewed, guidePromptRebuildPending: pending,
+    tableDesignRequired: tableRequired({ body }), requiredReads: tableRequired({ body }) ? ['references/table-visual-art-direction.md'] : [] };
 }

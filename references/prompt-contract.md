@@ -56,6 +56,8 @@ Every body-image prompt must include:
 
 ## Table Decision Carry-through
 
+Carry concrete, observable component treatments and failure signals from the table guide, not just material/quality adjectives. During QA compare the actual pixels against those treatments; prompt instructions are planning evidence, not proof of visible execution.
+
 Apply [Table Visual Design](table-visual-art-direction.md). Carry the current guide's fidelity map, contextual design idea, concrete component relationships and expected reading effect into the exact saved prompt. Check the saved prompt against that guide before generation; follow the contract's rebuild and repair rules.
 
 ## Must Carry Through From Page Guide

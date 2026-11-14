@@ -1,6 +1,6 @@
 # Table Visual Design
 
-Revision: 2026-11-14-r2. This is the single source for table-specific design rules. Read it for table-led pages and apply it through the existing guide, saved prompt and QA; no extra approval or document is needed. Use the current source, confirmed decisions and permitted assets.
+Revision: 2026-11-14-r3. This is the single source for table-specific design rules. Explicitly read it for a first table design, redesign, rule change or invalidated design cache, including in the fast execution path. Apply it through the existing guide, saved prompt and QA; no extra user approval or planning artifact is needed. Use the current source, confirmed decisions and permitted assets.
 
 ## 1. Establish the reading task
 
@@ -39,6 +39,8 @@ No universal header shape, palette, material or separator applies. Oversized bol
 
 In the existing page guide, record the reading task/fidelity map and a compact design explanation: **current semantic/decision basis → concrete treatment → expected visible effect and failure signal**. Cover the important component relationships together, without a separate checklist for every detail.
 
+Make the treatment concrete enough to locate in the result: describe how the backing responds to this page's subject, how each header direction forms a recognizable identity, and what actually separates information. Material labels such as brushed metal, blue rails, fine seams or cinematic depth alone do not establish those relationships. Preserve required row/column associations without automatically fixing a default rectangle grid. Keep the design type and component freedom; no universal silhouette, scene object, motif or material is prescribed.
+
 Translate that explanation into the exact saved tool prompt, including required copy/cell mapping, the selected design type and carrier, backing/header decorative hierarchy, separation mechanism, three distinct text sizes, palette roles, text space and asset role. Material names and adjectives such as refined or cinematic cannot replace positive design instructions. Check consistency with the guide. Rebuild guide/prompt for an explicit redesign or contract update even if body/board hashes are unchanged; record this revision. During repair, preserve only treatments already judged successful.
 
 ## 5. Judge the actual image
@@ -51,6 +53,12 @@ Record three independent outcomes, each pass/fail/unresolved with visible eviden
 
 For visual execution state what was planned, what is observed and the judgment. Correct cells, readability, differing fills, a textured backing or a related product photo alone cannot establish visual PASS. A conventional matrix can pass when its component relationships visibly meet the chosen ambition; retaining lines or avoiding physical imitation is not a failure.
 
+Inspect the table independently of the surrounding photo/background, then inspect the whole page. Do not describe a planned rail, inset, carrier or perceptual grouping as visible unless the actual pixels show it. If the output is an ordinary filled header and mechanical cell grid while the confirmed design required developed headers and contextual backing, record that shortfall as fail/unresolved, not as a minor aesthetic preference. A background scene and a correctly placed product photo cannot compensate for the missing table treatment.
+
+For fast execution, extend the existing QA JSON's `visualCompletion` with `table`: `designType` (`flat-graphic` or `physical-object-integration`), the inspected final `imageHash`, `tableOnlyInspected: true`, `wholePageInspected: true`, and `components`. In `components`, record `backing`, `horizontalHeaders`, `verticalHeaders`, `separation` and `typeHierarchy`, each with `planned`, `observed`, `judgment` and `status` (`pass`, `fail`, `unresolved`). These are the existing table requirements in an auditable form, not new layout/style quotas. Observations must identify actual image treatment rather than repeat the plan. Any failed/unresolved required component prevents a visual PASS and cache promotion. The script checks report structure and image lineage; it cannot certify aesthetics or whether a written observation is truthful.
+
 If a required outcome fails or is unresolved, identify the missing relationship and follow `failure-repair.md`. Recheck all three outcomes after repair; a retry limit cannot convert failure into a ready candidate. Internal QA does not decide the user's aesthetic preference.
 
 When validating skill changes, distinguish planning evidence from generated-image evidence. Use independent cases with different reading tasks when warranted; claim cross-chat visual reliability only when actual generated images and QA support it. Do not turn a test case or successful image into a fixed style, or reuse historical references/assets without current authorization.
+
+Record guide/prompt inputs before generation for traceability, but promote them to reusable designs only after actual-image QA passes. A visual failure, later reassessment or user rejection invalidates the corresponding design cache. Preserve the source, images and earlier reports as history; never rewrite a failed observation into a pass simply to finish a run.
