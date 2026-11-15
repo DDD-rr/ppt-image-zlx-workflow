@@ -46,7 +46,7 @@ export async function probeDirectory(directory) {
 
 export async function checkEnvironment({ url, requestId, phase = 'inspect' }) {
   let stage = 'board-service';
-  let manifestExists = false, manifestPath;
+  let manifestExists = false, manifestPath, execution;
   try {
     if (!['inspect', 'prepare', 'delivery'].includes(phase)) throw new Error('Unknown environment phase');
     if (!requestId) throw new Error('An exact request ID is required');
@@ -73,6 +73,13 @@ export async function checkEnvironment({ url, requestId, phase = 'inspect' }) {
       const manifest = JSON.parse(await readFile(manifestPath, 'utf8'));
       manifestExists = true;
       if (manifest.requestId !== requestId || manifest.input.pageId !== input.pageId || manifest.input.baseFingerprint !== input.fingerprint) throw new Error('Saved execution differs from current inputs');
+      execution = {
+        attemptCount:manifest.attempts?.length || 0,
+        artifacts:Object.fromEntries(['guide','prompt','extractedSource'].filter(key=>manifest.artifacts?.[key]).map(key=>[key,{path:manifest.artifacts[key].path,sha256:manifest.artifacts[key].sha256}])),
+        output:manifest.output || null,
+        generationCheckAt:manifest.attempts?.at(-1)?.generationStartedAt || null,
+        next:manifest.timings?.completedAt ? 'wait-for-acceptance' : manifest.output ? 'inspect-final-and-complete' : manifest.artifacts ? 'verify-recorded-inputs-and-locate-image-result' : 'design-and-ready'
+      };
     } catch (error) { if (error.code !== 'ENOENT') throw error; }
     stage = 'project-write-access';
     const directories = phase === 'delivery' ? ['body_image', 'final_image'].map(name => path.join(input.projectRoot, name))
@@ -82,9 +89,9 @@ export async function checkEnvironment({ url, requestId, phase = 'inspect' }) {
       if (directory !== input.boardRoot) await inside(input.projectRoot, directory);
       await probeDirectory(directory);
     }
-    return { ok: true, phase, requestId, pageId: input.pageId, status: input.request.status, projectRoot: input.projectRoot, manifestPath, manifestExists,
+    return { ok: true, phase, requestId, pageId: input.pageId, status: input.request.status, projectRoot: input.projectRoot, manifestPath, manifestExists, execution,
       sourceMode: input.sourceInput?.mode || 'markdown',
-      imageTool: 'Check image_gen.imagegen availability in the executing chat before start', next: 'Use page-task.mjs prepare with this exact request ID' };
+      imageTool: 'Check image_gen.imagegen availability in the executing chat before start', next: execution?.next || 'Use page-task.mjs prepare with this exact request ID' };
   } catch (error) {
     return { ok: false, phase, stage, requestId, manifestPath, manifestExists, code: error.code || null, error: error.message };
   }

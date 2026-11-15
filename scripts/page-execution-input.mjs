@@ -32,15 +32,25 @@ export async function projectFile(root, relative) {
   return target;
 }
 export async function ruleRevision(root = skillRoot) {
-  const names = ['SKILL.md', 'scripts/add_slide_titles.ps1', 'scripts/page-execution.mjs', 'scripts/page-execution-input.mjs', 'scripts/page-execution-qa.mjs', ...[
-    'single-page-execution', 'sequential-page-board', 'page-guide-template', 'visual-core', 'information-priority',
+  const names = ['SKILL.md', 'scripts/add_slide_titles.ps1', 'scripts/page-execution-qa.mjs', ...[
+    'sequential-page-board', 'page-guide-template', 'single-page-design-contract', 'visual-core', 'information-priority',
     'color-system', 'real-image-policy', 'master-template-template', 'title-style',
     'user-color-preference', 'color-preference-sample', 'page-patterns', 'prompt-contract',
     'title-safety', 'evidence-scenarios', 'qa-gates', 'failure-repair',
     'color-failure-repair', 'table-visual-art-direction'
   ].map(name => `references/${name}.md`)];
   const entries = await Promise.all(names.map(async name => {
-    try { return [name, hash(await readFile(path.join(root, name)))]; }
+    try {
+      const bytes=await readFile(path.join(root,name));
+      if(name==='SKILL.md') {
+        const text=bytes.toString('utf8');
+        const start=text.indexOf('## Content and visual invariants');
+        const end=text.indexOf('## Cost and recovery',start);
+        // Existing-page design identity tracks semantic rules, independently of CLI routing text.
+        return [name,hash(start>=0 && end>start ? text.slice(start,end) : bytes)];
+      }
+      return [name,hash(bytes)];
+    }
     catch (error) { if (error.code === 'ENOENT') return [name, null]; throw error; }
   }));
   return hash(JSON.stringify(entries));

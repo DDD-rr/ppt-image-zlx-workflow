@@ -39,7 +39,7 @@ export async function run(command, flags) {
   if(command==='prepare') {
     const result=await execute(command,flags);
     if(result.input.sourceInput) {
-      try { await verifyExtraction(await readJson(result.manifest)); } catch { result.reuse=false; }
+      try { await verifyExtraction(await readJson(result.manifest)); } catch { result.reuse=false; result.inputReuse=false; }
     }
     return result;
   }

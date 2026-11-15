@@ -20,6 +20,8 @@ test('环境自检验证同一请求并清理探测文件，保留执行记录�
   const result = await checkEnvironment({url:'http://127.0.0.1:'+server.address().port,requestId:'same-id'});
   assert.equal(result.ok,true); assert.equal(result.status,'queued');
   assert.equal(result.manifestExists,true);
+  assert.equal(result.execution.next,'design-and-ready');
+  assert.ok(JSON.stringify(result).length < 4096);
   for (const directory of ['body_image','final_image','page_guides','prompts']) {
     assert.ok(!(await readdir(project)).includes(directory));
   }

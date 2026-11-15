@@ -106,19 +106,34 @@ export async function run(command, flags) {
       const previous = await readJson(manifestPath);
       if (previous.input.fingerprint !== normalized.fingerprint) throw new Error('Existing run has different inputs; do not overwrite its manifest');
       await fresh(previous);
+      if (flags['rebuild-inputs']) {
+        previous.designValidation = {status:'invalidated',reason:'Explicit input rebuild requested'};
+        await save(manifestPath,previous);
+      }
       let reuse = false;
-      try { await verifiedArtifacts(previous); reuse = previous.designValidation?.status === 'approved'; } catch {}
-      return { manifest: manifestPath, resumed: true, reuse, artifactState: previous.designValidation?.status || 'legacy-recorded', input: normalized, artifacts: previous.artifacts };
+      let validArtifacts = false;
+      try { await verifiedArtifacts(previous); validArtifacts = true; reuse = previous.designValidation?.status === 'approved'; } catch {}
+      return { manifest: manifestPath, resumed: true, reuse, inputReuse:validArtifacts && previous.designValidation?.status === 'recorded', artifactState: previous.designValidation?.status || 'legacy-recorded', input: normalized, artifacts: previous.artifacts };
     } catch (error) { if (error.code !== 'ENOENT') throw error; }
     const cachePath = path.join(input.boardRoot, 'page-execution-cache', `${input.pageId}.json`);
     let cache;
     try { cache = await readJson(cachePath); } catch (error) { if (error.code !== 'ENOENT') throw error; }
-    const reuse = await reusable(cache, normalized);
+    const reuse = !flags['rebuild-inputs'] && await reusable(cache, normalized);
+    let inputReuse = false;
+    if (!flags['rebuild-inputs'] && !reuse && cache?.status === 'recorded' && cache.fingerprint === normalized.fingerprint) {
+      try {
+        for (const key of ['guide', 'prompt']) {
+          const record = await artifact(input.projectRoot, cache.artifacts?.[key]?.path);
+          if (record.sha256 !== cache.artifacts[key].sha256) throw new Error('Recorded input changed');
+        }
+        inputReuse = true;
+      } catch { /* Missing or modified drafts require rebuilding. */ }
+    }
     const manifest = { schemaVersion: 1, url: base, requestId: input.request.id, preparedAt: new Date().toISOString(), input: normalized,
-      artifacts: reuse ? cache.artifacts : null, designValidation: reuse ? { status: 'approved', ...cache.validation } : null,
-      tableDesignRequired: tableRequired(input) || !!(reuse && cache.tableDesignRequired), attempts: [], timings: {} };
+      artifacts: reuse || inputReuse ? cache.artifacts : null, designValidation: reuse ? { status: 'approved', ...cache.validation } : inputReuse ? { status:'recorded' } : null,
+      tableDesignRequired: tableRequired(input) || !!((reuse || inputReuse) && cache.tableDesignRequired), attempts: [], timings: {} };
     await save(manifestPath, manifest);
-    return { manifest: manifestPath, reuse, input: normalized, artifacts: manifest.artifacts };
+    return { manifest: manifestPath, reuse, inputReuse, input: normalized, artifacts: manifest.artifacts };
   }
   if (!flags.manifest) throw new Error('Use --manifest returned by prepare');
   const manifestPath = path.resolve(flags.manifest);
@@ -174,6 +189,7 @@ export async function run(command, flags) {
     manifest.attempts.push({ number: manifest.attempts.length + 1, ...manifest.artifacts, inputPaths, recordedAt: new Date().toISOString() });
     await save(manifestPath, manifest);
     await save(path.join(input.boardRoot, 'page-execution-cache', `${input.pageId}.json`), { schemaVersion: 2, status: 'recorded', requestId: manifest.requestId, fingerprint: manifest.input.fingerprint, artifacts: manifest.artifacts,
+      tableDesignRequired: manifest.tableDesignRequired,
       guide: manifest.artifacts.guide, prompt: manifest.artifacts.prompt });
     return { artifacts: manifest.artifacts, inputPaths };
   }

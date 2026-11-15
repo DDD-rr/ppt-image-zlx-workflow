@@ -211,28 +211,29 @@
     return index >= 0 ? index + 1 : Number(pageId.replace(/\D/g, ''));
   }
   function copySessionInstruction(request) {
-    const target = snapshot?.pages.find(item => item.id === request.pageId);
-    const pageNumberLabel = pagePosition(request.pageId);
-    let instruction = `请使用 $ppt-image-zlx-workflow 处理逐页决策板中的待生成任务。决策板：${location.origin}/；请求 ID：${request.id}；按 ID 查询任务：${location.origin}/api/page-flow/requests/next?requestId=${request.id}；目标：第 ${pageNumberLabel} 页（${target?.title || target?.label || request.pageId}）。只处理这一页，完成 QA 后回写候选结果并等待我验收，不要自动采用或处理其他页面。`;
+    let instruction = '';
     const notice = element('span', 'page-flow-note page-flow-copy-notice');
-    instruction += `\n页面定位以请求 ID 和固定页面 ID ${request.pageId} 为准，当前导航序号为 ${pageNumberLabel}。插页、隐藏或删除会影响导航顺序。通过 execution-input?requestId=${request.id} 读取本请求的材料与决策，核对 pageId 和标题。材料、资源及输出文件沿用固定页面 ID 对应的路径与编号。`;
-    let taskEntry = 'scripts/page-task.mjs';
     Promise.resolve().then(async () => {
-      try {
-        const service = await api('/api/status');
-        if (service.taskEntry) taskEntry = service.taskEntry;
-        if (service.root) {
-          const project = service.root.slice(0, Math.max(service.root.lastIndexOf('/'), service.root.lastIndexOf('\\')));
-          instruction += `\n本机项目目录：${project}。请在可访问此目录的本地工作区执行。`;
-        }
-      } catch { /* The exact request URL remains available for service recovery. */ }
-      instruction += `\n读取 references/execution-environment-recovery.md，使用统一入口准备任务：node "${taskEntry}" prepare --url ${location.origin}/ --request-id ${request.id}。后续 start/record/check/finalize/complete 均使用同一入口及返回的 --manifest 和 --worker-id；入口自动识别截图材料。生成前确认 image_gen.imagegen 可用并执行 check --include-prompt。权限错误按返回的 guidance 为同一操作申请权限；策略拒绝时保留请求并报告具体阻塞。若中断，按同一请求 ID 和已有 execution.json 恢复。`;
+      const [latest, service] = await Promise.allSettled([api('/api/page-flow/snapshot'),api('/api/status')]);
+      if (latest.status !== 'fulfilled') throw new Error('无法核对当前任务，请刷新后重试。');
+      const target = latest.value.pages.find(item => item.id === request.pageId);
+      const current = target?.lastRequest;
+      if (!current || !['queued','running'].includes(current.status) || current.pageId !== request.pageId) throw new Error('本页当前没有可复制的待生成任务，请刷新状态。');
+      request = current;
+      const pageNumberLabel = latest.value.pages.findIndex(item => item.id === request.pageId) + 1;
+      instruction = `请使用 $ppt-image-zlx-workflow 处理逐页决策板中的待生成任务。决策板：${location.origin}/；请求 ID：${request.id}；按 ID 查询任务：${location.origin}/api/page-flow/requests/next?requestId=${request.id}；目标：第 ${pageNumberLabel} 页（${target.title || target.label || request.pageId}）。只处理这一页，完成 QA 后回写候选结果并等待我验收，不要自动采用或处理其他页面。`;
+      instruction += `\n固定页面 ID ${request.pageId}，以请求 ID 和页面 ID 定位材料。按 skill 的单页流程处理，沿用同一请求及已有执行记录。`;
+      if (service.status === 'fulfilled' && service.value.root) {
+        const root = service.value.root;
+        const project = root.slice(0,Math.max(root.lastIndexOf('/'),root.lastIndexOf('\\')));
+        instruction += `\n本机项目目录：${project}。请在可访问此目录的本地工作区执行。`;
+      }
       if (!navigator.clipboard?.writeText) throw new Error('剪贴板不可用');
       return navigator.clipboard.writeText(instruction + (request.status === 'running' ? '\n该请求目前显示生成中。请先确认原会话已经停止；原会话仍在执行时不要重复生成。若已在决策板结束旧任务，请使用重新生成后的新请求 ID。' : ''));
     }).then(() => {
       notice.textContent = '会话指令已复制，可粘贴到新会话处理此页。';
-    }).catch(() => {
-      notice.textContent = `复制失败，请手动复制：${instruction}`;
+    }).catch(problem => {
+      notice.textContent = instruction ? `复制失败，请手动复制：${instruction}` : problem.message;
     });
     infoInsertNotice(notice);
   }
