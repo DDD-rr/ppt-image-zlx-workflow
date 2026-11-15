@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
-test('复制指令带上本机项目、自检入口和同一请求恢复说明', async () => {
+test('复制指令使用当前统一入口并校验新执行回执', async () => {
   const source = await readFile(new URL('../references/page-flow.js',import.meta.url),'utf8');
   const definition = source.match(/function copySessionInstruction\([^]*?\n  \}/)[0];
   let copied;
@@ -11,7 +11,7 @@ test('复制指令带上本机项目、自检入口和同一请求恢复说明',
     {origin:'http://127.0.0.1:4190'},
     ()=>({}),
     {clipboard:{writeText:async text=>{copied=text;}}},
-    async route=>route.includes('snapshot') ? {pages:[...Array.from({length:38},(_,i)=>({id:'other'+i})),{id:'slide37',title:'核心能力',lastRequest:{id:'same-request',pageId:'slide37',status:'queued'}}]} : {root:'C:\\Project\\decision_board_visual_v2'},
+    async route=>route.includes('snapshot') ? {pages:[...Array.from({length:38},(_,i)=>({id:'other'+i})),{id:'slide37',title:'核心能力',lastRequest:{id:'same-request',pageId:'slide37',status:'queued'}}]} : {root:'C:\\Project\\decision_board_visual_v2',taskEntry:'C:\\Skill\\scripts\\page-task.mjs'},
     ()=>{},
     ()=>39
   );
@@ -25,7 +25,10 @@ test('复制指令带上本机项目、自检入口和同一请求恢复说明',
   assert.ok(copied.includes('目标：第 39 页（核心能力）'));
   assert.ok(copied.includes('固定页面 ID slide37'));
   assert.ok(copied.includes('按 skill 的单页流程处理'));
-  assert.ok(!copied.includes('node "'));
+  assert.ok(copied.includes('node "C:\\Skill\\scripts\\page-task.mjs" prepare'));
+  assert.ok(copied.includes('sessionFile'));
+  assert.ok(copied.includes('入口版本过旧'));
+  assert.ok(copied.includes('不要调用 page-execution.mjs 或 heartbeat 路由'));
   assert.ok(!copied.includes('node scripts/page-environment.mjs'));
 });
 

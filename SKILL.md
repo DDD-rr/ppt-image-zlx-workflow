@@ -7,7 +7,7 @@ description: Generate reviewed 16:9 PPT slide images from source material or exa
 
 ## Route by task
 
-- Existing board URL and request ID — read `references/single-page-execution.md` and use `scripts/page-task.mjs`. Fetch only this request's input package. Continue its generation, saving or QA stage. Use recovery documentation after an actual exception. Stop after registering one candidate for acceptance.
+- Existing board URL and request ID — read `references/single-page-execution.md` and use `scripts/page-task.mjs`. Fetch only this request's input package. On prepare, verify it returned `sessionFile` and a next step using `--brief-file`. If either is missing, stop before image generation and report that the local entrypoint is outdated. Continue its generation, saving or QA stage. Use recovery documentation after an actual exception. Stop after registering one candidate for acceptance.
 - New project, source normalization, outline, board creation, master/style definition or batch planning — read `references/workflow-authoring.md`, which preserves the complete authoring workflow and review gates. Then load only references required for that stage.
 - Workflow maintenance or release — use the maintenance sections of `references/workflow-authoring.md`. Preserve existing changes. Verify and push only when the user requests release.
 
