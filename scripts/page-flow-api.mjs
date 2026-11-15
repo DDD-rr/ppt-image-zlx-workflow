@@ -3,12 +3,14 @@ import { mkdir, readFile, readdir, rename, stat, writeFile } from 'node:fs/promi
 import path from 'node:path';
 import { executionInput, projectFile } from './page-execution-input.mjs';
 import { validateQa, tableRequired } from './page-execution-qa.mjs';
+import { extractedSourceBody } from './screenshot-source.mjs';
 
-let project, board, statePath;
-export async function configurePageFlow(projectPath, boardPath) {
+let project, board, statePath, saveScreenshotExtraction;
+export async function configurePageFlow(projectPath, boardPath, options = {}) {
   project = path.resolve(projectPath);
   board = path.resolve(boardPath);
   statePath = path.join(board, 'page-flow-state.json');
+  saveScreenshotExtraction = options.saveScreenshotExtraction;
   await mkdir(path.join(board, 'page-flow-requests'), { recursive: true });
 }
 const sha = value => createHash('sha256').update(value).digest('hex');
@@ -142,6 +144,29 @@ async function handlePost(route, body) {
   return mutate(async () => {
     const saved = await state();
     const request = body.requestId && saved.requests[body.requestId];
+    if (route === '/api/run/worker') {
+      if (!request || !['queued','running','ready'].includes(request.status)) return [409,{error:'该请求不可接手'}];
+      if (typeof body.workerId !== 'string' || !/^[\da-f-]{36}$/i.test(body.workerId)) return [400,{error:'执行者标识无效'}];
+      const owner = request.worker?.id;
+      if (!owner && request.status === 'running' && body.claim && !body.confirmStopped) return [409,{error:'请确认旧执行者已停止，再使用 prepare --confirm-stopped 接续。',code:'WORKER_CONFLICT'}];
+      if (owner && owner !== body.workerId && !(body.claim === true && body.confirmStopped === true)) return [409,{error:'该请求已由其他执行者接手。确认原执行者停止后，使用 prepare --confirm-stopped 接续。',code:'WORKER_CONFLICT'}];
+      if (!owner && !body.claim && !body.release) return [409,{error:'先使用 prepare 接手同一请求',code:'WORKER_CONFLICT'}];
+      request.worker = body.release ? null : {id:body.workerId,claimedAt:owner===body.workerId ? request.worker.claimedAt : new Date().toISOString(),lastCommandAt:new Date().toISOString()};
+      await atomic(statePath,saved);
+      return [200,{worker:request.worker}];
+    }
+    if (route === '/api/run/environment') {
+      if (!request) return [404, {error:'找不到指定生成请求'}];
+      if (!['queued','running','ready'].includes(request.status)) return [409, {error:'该请求已结束'}];
+      if (request.worker?.id && request.worker.id !== body.workerId) return [409,{error:'该请求由另一执行者持有',code:'WORKER_CONFLICT'}];
+      const value = body.environment;
+      if (!value || typeof value.ok !== 'boolean' || typeof value.stage !== 'string') return [400, {error:'检查结果无效'}];
+      const environment = {ok:value.ok,stage:value.stage.slice(0,80),code:String(value.code || '').slice(0,40),error:String(value.error || '').slice(0,2000),category:String(value.category || '').slice(0,40),recovery:String(value.recovery || '').slice(0,80),checkedAt:new Date().toISOString()};
+      // A read-only inspection cannot establish that an earlier write failure recovered.
+      if (!(environment.ok && environment.stage === 'inspect' && request.environment?.ok === false)) request.environment = environment;
+      await atomic(statePath,saved);
+      return [200,{environment:request.environment}];
+    }
     if (route === '/api/candidate/mark' || route === '/api/candidate/unmark' || route === '/api/candidate/accept' || route === '/api/candidate/unaccept') {
       const ctx = await context(body.pageId);
       if (!ctx.sourceMatches) return [409, { error: '本页材料尚未同步，不能标记历史图片。请先在本页原始材料中点击“更新”。' }];
@@ -197,6 +222,7 @@ async function handlePost(route, body) {
     }
     if (route === '/api/request') {
       const ctx = await context(body.pageId);
+      if (ctx.slide.deletedAt) return [409, { error: '该页已移入回收站，请恢复后再生成。' }];
       if (ctx.sourceInput && !ctx.sourceInput.images.length) return [409, { error: '请先添加本页截图材料。' }];
       if (ctx.sourceInput) for (const image of ctx.sourceInput.images) {
         if (typeof image.path !== 'string' || !/^uploads\/[a-f0-9-]+\.(png|jpg|webp|gif)$/.test(image.path)) return [400, { error: '截图材料路径无效，请重新上传。' }];
@@ -223,6 +249,7 @@ async function handlePost(route, body) {
       }
       const id = randomUUID();
       const item = { id, pageId: body.pageId, status: 'queued', createdAt: new Date().toISOString(), sourceHash: ctx.sourceHash, decisionHash: ctx.decisionHash, note: String(body.note || '').slice(0, 2000), sourceDocument: (await readJson(path.join(board, 'board-data.json'))).sourceDocument?.path || null, guidePromptRebuildPending: !!ctx.slide.guidePromptRebuildPending };
+      if (ctx.sourceInput) item.inactiveMarkdownHash = sha(ctx.slide.raw || '');
       if (ctx.sourceInput) { item.sourceDocument=null; item.sourceInput={...ctx.sourceInput,images:ctx.sourceInput.images.map(image=>({...image,absolutePath:path.join(board,image.path)}))}; item.guidePromptRebuildPending=true; }
       if (paletteReference) { item.paletteReference = { ...paletteReference, absolutePath: path.join(board, paletteReference.path), notes: String(ctx.decisionPage.palette_reference_notes || '').slice(0, 2000), policy: 'colors-only' }; item.guidePromptRebuildPending = true; }
       saved.requests[id] = item;
@@ -231,12 +258,30 @@ async function handlePost(route, body) {
       await atomic(statePath, saved);
       return [200, { request: item }];
     }
+    if (route === '/api/run/extract-source') {
+      if (!request || request.status !== 'ready') return [409, { error: '请先完成本页候选回写，再保存截图识别结果。' }];
+      const ctx = await context(request.pageId);
+      if (!ctx.sourceInput || request.sourceHash !== ctx.sourceHash || request.decisionHash !== ctx.decisionHash) return [409, { error: '截图或决策已变化，不能回写旧识别结果。' }];
+      const execution = await readJson(await projectFile(project, body.executionManifest));
+      const currentInput = await executionInput({ project, board, request, ctx, reviewed: reviewed(saved.pages[request.pageId], ctx), pending: guidePending(saved.pages[request.pageId], ctx) });
+      if (execution.requestId !== request.id || execution.input?.boardRoot !== board || execution.input?.baseFingerprint !== currentInput.fingerprint) return [409, { error: '截图识别执行记录与本页不符。' }];
+      const record = execution.artifacts?.extractedSource;
+      const markdown = await readFile(await projectFile(project, record?.path), 'utf8');
+      if (sha(markdown) !== record.sha256) return [409, { error: '截图识别文件在记录后发生变化。' }];
+      if (!saveScreenshotExtraction) return [503, { error: '服务尚未加载截图识别回写功能。' }];
+      const extraction = await saveScreenshotExtraction({ request, markdown: extractedSourceBody(markdown) });
+      const latest = await state();
+      latest.requests[request.id].sourceExtraction = extraction;
+      await atomic(statePath, latest);
+      return [200, { request:latest.requests[request.id], extraction }];
+    }
     if (['/api/accept', '/api/unaccept', '/api/reject', '/api/run/start', '/api/run/complete', '/api/run/review', '/api/run/fail'].includes(route)) {
       if (!request) return [404, { error: '找不到生成请求' }];
       const page = saved.pages[request.pageId] ||= {};
       if (route === '/api/run/start') {
         if (request.status !== 'queued' && request.status !== 'running') return [409, { error: '该请求已结束' }];
         const ctx = await context(request.pageId);
+        if (ctx.slide.deletedAt) return [409, { error: '该页已移入回收站，请恢复后再生成。' }];
         if (!ctx.sourceMatches || request.sourceHash !== ctx.sourceHash || request.decisionHash !== ctx.decisionHash) return [409, { error: '本页来源或决策已变化，请重新确认生成请求。' }];
         request.status = 'running'; request.startedAt ||= new Date().toISOString();
       } else if (route === '/api/run/complete') {
@@ -328,21 +373,26 @@ export async function handlePageFlow(req, res, url) {
       if (!request) return json(res, 404, { error: '找不到指定生成请求' });
       const ctx = await context(request.pageId);
       const page = saved.pages[request.pageId] || {};
-      return json(res, 200, await executionInput({ project, board, request, ctx,
-        reviewed: reviewed(page, ctx), pending: guidePending(page, ctx) }));
+      const input = await executionInput({ project, board, request, ctx,
+        reviewed: reviewed(page, ctx), pending: guidePending(page, ctx) });
+      input.requiredReads = [...(input.requiredReads || []), 'references/execution-environment-recovery.md'];
+      if (ctx.sourceInput) {
+        input.requiredReads = [...(input.requiredReads || []), 'references/screenshot-extraction.md'];
+      }
+      return json(res, 200, input);
     }
     if (req.method === 'GET' && route === '/api/snapshot') {
       const data = await readJson(path.join(board, 'board-data.json'));
       const decision = await readJson(path.join(board, 'style_decision.json'));
       const saved = await state();
-      const pages = await Promise.all(data.slides.map(async slide => {
+      const pages = await Promise.all(data.slides.filter(slide => !slide.deletedAt).map(async slide => {
         const ctx = await context(slide.id);
         const page = saved.pages[slide.id] || {};
         const last = saved.requests[page.lastRequestId];
         const markedCandidate = saved.versions[page.markedCandidateVersionId] || null;
         const markedCurrent = !!markedCandidate && markedCandidate.sourceHash === ctx.sourceHash;
         const confirmed = ctx.sourceMatches && !!current(page, ctx);
-        return { id: slide.id, label: slide.label, title: slide.title, role: slide.role, summary: slide.summary, raw: ctx.sourceInput ? '' : slide.raw, sourceInput: ctx.sourceInput, checked: confirmed, confirmed, reviewedForGeneration: reviewed(page, ctx), sourceMatches: ctx.sourceMatches, needsReview: !!page.adopted && !current(page, ctx), guidePromptRebuildPending: guidePending(page, ctx), decision: ctx.decisionPage, sourceHash: ctx.sourceHash, decisionHash: ctx.decisionHash, adopted: page.adopted || null, adoptedVersion: saved.versions[page.adopted?.id] || null, markedCandidate, lastRequest: last || null, candidate: markedCandidate || saved.versions[last?.finalVersionId] || null };
+        return { id: slide.id, label: slide.label, title: slide.title, role: slide.role, summary: slide.summary, raw: ctx.sourceInput ? '' : slide.raw, screenshotExtraction: slide.screenshotExtraction?.sourceHash === ctx.sourceHash ? {...slide.screenshotExtraction,raw:slide.raw,pageHash:sha(slide.raw)} : null, sourceInput: ctx.sourceInput, checked: confirmed, confirmed, reviewedForGeneration: reviewed(page, ctx), sourceMatches: ctx.sourceMatches, needsReview: !!page.adopted && !current(page, ctx), guidePromptRebuildPending: guidePending(page, ctx), decision: ctx.decisionPage, sourceHash: ctx.sourceHash, decisionHash: ctx.decisionHash, adopted: page.adopted || null, adoptedVersion: saved.versions[page.adopted?.id] || null, markedCandidate, lastRequest: last || null, candidate: markedCandidate || saved.versions[last?.finalVersionId] || null };
       }));
       const active = activeRequests(saved);
       return json(res, 200, { projectName: data.projectName, contentHandling: decision.content_handling, palette: decision.global_palette?.palette_label || decision.palette_direction, titleMode: decision.title_overlay?.label || decision.title_overlay?.mode, pages, activeRequest: active[0] || null, activeRequests: active });

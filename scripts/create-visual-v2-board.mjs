@@ -2,6 +2,7 @@ import { cp, mkdir, readFile, writeFile, readdir } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import path from 'node:path';
+import { prepareVisualV2Html } from './visual-v2-html.mjs';
 
 const source = path.resolve(process.argv[2] || '');
 if (!process.argv[2] || !existsSync(path.join(source, 'board-data.json'))) throw new Error('请提供已有逐页决策板目录。');
@@ -49,8 +50,7 @@ if (originalDocument) {
 await writeFile(path.join(target, 'board-data.json'), JSON.stringify(data));
 await writeFile(path.join(target, 'board-inline-data.js'), 'window.__BOARD_DATA__ = ' + JSON.stringify(data) + ';\n');
 let html = await readFile(path.join(target, 'index.html'), 'utf8');
-// V2 applies text marks immediately; omit only this redundant numeric-content notice.
-html = html.replace(/^[ \t]*if \([^\r\n]*\) alert\('所选内容含数字或限定信息。请在生成后重点核对这些信息是否准确保留。'\);\r?\n/gm, '');
+html = prepareVisualV2Html(html);
 html = html.replace('</head>', '<link rel="stylesheet" href="board-v2.css">\n</head>')
   .replace('<body>', '<body class="board-ui-v2">')
   .replace('</body>', '<script src="board-v2.js" defer></script>\n</body>');

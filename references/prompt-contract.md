@@ -8,6 +8,8 @@ Use before generating each generated body image. This file defines the core prom
 
 ## Conditional Packages
 
+For `emphasize`, `condense-illustrate` and `soften`, including a saved `raw_visual_default`, apply [Marked text and module visual treatment](information-priority.md#marked-text-and-module-visual-treatment). Specify how the text-bearing module's semantic icons/symbols, backing, heading details or local ornament relate to its imagery and meaning. Carry the chosen treatment into the exact saved generation prompt alongside its wording rule.
+
 | Condition | Add |
 | --- | --- |
 | Standard content page, left-title layout, or title-area risk | `references/title-safety.md` |

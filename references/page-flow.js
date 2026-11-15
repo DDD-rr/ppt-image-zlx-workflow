@@ -14,6 +14,9 @@
     .page-flow-actions button:disabled { opacity: .5; cursor: not-allowed; }
     .page-flow-actions button[aria-disabled="true"] { opacity: .55; cursor: not-allowed; filter: saturate(.55); }
     .page-flow-error { color: #ae4334; }
+    .page-flow-other-tasks { margin-top:10px; padding-top:8px; border-top:1px solid #d7e3ee; color:#667085; font-size:12px; }
+    .page-flow-other-tasks summary { width:fit-content; cursor:pointer; }
+    .page-flow-other-tasks p { margin:5px 0; }
     .page-flow-note { margin-top: 8px; color: #71869a; font-size: 12px; }
     .page-flow-note summary { width: fit-content; cursor: pointer; }
     .page-flow-note textarea { display: block; width: min(100%, 680px); min-height: 54px; margin-top: 7px; padding: 8px 10px; border: 1px solid #c7d9e8; border-radius: 8px; color: #34546f; font: inherit; resize: vertical; }
@@ -117,31 +120,41 @@
   document.addEventListener('page-source-changed', () => render());
   let snapshot = null, busy = false, error = '', lastPage = null;
   const shownVersion = new Map();
+  const panelRenderKeys = new WeakMap();
+  const stoppedReason = '用户确认原会话已停止，已结束本次任务';
+  const requestState = request => request?.status === 'failed' && request.error === stoppedReason ? 'cancelled' : request?.status;
   const bridge = () => window.__PAGE_FLOW_BRIDGE__;
   const flow = route => `/api/page-flow${route}`;
   async function api(route, body) {
-    const response = await fetch(route, { method: body ? 'POST' : 'GET', headers: body ? { 'Content-Type': 'application/json' } : {}, body: body ? JSON.stringify(body) : undefined, cache: 'no-store' });
+    const response = await fetch(route, { method: body ? 'POST' : 'GET', headers: body ? { 'Content-Type': 'application/json' } : {}, body: body ? JSON.stringify(body) : undefined, cache: 'no-store', signal:AbortSignal.timeout(12000) });
     const value = await response.json();
     if (!response.ok) throw new Error(value.error || '操作失败');
     return value;
   }
   function status(page) {
+    if (page.disposition === 'manual') return '手动制作';
+    if (page.disposition === 'source-issue') return '材料待处理';
     if (!page.sourceMatches) return '原文待同步';
     const confirmed = page.markedCandidate && page.markedCandidate.sourceHash === page.sourceHash;
     if (page.markedCandidate && !confirmed) return '需要重审';
     if (confirmed && page.adopted?.id === page.markedCandidate.id) return '已采用';
-    const current = page.lastRequest?.status;
+    const current = requestState(page.lastRequest);
+    if (['queued','running'].includes(current) && page.lastRequest?.environment?.ok === false) return page.lastRequest.environment.category === 'permission' ? '等待项目权限' : '执行待恢复';
     if (current === 'queued') return '等待 Codex 处理';
     if (current === 'running') return '生成中';
     if (current === 'ready') return '待确认';
     if (page.needsReview) return '需要重审';
     if (page.adopted && page.adopted.sourceHash === page.sourceHash) return '已采用';
     if (current === 'failed') return '生成失败';
+    if (current === 'cancelled') return '已中止';
     if (current === 'stale') return '结果已过期';
     if (page.adopted) return '已采用';
     return '待生成';
   }
   function statusIcon(value) {
+    if (value === '已中止') return '■';
+    if (value === '手动制作') return '✎';
+    if (value === '材料待处理') return '!';
     return ({ '待生成': '◇', '等待 Codex 处理': '◷', '生成中': '⟳', '待确认': '◉', '已采用': '✓', '生成失败': '!', '原文待同步': '↻', '需要重审': '⚠', '结果已过期': '⌛' })[value] || '•';
   }
   function element(tag, className, text) {
@@ -149,6 +162,29 @@
     if (className) item.className = className;
     if (text != null) item.textContent = text;
     return item;
+  }
+  function decoratePageMarkers(page) {
+    const hero = document.querySelector('body.board-ui-v2 .slide-hero');
+    if (!hero) return;
+    let actions = hero.querySelector('.ui-page-markers');
+    if (!actions) { actions = element('div', 'ui-page-markers'); hero.append(actions); }
+    const key = JSON.stringify([page.id, page.disposition, busy]);
+    if (actions.dataset.renderKey === key) return;
+    actions.dataset.renderKey = key;
+    actions.replaceChildren();
+    const icons = {
+      manual:'<path d="m4 16-1 5 5-1L20 8l-4-4L4 16Z"/><path d="m13 7 4 4M3 21h18"/>',
+      'source-issue':'<circle cx="12" cy="12" r="9"/><path d="M12 7v6m0 4h.01"/>'
+    };
+    for (const [mark, name, detail] of [['manual','手动制作','本页由你在 PPT 中手动制作，计入完成进度'],['source-issue','材料有问题','本页材料待处理，处理后取消标记再生成']]) {
+      const selected = page.disposition === mark;
+      const item = button('', () => action(() => api(flow('/page/mark'), {pageId:page.id, mark:selected ? null : mark})));
+      item.className = 'ui-page-marker'; item.dataset.mark = mark;
+      item.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true">' + icons[mark] + '</svg>';
+      item.setAttribute('aria-label', name); item.setAttribute('aria-pressed', String(selected));
+      item.title = selected ? '取消“' + name + '”标记' : detail;
+      actions.append(item);
+    }
   }
   function button(label, action, primary = false) {
     const item = element('button', primary ? 'primary' : 'secondary', label);
@@ -169,14 +205,30 @@
     }
     return item;
   }
+  function pagePosition(pageId) {
+    const pages = bridge()?.pageList?.() || snapshot?.pages || [];
+    const index = pages.findIndex(page => page.id === pageId);
+    return index >= 0 ? index + 1 : Number(pageId.replace(/\D/g, ''));
+  }
   function copySessionInstruction(request) {
     const target = snapshot?.pages.find(item => item.id === request.pageId);
-    const pageNumberLabel = Number(request.pageId.replace(/\D/g, ''));
-    const instruction = `请使用 $ppt-image-zlx-workflow 处理逐页决策板中的待生成任务。决策板：${location.origin}/；请求 ID：${request.id}；按 ID 查询任务：${location.origin}/api/page-flow/requests/next?requestId=${request.id}；目标：第 ${pageNumberLabel} 页（${target?.title || target?.label || request.pageId}）。只处理这一页，完成 QA 后回写候选结果并等待我验收，不要自动采用或处理其他页面。`;
-    const notice = element('span', 'page-flow-note');
-    Promise.resolve().then(() => {
+    const pageNumberLabel = pagePosition(request.pageId);
+    let instruction = `请使用 $ppt-image-zlx-workflow 处理逐页决策板中的待生成任务。决策板：${location.origin}/；请求 ID：${request.id}；按 ID 查询任务：${location.origin}/api/page-flow/requests/next?requestId=${request.id}；目标：第 ${pageNumberLabel} 页（${target?.title || target?.label || request.pageId}）。只处理这一页，完成 QA 后回写候选结果并等待我验收，不要自动采用或处理其他页面。`;
+    const notice = element('span', 'page-flow-note page-flow-copy-notice');
+    instruction += `\n页面定位以请求 ID 和固定页面 ID ${request.pageId} 为准，当前导航序号为 ${pageNumberLabel}。插页、隐藏或删除会影响导航顺序。通过 execution-input?requestId=${request.id} 读取本请求的材料与决策，核对 pageId 和标题。材料、资源及输出文件沿用固定页面 ID 对应的路径与编号。`;
+    let taskEntry = 'scripts/page-task.mjs';
+    Promise.resolve().then(async () => {
+      try {
+        const service = await api('/api/status');
+        if (service.taskEntry) taskEntry = service.taskEntry;
+        if (service.root) {
+          const project = service.root.slice(0, Math.max(service.root.lastIndexOf('/'), service.root.lastIndexOf('\\')));
+          instruction += `\n本机项目目录：${project}。请在可访问此目录的本地工作区执行。`;
+        }
+      } catch { /* The exact request URL remains available for service recovery. */ }
+      instruction += `\n读取 references/execution-environment-recovery.md，使用统一入口准备任务：node "${taskEntry}" prepare --url ${location.origin}/ --request-id ${request.id}。后续 start/record/check/finalize/complete 均使用同一入口及返回的 --manifest 和 --worker-id；入口自动识别截图材料。生成前确认 image_gen.imagegen 可用并执行 check --include-prompt。权限错误按返回的 guidance 为同一操作申请权限；策略拒绝时保留请求并报告具体阻塞。若中断，按同一请求 ID 和已有 execution.json 恢复。`;
       if (!navigator.clipboard?.writeText) throw new Error('剪贴板不可用');
-      return navigator.clipboard.writeText(instruction);
+      return navigator.clipboard.writeText(instruction + (request.status === 'running' ? '\n该请求目前显示生成中。请先确认原会话已经停止；原会话仍在执行时不要重复生成。若已在决策板结束旧任务，请使用重新生成后的新请求 ID。' : ''));
     }).then(() => {
       notice.textContent = '会话指令已复制，可粘贴到新会话处理此页。';
     }).catch(() => {
@@ -186,14 +238,21 @@
   }
   function infoInsertNotice(notice) {
     const info = document.querySelector('#page-flow-panel .page-flow-info');
-    info?.querySelector('.page-flow-note')?.remove();
+    info?.querySelector('.page-flow-copy-notice')?.remove();
     info?.append(notice);
   }
   async function action(operation) {
     busy = true; error = ''; render();
     try { await operation(); await refresh(); }
-    catch (problem) { error = problem.message; }
-    busy = false; render();
+    catch (problem) { error = problem.name === 'TimeoutError' ? '连接超时。任务可能已经登记，请先刷新状态，再决定是否重试。' : problem.message; }
+    finally { busy = false; render(); document.dispatchEvent(new Event('page-action-complete')); }
+  }
+  async function endStoppedTask(request) {
+    // Existing services already reject late writes once run/fail releases a request.
+    // This keeps recovery available without restarting an active generation service.
+    return snapshot.capabilities?.taskRecovery
+      ? api(flow('/run/cancel'), {requestId:request.id, confirmStopped:true})
+      : api(flow('/run/fail'), {requestId:request.id, error:stoppedReason});
   }
   async function request(retry = false) {
     const sourceIssue = bridge().previewData?.().sourceIssue;
@@ -229,33 +288,82 @@
       let badge = item.querySelector('.page-flow-nav-status');
       if (!badge) { badge = element('span', 'page-flow-nav-status'); item.append(badge); }
       const value = status(page);
+      item.title = value; item.setAttribute('aria-label', `${page.title}，${value}`);
       badge.textContent = statusIcon(value);
       badge.dataset.state = value;
       badge.title = value;
       badge.setAttribute('aria-label', value);
       badge.setAttribute('role', 'img');
     });
+    const manual = snapshot.pages.filter(page => page.disposition === 'manual').length;
+    const adopted = snapshot.pages.filter(page => !page.disposition && page.sourceMatches && page.adopted && !page.needsReview).length;
+    document.getElementById('progressText').textContent = `${manual + adopted} / ${snapshot.pages.length} 页已完成` + (manual ? ` · ${manual} 页手动` : '');
+  }
+  function taskActivity(request, now = Date.now()) {
+    if (!request || !['queued','running'].includes(request.status)) return null;
+    const seen = request.lastHeartbeatAt || request.startedAt || request.createdAt;
+    const minutes = Math.max(0, Math.floor((now - Date.parse(seen)) / 60000)) || 0;
+    const queued = request.status === 'queued';
+    const timing = request.lastHeartbeatAt
+      ? `最近回报：${minutes < 1 ? '刚刚' : minutes + ' 分钟前'}`
+      : `已启动 ${minutes} 分钟，尚无进度回报`;
+    return { minutes, attention:minutes >= (queued ? 10 : 15), text:queued ? `本页已等待 ${minutes} 分钟接手` : `本页任务${timing}${request.phase ? ' · ' + request.phase : ''}` };
+  }
+  function otherTaskSummary(request, page, now = Date.now()) {
+    const number = pagePosition(request.pageId);
+    const activity = taskActivity(request, now);
+    if (request.status === 'running' && page?.adopted?.acceptedAt && Date.parse(page.adopted.acceptedAt) > Date.parse(request.createdAt)) {
+      return `第 ${number} 页已有采用图，旧任务状态待核对。`;
+    }
+    if (activity?.attention) return `第 ${number} 页${request.status === 'queued' ? '等待接手' : '任务仍记录为生成中'}，已 ${activity.minutes} 分钟无进度回报。`;
+    const label = request.status === 'queued' ? '等待会话处理' : request.status === 'running' ? '生成中' : '候选图待验收';
+    return `第 ${number} 页：${label}。`;
+  }
+  function updateTaskActivity(page) {
+    const item = document.querySelector('#page-flow-panel .page-flow-activity');
+    const activity = taskActivity(page.lastRequest);
+    if (!item || !activity) return;
+    item.textContent = activity.text + (activity.attention ? '；较长时间未回报，可检查原会话或使用下方任务恢复。' : '');
+    item.dataset.attention = String(activity.attention);
   }
   function render() {
     const panel = document.getElementById('page-flow-panel');
     const page = snapshot?.pages.find(item => item.id === bridge()?.active());
     if (!panel || !page) return;
+    decoratePageMarkers(page);
+    renderNav();
+    const preview = bridge().previewData?.();
+    const activeRequests = Array.isArray(snapshot.activeRequests) ? snapshot.activeRequests : (snapshot.activeRequest ? [snapshot.activeRequest] : []);
+    const otherActive = activeRequests.filter(item => item.pageId !== page.id);
+    const otherSummaries = otherActive.map(request => otherTaskSummary(request, snapshot.pages.find(item => item.id === request.pageId)));
+    const key = JSON.stringify([page, preview, otherSummaries, bridge().rawDirty(), busy, error]);
+    if (panelRenderKeys.get(panel) === key) { updateTaskActivity(page); return; }
+    panelRenderKeys.set(panel, key);
     const previousNote = panel.querySelector('textarea')?.value || '';
     const noteWasOpen = panel.querySelector('.page-flow-note')?.open || false;
     const guideWasOpen = panel.querySelector('.page-flow-guide')?.open || false;
+    const recoveryWasOpen = panel.querySelector('.page-flow-recovery')?.open || false;
+    const otherTasksWereOpen = panel.querySelector('.page-flow-other-tasks')?.open || false;
     panel.replaceChildren();
     const header = element('div', 'page-flow-head');
     const heading = element('div');
-    heading.append(element('h3', '', '本页生成与验收'));
+    heading.append(element('h3', '', `第 ${pagePosition(page.id)} 页生成与验收`));
     header.append(heading, element('span', 'page-flow-status', status(page)));
     const body = element('div', 'page-flow-body');
     const info = element('div', 'page-flow-info');
-    const requestStatus = page.lastRequest?.status;
+    const requestStatus = requestState(page.lastRequest);
     const version = page.markedCandidate || (page.lastRequest?.status === 'ready' ? page.candidate : page.adoptedVersion);
     const manualCandidate = !!page.markedCandidate && page.markedCandidate.sourceHash === page.sourceHash;
     const adoptedCurrent = !!page.adopted && !page.needsReview && page.adopted.sourceHash === page.sourceHash;
     const message = error || (!page.sourceMatches ? '原文与页面决策不一致，请先同步材料。' : page.needsReview && requestStatus === 'failed' ? `重新生成失败：${page.lastRequest.error || '请重试。'}；此前采用图片与当前决策不一致，需要重新验收。` : page.needsReview && requestStatus === 'stale' ? '本次结果已过期；此前采用图片与当前决策不一致，需要重新验收。' : page.markedCandidate && !manualCandidate ? '曾采用的图片与当前原文或决策不一致，请重新生成并验收。' : page.needsReview ? '此前采用的图片与当前决策不一致，需要重新验收。' : adoptedCurrent && (requestStatus === 'failed' || requestStatus === 'stale') ? `重新生成${requestStatus === 'failed' ? '失败' : '结果已过期'}：${page.lastRequest.error || '此前采用版本仍有效。'}；当前采用版本仍保留。` : page.adopted && manualCandidate ? `当前采用：${page.adoptedVersion?.path.split('/').at(-1) || '所选图片'}` : requestStatus === 'queued' ? '生成请求已排队，尚未开始。请回到新会话发送处理指令；完成后图片会显示在本页。' : requestStatus === 'running' ? '正在生成一张图片。完成后会显示在下方。' : requestStatus === 'ready' ? '图片已生成，请在下方选择并采用。' : requestStatus === 'failed' ? `生成失败：${page.lastRequest.error || '请重试。'}` : requestStatus === 'stale' ? '采用图片已过期，请重新生成。' : page.adopted ? '此前采用的图片与当前决策不一致，需要重新验收。' : '尚无采用图片。确认后生成一张。');
-    info.append(element('strong', error ? 'page-flow-error' : '', message));
+    const dispositionMessage = page.disposition === 'manual' ? '本页由你在 PPT 中手动制作，已计入完成进度。' : page.disposition === 'source-issue' ? '本页材料有问题，请处理材料后取消页头的感叹号标记。' : '';
+    const recoveryMessage = requestStatus === 'cancelled' ? '本次任务已中止。可点击“重新生成”准备新指令；已有图片保留。' : '';
+    info.append(element('strong', error ? 'page-flow-error' : '', error || dispositionMessage || recoveryMessage || message));
+    const environment = page.lastRequest?.environment;
+    if (['queued','running'].includes(requestStatus) && environment?.ok === false) {
+      info.append(element('div','page-flow-error',`执行检查受阻 · ${environment.stage}${environment.code ? ' · '+environment.code : ''}：${environment.error}`));
+      info.append(element('div','page-flow-note',environment.category === 'permission' ? '请在具备本项目写入权限的本地会话中复制同一请求指令继续。已有执行记录和图片可接续。' : '处理上述问题后，使用同一请求和执行记录继续。'));
+    }
     if (version && requestStatus === 'ready') info.append(element('code', '', `候选文件：${version.path.split('/').at(-1)}`));
     const noteDetails = element('details', 'page-flow-note');
     noteDetails.open = noteWasOpen;
@@ -263,16 +371,13 @@
     const note = element('textarea'); note.value = previousNote; note.placeholder = '说明希望调整的地方'; note.setAttribute('aria-label', '重做意见');
     noteDetails.append(noteSummary, note);
     const controls = element('div', 'page-flow-actions');
-    const activeRequests = Array.isArray(snapshot.activeRequests) ? snapshot.activeRequests : (snapshot.activeRequest ? [snapshot.activeRequest] : []);
-    const activeOnPage = activeRequests.find(item => item.pageId === page.id);
-    const otherActive = activeRequests.filter(item => item.pageId !== page.id);
-    const preview = bridge().previewData?.();
     const annotationPending = (preview?.annotations || []).some(mark => mark.needsReview);
     const imageTextLinkPending = !!preview?.imageTextLinksPending;
     const groupPending = (preview?.groups || []).some(group => group.pending);
     const currentRequestActive = ['queued', 'running'].includes(requestStatus);
     let generationBlock = '';
-    if (preview?.sourceIssue) generationBlock = preview.sourceIssue;
+    if (page.disposition) generationBlock = page.disposition === 'manual' ? '本页已改为手动制作。需要恢复生成时，请取消页头的手动标记。' : '请先处理本页原始材料，保存后取消页头的感叹号标记。';
+    else if (preview?.sourceIssue) generationBlock = preview.sourceIssue;
     else if (!page.sourceMatches && preview?.sourceMode !== 'images') generationBlock = '请到本页“页面审阅 → 本页原始材料”点击“更新”，同步后重新检查本页。';
     else if (bridge().rawDirty()) generationBlock = '本页材料有未保存修改，请到“页面审阅 → 本页原始材料”点击“保存”。';
     else if (preview?.groupSyncPending) generationBlock = '材料小标题还未同步，请到“每页内容怎么处理 → 信息组权重”点击“同步材料小标题”。删除或修改的小标题会移入历史分组。';
@@ -282,15 +387,21 @@
     else if (imageTextLinkPending) generationBlock = '图片对应的原文已修改或无法确认，请到 Markdown 编辑区重新标记，再为图片选择对应文字。';
     else if (currentRequestActive) generationBlock = requestStatus === 'queued' ? '本页生成任务已排队；请在当前 Codex 对话中处理，完成后回到本页验收。' : '本页正在生成，请等待候选图片出现后验收。';
     else if (requestStatus === 'ready') generationBlock = '图片已经生成，请先采用、重做或暂不采用，再开始下一次生成。';
-    const generationLabel = currentRequestActive ? (requestStatus === 'queued' ? '等待处理' : '生成中') : requestStatus === 'ready' ? '候选图待验收' : page.lastRequest?.status === 'failed' || page.lastRequest?.status === 'stale' ? '重试生成' : page.adopted ? '重新生成' : '生成本页';
+    const generationLabel = currentRequestActive ? (requestStatus === 'queued' ? '等待处理' : '生成中') : requestStatus === 'ready' ? '候选图待验收' : requestStatus === 'cancelled' ? '重新生成' : page.lastRequest?.status === 'failed' || page.lastRequest?.status === 'stale' ? '重试生成' : page.adopted ? '重新生成' : '生成本页';
     controls.append(generationButton(generationLabel, generationBlock, () => request(requestStatus === 'failed' || requestStatus === 'stale')));
-    otherActive.forEach(active => {
-      const activePageNumber = Number(active.pageId.replace(/\D/g, ''));
-      const label = active.status === 'queued' ? '等待会话处理' : active.status === 'running' ? '正在生成' : '候选图待验收';
-      info.append(element('span', '', `第 ${activePageNumber} 页：${label}。`));
-    });
-    if (requestStatus === 'queued') {
-      controls.append(button(`复制第 ${Number(page.id.replace(/\D/g, ''))} 页指令`, () => copySessionInstruction(page.lastRequest)));
+    if (error) controls.append(button('刷新状态', () => action(async () => {})));
+    if (page.disposition) {
+      // The persistent page marker owns this page until the user clears it.
+    } else if (['queued','running'].includes(requestStatus)) {
+      const copy = button(`复制第 ${pagePosition(page.id)} 页指令`, () => copySessionInstruction(page.lastRequest));
+      copy.disabled = false; controls.append(copy);
+      const activity = element('span', 'page-flow-activity'); info.append(activity);
+      const recovery = element('details', 'page-flow-recovery');
+      recovery.open = recoveryWasOpen;
+      recovery.append(element('summary', '', '任务恢复'));
+      recovery.append(element('p', '', requestStatus === 'running' ? '只有确认原会话已停止时才结束任务。结束后可重新生成新指令；旧请求的迟到回写会被拒绝，已有图片保留。' : '若不再使用当前指令，可结束等待，再重新生成新指令。'));
+      recovery.append(button(requestStatus === 'running' ? '原会话已停止，结束任务' : '结束等待', () => action(() => endStoppedTask(page.lastRequest))));
+      info.append(recovery);
     }
     else if (manualCandidate) {
       if (page.adopted?.id === version.id) controls.append(button('取消采用', () => action(() => api(flow('/candidate/unmark'), { pageId: page.id, versionId: version.id }))));
@@ -299,7 +410,7 @@
       controls.append(button('采用', () => action(async () => {
         await api(flow('/candidate/mark'), { pageId: page.id, path: page.candidate.path });
         await refresh();
-        bridge().nextPage(snapshot.pages.filter(item => !item.adopted || item.needsReview).map(item => item.id));
+        bridge().nextPage(snapshot.pages.filter(item => item.disposition !== 'manual' && (!item.adopted || item.needsReview)).map(item => item.id));
       }), true));
       controls.append(button('按意见重做本页', () => action(() => request(true))));
       controls.append(button('暂不采用，先选别页', () => action(() => api(flow('/reject'), { requestId: page.lastRequest.id }))));
@@ -308,7 +419,7 @@
     } else if (page.adopted) {
       controls.append(button('取消采用', () => action(() => api(flow('/unaccept'), { requestId: page.adoptedVersion.requestId }))));
     }
-    if (!['queued', 'running'].includes(requestStatus)) info.append(noteDetails);
+    if (!page.disposition && !['queued', 'running'].includes(requestStatus)) info.append(noteDetails);
     const guide = element('details', 'page-flow-guide');
     guide.open = guideWasOpen;
     guide.append(element('summary', '', '本页效果预览'));
@@ -331,7 +442,14 @@
     appendSection('全局沿用', preview?.global);
     guide.append(guideContent);
     body.append(info, controls); panel.append(header, body, guide);
-    renderNav();
+    if (otherSummaries.length) {
+      const otherTasks = element('details', 'page-flow-other-tasks');
+      otherTasks.open = otherTasksWereOpen;
+      otherTasks.append(element('summary', '', `其他页任务（${otherSummaries.length}）`));
+      otherSummaries.forEach(text => otherTasks.append(element('p', '', text)));
+      panel.append(otherTasks);
+    }
+    updateTaskActivity(page);
   }
   function selectedImagePath() {
     return document.querySelector('#slidePanel .generated-image-group')?.dataset.selectedImagePath || '';
@@ -392,7 +510,8 @@
     const adoptedMark = currentMark && page.adopted?.id === page.markedCandidate.id;
     action.textContent = adoptedMark ? '取消采用' : '采用';
     action.title = canMark ? (adoptedMark ? '取消采用当前图片' : '采用当前图片') : '只有 final_image 中的最终图片可以采用';
-    action.disabled = !canMark;
+    action.disabled = !canMark || !!page.disposition;
+    if (page.disposition) action.title = '请先取消页头的手动或材料问题标记，再采用图片。';
     action.setAttribute('aria-pressed', String(adoptedMark));
     action.onclick = async () => {
       action.disabled = true;
@@ -439,11 +558,19 @@
     if (boardTitle && !boardTitle.textContent.includes('逐页版')) boardTitle.textContent += ' · 逐页版';
     if (!document.title.includes('逐页版')) document.title += ' · 逐页版';
     snapshot = await api(flow('/snapshot'));
-    window.__PAGE_FLOW_CONFIRMED_IDS__ = new Set(snapshot.pages.filter(page => {
+    for (const page of snapshot.pages) {
+      if (page.screenshotExtraction) bridge().syncScreenshotExtraction?.(page.id, page.screenshotExtraction);
+    }
+    const nextConfirmed = new Set(snapshot.pages.filter(page => {
+      if (page.disposition === 'manual') return true;
+      if (page.disposition) return false;
       const adopted = page.adopted && !page.needsReview;
       return page.sourceMatches && !!adopted;
     }).map(page => page.id));
-    bridge().refreshCandidateNav?.();
+    const previousConfirmed = window.__PAGE_FLOW_CONFIRMED_IDS__ || new Set();
+    const navChanged = nextConfirmed.size !== previousConfirmed.size || [...nextConfirmed].some(id => !previousConfirmed.has(id));
+    window.__PAGE_FLOW_CONFIRMED_IDS__ = nextConfirmed;
+    if (navChanged) bridge().refreshCandidateNav?.();
     const current = bridge().active();
     if (lastPage !== current) { error = ''; lastPage = current; }
     mount(); render();
@@ -455,6 +582,7 @@
   const panel = document.getElementById('slidePanel');
   if (panel) new MutationObserver(() => mount()).observe(panel, { childList: true });
   document.addEventListener('generated-image-selected', decorateHistory);
+  document.addEventListener('page-decision-changed', () => { mount(); render(); });
   document.addEventListener('page-flow-ready', () => refresh().catch(problem => { error = problem.message; render(); }));
   if (bridge()) refresh().catch(problem => { error = problem.message; render(); });
   setInterval(() => refresh().catch(problem => { error = problem.message; render(); }), 6000);

@@ -70,6 +70,10 @@ Use these defaults unless the user clearly overrides them.
 - Add a global `visual_expressiveness` decision by default. Use `polished-enhanced` as the default for most commercial decks; allow `restrained-professional` for evidence/table/review-heavy work and `high-impact` for covers, launch, sales roadshow, market opportunity, and hero-value pages. When `polished-enhanced` or `high-impact` is selected, anti-AI and anti-decoration rules should be interpreted as banning generic or meaningless effects, not as a command to make the page conservative.
 - Treat `visual_expressiveness` as the single default user-facing control for expressive ambition. Derive `creative_extension_level` and `expressive_mechanism` internally from the selected level plus page content; expose them only as saved schema fields, debug/advanced transparency, or explicit override fields when the user asks for creative approval. Default mapping: `restrained-professional` -> `strict-source` with conservative material/editorial mechanisms; `polished-enhanced` -> `semantic-extended` with one content-driven mechanism; `high-impact` -> `expressive-metaphor` with stronger scene/object/path mechanisms. These derived fields must not change source reading order, invent evidence, or add generic frames/cards.
 
+## Marked Text Visual Treatment
+
+For 信息强化 (`emphasize`), 精简＋图示 (`condense-illustrate`) and 弱化＋图示 (`soften`, including the page default), apply [Marked text and module visual treatment](references/information-priority.md#marked-text-and-module-visual-treatment). Design the text-bearing module together with its semantic imagery, icons and contextual decoration, carry the concrete treatment into the saved prompt, and inspect its execution in image QA.
+
 ## Table Design Execution
 
 For table-led pages, read [Table Visual Design](references/table-visual-art-direction.md), the single source for table-specific rules. Use its reading task → contextual design idea → component treatment → image evidence sequence within the existing [page guide](references/page-guide-template.md), [saved prompt](references/prompt-contract.md) and [QA](references/qa-gates.md).
