@@ -48,17 +48,18 @@
     .generated-image-details-title { display:flex; align-items:center; justify-content:space-between; gap:12px; }
     .page-flow-mark-image { margin:0; padding:9px 16px; border:1px solid #218b43; border-radius:8px; background:#258d45; color:white; font-size:12px; font-weight:800; white-space:nowrap; cursor:pointer; }
     .page-flow-mark-image[aria-pressed="true"] { background:#eefaf1; color:#237d3c; }
-    .generated-image-details.page-flow-image-meta { display:grid !important; grid-template-columns:minmax(0,1fr) minmax(150px,auto) auto; align-items:center; gap:8px 20px; height:auto; min-height:72px; padding:10px 16px; }
+    .generated-image-details.page-flow-image-meta { display:grid !important; grid-template-columns:minmax(0,1fr) minmax(150px,auto) auto; align-items:center; gap:2px 20px; height:72px; min-height:72px; box-sizing:border-box; padding:6px 16px; }
     .generated-image-details.page-flow-image-meta[hidden] { display:none !important; }
     .page-flow-image-meta > div { min-width:0; }
     .page-flow-image-meta > div:last-child { display:flex; flex-direction:column; align-items:flex-end; gap:5px; }
-    .page-flow-image-meta .generated-image-filepath { display:block; max-height:none; margin-top:4px; white-space:normal; overflow-wrap:anywhere; color:#71869a; font-size:11px; }
+    .page-flow-image-meta .generated-image-filepath { display:block; max-height:none; margin-top:1px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:#71869a; font-size:11px; line-height:13px; }
     .page-flow-image-meta .generated-image-detail-label { display:none; }
-    .page-flow-image-name { display:block; color:#244a67; font-size:13px; font-weight:800; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-    .page-flow-image-path { margin-top:4px; color:#667f95; font-size:11px; }
+    .page-flow-image-name { display:block; color:#244a67; font-size:13px; font-weight:800; line-height:16px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .page-flow-image-path { display:block; margin-top:1px; color:#667f95; font-size:11px; line-height:13px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .page-flow-image-feedback { display:block; max-width:100%; margin-top:1px; color:#9a6400; font-size:11px; line-height:13px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
     .page-flow-image-time { color:#314f69; font-size:12px; white-space:nowrap; }
     .page-flow-image-action { display:flex; justify-content:flex-end; }
-    @media (max-width:700px) { .generated-image-details.page-flow-image-meta { grid-template-columns:1fr; } .page-flow-image-meta > div:last-child { align-items:flex-start; } .page-flow-image-action { justify-content:flex-start; } }
+    @media (max-width:700px) { .generated-image-details.page-flow-image-meta { grid-template-columns:1fr; height:auto; min-height:72px; } .page-flow-image-meta > div:last-child { align-items:flex-start; } .page-flow-image-action { justify-content:flex-start; } }
     .page-flow-bottom-link { position:fixed; right:22px; bottom:20px; z-index:1000; padding:10px 14px; border:1px solid #b6cde1; border-radius:999px; background:#fff; color:#245d8c; box-shadow:0 4px 18px #14314b26; font-weight:800; cursor:pointer; }
     .generated-image-group:has(.page-flow-panel) { padding: 16px; }
     .generated-image-group:has(.page-flow-panel) .generated-image-layout { position: relative; grid-template-columns: 160px minmax(0, 1fr); min-height: 0; height: auto; }
@@ -457,6 +458,13 @@
   function selectedImagePath() {
     return document.querySelector('#slidePanel .generated-image-group')?.dataset.selectedImagePath || '';
   }
+  function selectedTextFeedback(page, selectedPath) {
+    const name = selectedPath.split(/[\\/]/).at(-1);
+    const version = [page.candidate, page.markedCandidate, page.adoptedVersion].find(item => item?.path?.split(/[\\/]/).at(-1) === name);
+    const feedback = version?.qaReport?.textFeedback;
+    if (typeof feedback === 'string') return feedback.trim() ? [feedback.trim()] : [];
+    return Array.isArray(feedback) ? feedback.filter(item => typeof item === 'string' && item.trim()).slice(0, 5) : [];
+  }
   function decorateHistory() {
     const page = snapshot?.pages.find(item => item.id === bridge()?.active());
     const wrap = document.querySelector('#slidePanel .generated-image-group');
@@ -495,6 +503,15 @@
     const selectedPath = selectedImagePath();
     name.textContent = selectedPath.split(/[\\/]/).at(-1) || '当前版本';
     file.textContent = selectedPath;
+    file.classList.add('page-flow-image-path');
+    let feedbackLine = fileColumn.querySelector('.page-flow-image-feedback');
+    const textFeedback = selectedTextFeedback(page, selectedPath);
+    if (textFeedback.length) {
+      if (!feedbackLine) { feedbackLine = element('span', 'page-flow-image-feedback'); fileColumn.append(feedbackLine); }
+      feedbackLine.textContent = `文字待你调整：${textFeedback[0]}${textFeedback.length > 1 ? ` 等${textFeedback.length}项` : ''}`;
+      feedbackLine.title = textFeedback.join('\n');
+      feedbackLine.setAttribute('aria-label', feedbackLine.title);
+    } else feedbackLine?.remove();
     timeColumn.classList.add('page-flow-image-time');
     let actionColumn = details.querySelector('.page-flow-image-action');
     if (!actionColumn) {

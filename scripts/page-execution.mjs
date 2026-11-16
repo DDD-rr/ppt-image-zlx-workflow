@@ -263,7 +263,10 @@ export async function run(command, flags) {
       if (input.request.finalVersionId !== expected) throw new Error('Ready request points to a different candidate');
       throw new Error('Request is already complete; do not promote or replace cached QA from a later local edit');
     }
-    const qaText = Object.entries(qa).map(([key, value]) => `${key} PASS: ${value.evidence}`).join('\n');
+    const qaText = [
+      ...Object.entries(qa).filter(([key]) => key !== 'textFeedback').map(([key, value]) => `${key} PASS: ${value.evidence}`),
+      ...(qa.textFeedback || []).map(item => `文字提示（不阻断候选）：${item}`)
+    ].join('\n');
     if (qaText.length > 2000) throw new Error('QA evidence exceeds 2000 characters; shorten without dropping required outcomes');
     const result = await api(manifest.url, 'run/complete', { requestId: manifest.requestId, ...manifest.output, qa: qaText,
       guideHash: manifest.artifacts.guide.sha256, promptHash: manifest.artifacts.prompt.sha256,

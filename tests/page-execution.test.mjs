@@ -296,7 +296,7 @@ function png() {
   const header = Buffer.alloc(13); header.writeUInt32BE(320, 0); header.writeUInt32BE(180, 4); header[8] = 8; header[9] = 6;
   return Buffer.concat([Buffer.from('89504e470d0a1a0a', 'hex'), chunk('IHDR', header), chunk('IDAT', deflateSync(Buffer.alloc((320 * 4 + 1) * 180))), chunk('IEND', Buffer.alloc(0))]);
 }
-const qa = { compliance: { status: 'pass', evidence: 'Synthetic fixture matches the test source.' }, informationLayout: { status: 'pass', evidence: 'Synthetic test only; no production image judged.' }, visualCompletion: { status: 'pass', evidence: 'Synthetic fixture validates registration, not slide aesthetics.' } };
+const qa = { textFeedback: [], compliance: { status: 'pass', evidence: 'Synthetic fixture matches the test source.' }, informationLayout: { status: 'pass', evidence: 'Synthetic test only; no production image judged.' }, visualCompletion: { status: 'pass', evidence: 'Synthetic fixture validates registration, not slide aesthetics.' } };
 function tableQa(imageHash) {
   const report = structuredClone(qa);
   report.visualCompletion.table = { designType: 'flat-graphic', imageHash, tableOnlyInspected: true, wholePageInspected: true,
@@ -371,6 +371,19 @@ test('table QA rejects missing image observations, copied plans, and failed comp
   report.visualCompletion.table.components.backing.observed = 'Actual flat rectangle; planned carrier not present';
   report.visualCompletion.table.components.backing.status = 'fail';
   assert.throws(() => validateQa(report, { table: true, imageHash: 'hash', allowFailure: true }), /has not passed/);
+});
+
+test('文字差异作为候选提示，纯字号层级偏差不阻断表格候选', () => {
+  const report = tableQa('hash');
+  report.textFeedback = ['Audio Input 的字号可由用户自行调整'];
+  report.visualCompletion.table.components.typeHierarchy.status = 'unresolved';
+  report.visualCompletion.table.components.typeHierarchy.judgment = '字号层级可由用户后续调整';
+  validateQa(report, { table: true, imageHash: 'hash' });
+  report.visualCompletion.table.components.backing.status = 'fail';
+  assert.throws(() => validateQa(report, { table: true, imageHash: 'hash' }), /Table QA backing/);
+  report.visualCompletion.table.components.backing.status = 'pass';
+  report.textFeedback = [];
+  assert.throws(() => validateQa(report, { table: true, imageHash: 'hash' }), /typeHierarchy/);
 });
 
 test('same-run recorded artifacts resume without being called a validated reusable design', async t => {
