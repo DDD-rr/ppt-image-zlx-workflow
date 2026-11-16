@@ -271,7 +271,7 @@
     const decision = bridge().confirmPage();
     const saved = await api('/api/decision', decision);
     if (!saved.ok) throw new Error('决策保存失败');
-    await api(flow('/request'), { pageId, confirmReview: true, retry, note });
+    await api(flow('/request'), { pageId, confirmReview: true, retry, note, entryContract: 'page-task-v2' });
   }
   function mount() {
     const imageGroup = document.querySelector('#slidePanel .generated-image-group');

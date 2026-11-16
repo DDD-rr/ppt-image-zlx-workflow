@@ -12,6 +12,29 @@ import { tableComponents } from '../scripts/page-execution-qa.mjs';
 import { extractedSourceRaw } from '../scripts/screenshot-source.mjs';
 import { runTask } from '../scripts/page-task.mjs';
 
+test('新版请求在生图前要求统一入口，且沿用已重建的页面输入',async t=>{
+  const f=await fixture(t);
+  await f.api('run/fail',{requestId:f.request.id,error:'Fixture reset'});
+  const statePath=path.join(f.board,'page-flow-state.json');
+  const state=JSON.parse(await readFile(statePath,'utf8'));
+  state.pages.slide01.rebuiltFor={sourceHash:f.request.sourceHash,decisionHash:f.request.decisionHash};
+  await writeFile(statePath,JSON.stringify(state));
+  const response=await f.api('request',{pageId:'slide01',confirmReview:true,entryContract:'page-task-v2'});
+  assert.equal(response.status,200);
+  const request=response.value.request;
+  assert.equal(request.guidePromptRebuildPending,false);
+  const directStart=await f.api('run/start',{requestId:request.id});
+  assert.equal(directStart.status,409);
+  assert.equal(directStart.value.code,'ENTRY_REQUIRED');
+  const prepared=await runTask('prepare',{url:f.url,'request-id':request.id,'packet-only':true});
+  assert.equal(prepared.ok,true);
+  assert.ok(prepared.sessionFile);
+  assert.equal((await f.api('run/start',{requestId:request.id})).status,200);
+  const directComplete=await f.api('run/complete',{requestId:request.id});
+  assert.equal(directComplete.status,409);
+  assert.equal(directComplete.value.code,'ENTRY_REQUIRED');
+});
+
 test('准备一次后用会话文件与单份简稿直接就绪，旧执行身份仍受保护',async t=>{
   const f=await fixture(t);
   const initial={url:f.url,'request-id':f.request.id,'packet-only':true};

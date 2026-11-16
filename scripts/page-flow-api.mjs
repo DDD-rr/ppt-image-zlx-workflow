@@ -95,7 +95,7 @@ function current(page, ctx) {
   return page?.adopted && page.adopted.sourceHash === ctx.sourceHash;
 }
 function guidePending(page, ctx) {
-  return (!!ctx.sourceInput || !!ctx.slide.guidePromptRebuildPending) && !(page?.rebuiltFor?.sourceHash === ctx.sourceHash && page?.rebuiltFor?.decisionHash === ctx.decisionHash);
+  return (!!ctx.sourceInput || !!ctx.slide.guidePromptRebuildPending || !!ctx.decisionPage.palette_reference) && !(page?.rebuiltFor?.sourceHash === ctx.sourceHash && page?.rebuiltFor?.decisionHash === ctx.decisionHash);
 }
 const blocking = new Set(['queued', 'running', 'ready']);
 function activeRequests(saved) { return Object.values(saved.requests).filter(item => blocking.has(item.status) && !(item.status === 'ready' && saved.pages[item.pageId]?.adopted?.id === item.finalVersionId)).sort((a, b) => a.createdAt.localeCompare(b.createdAt)); }
@@ -221,6 +221,7 @@ async function handlePost(route, body) {
       return [200, { version, markedCandidateVersionId: page.markedCandidateVersionId || null, adopted: page.adopted || null }];
     }
     if (route === '/api/request') {
+      if (body.entryContract && body.entryContract !== 'page-task-v2') return [400, { error: '未知的执行入口版本。' }];
       const ctx = await context(body.pageId);
       if (ctx.slide.deletedAt) return [409, { error: '该页已移入回收站，请恢复后再生成。' }];
       if (ctx.sourceInput && !ctx.sourceInput.images.length) return [409, { error: '请先添加本页截图材料。' }];
@@ -248,10 +249,11 @@ async function handlePost(route, body) {
         await invalidateDesignCache(body.pageId, samePage.finalVersionId, 'User requested a replacement candidate');
       }
       const id = randomUUID();
-      const item = { id, pageId: body.pageId, status: 'queued', createdAt: new Date().toISOString(), sourceHash: ctx.sourceHash, decisionHash: ctx.decisionHash, note: String(body.note || '').slice(0, 2000), sourceDocument: (await readJson(path.join(board, 'board-data.json'))).sourceDocument?.path || null, guidePromptRebuildPending: !!ctx.slide.guidePromptRebuildPending };
+      const item = { id, pageId: body.pageId, status: 'queued', createdAt: new Date().toISOString(), sourceHash: ctx.sourceHash, decisionHash: ctx.decisionHash, note: String(body.note || '').slice(0, 2000), sourceDocument: (await readJson(path.join(board, 'board-data.json'))).sourceDocument?.path || null, guidePromptRebuildPending: guidePending(page, ctx) };
+      if (body.entryContract) item.entryContract = body.entryContract;
       if (ctx.sourceInput) item.inactiveMarkdownHash = sha(ctx.slide.raw || '');
-      if (ctx.sourceInput) { item.sourceDocument=null; item.sourceInput={...ctx.sourceInput,images:ctx.sourceInput.images.map(image=>({...image,absolutePath:path.join(board,image.path)}))}; item.guidePromptRebuildPending=true; }
-      if (paletteReference) { item.paletteReference = { ...paletteReference, absolutePath: path.join(board, paletteReference.path), notes: String(ctx.decisionPage.palette_reference_notes || '').slice(0, 2000), policy: 'colors-only' }; item.guidePromptRebuildPending = true; }
+      if (ctx.sourceInput) { item.sourceDocument=null; item.sourceInput={...ctx.sourceInput,images:ctx.sourceInput.images.map(image=>({...image,absolutePath:path.join(board,image.path)}))}; }
+      if (paletteReference) { item.paletteReference = { ...paletteReference, absolutePath: path.join(board, paletteReference.path), notes: String(ctx.decisionPage.palette_reference_notes || '').slice(0, 2000), policy: 'colors-only' }; }
       saved.requests[id] = item;
       page.lastRequestId = id;
       await atomic(path.join(board, 'page-flow-requests', `${id}.json`), item);
@@ -280,12 +282,14 @@ async function handlePost(route, body) {
       const page = saved.pages[request.pageId] ||= {};
       if (route === '/api/run/start') {
         if (request.status !== 'queued' && request.status !== 'running') return [409, { error: '该请求已结束' }];
+        if (request.entryContract === 'page-task-v2' && !request.worker?.id) return [409, { error: '请先使用统一入口准备本页任务。', code: 'ENTRY_REQUIRED' }];
         const ctx = await context(request.pageId);
         if (ctx.slide.deletedAt) return [409, { error: '该页已移入回收站，请恢复后再生成。' }];
         if (!ctx.sourceMatches || request.sourceHash !== ctx.sourceHash || request.decisionHash !== ctx.decisionHash) return [409, { error: '本页来源或决策已变化，请重新确认生成请求。' }];
         request.status = 'running'; request.startedAt ||= new Date().toISOString();
       } else if (route === '/api/run/complete') {
         if (request.status !== 'running') return [409, { error: '请先标记开始生成' }];
+        if (request.entryContract === 'page-task-v2' && (!body.executionManifest || !body.qaReport)) return [409, { error: '本次请求需要统一入口的执行记录和图片 QA。', code: 'ENTRY_REQUIRED' }];
         const final = await fileRecord(body.final, 'final_image', pageNumber(request.pageId));
         const imageBody = body.body ? await fileRecord(body.body, 'body_image', pageNumber(request.pageId)) : null;
         const ctx = await context(request.pageId);
