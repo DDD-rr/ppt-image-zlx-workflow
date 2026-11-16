@@ -1,4 +1,4 @@
-import { readFile, writeFile, rename, access } from 'node:fs/promises';
+import { readFile, writeFile, rename, access, open, unlink } from 'node:fs/promises';
 import { request as httpRequest } from 'node:http';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
@@ -25,10 +25,13 @@ async function sameRecordedInputs(manifest, flags) {
 
 async function saveProgress(manifestPath, workerId, command, result) {
   const manifest = JSON.parse(await readFile(manifestPath,'utf8'));
+  manifest.commandHistory ||= [];
+  manifest.commandHistory.push({command,ok:result.ok,stage:result.stage,elapsedMs:result.elapsedMs,timings:result.timings,finishedAt:new Date().toISOString()});
+  await saveJson(manifestPath,manifest);
   const progress = {requestId:manifest.requestId,pageId:manifest.input.pageId,workerId,manifest:manifestPath,
     command,ok:result.ok,stage:result.stage,error:result.error,elapsedMs:result.elapsedMs,updatedAt:new Date().toISOString(),
     artifacts:manifest.artifacts,output:manifest.output,
-    next:manifest.timings?.completedAt ? 'wait-for-acceptance' : manifest.qa ? 'complete' : manifest.output ? 'inspect-image-and-complete' : manifest.attempts?.length ? 'check-and-generate' : 'design-and-ready'};
+    next:manifest.timings?.completedAt ? 'wait-for-acceptance' : manifest.qa ? 'complete' : manifest.output ? 'inspect-image-and-complete' : manifest.attempts?.at(-1)?.imageReceipt ? 'finalize-saved-image' : manifest.attempts?.length ? 'check-and-generate' : 'design-and-ready'};
   const file = path.join(path.dirname(manifestPath),'task-progress.json');
   const temporary = file+'.'+randomUUID()+'.tmp';
   await writeFile(temporary,JSON.stringify(progress,null,2));
@@ -39,6 +42,10 @@ async function saveProgress(manifestPath, workerId, command, result) {
 export function classifyFailure(error, stage) {
   const code = error.code || null;
   const permission = ['EPERM', 'EACCES'].includes(code);
+  if (code === 'NATIVE_IMAGE_REQUIRED') return {
+    ok:false, stage, code, error:error.message, category:'transport', recovery:'native-file-required',
+    guidance:'使用官方生图工具提供的本地 PNG 路径继续保存。当前会话只有 data URL 时，保留请求并报告输出通道限制。'
+  };
   return { ok:false, stage, code, error:error.message, category:permission ? 'permission' : 'execution',
     recovery:permission ? 'retry-with-project-permission' : 'resume-same-request',
     guidance:permission
@@ -64,10 +71,14 @@ export async function runTask(command, flags, execute) {
   let url = flags.url, requestId = flags['request-id'];
   let stage = command;
   let preparedPath, claimedPreparation = false;
+  let completedExecution = false;
   let workerId = flags['worker-id'] || (command === 'prepare' ? randomUUID() : undefined);
   let result;
   try {
     if (!['inspect','prepare','ready','start','record','check','receive','finalize','complete','review','plan-repair'].includes(command)) throw new Error('Unknown task command');
+    if (typeof flags.result?.image_url === 'string' && flags.result.image_url.startsWith('data:')) {
+      throw Object.assign(new Error('Embedded image arguments are disabled; use --image with the official PNG path or an already-saved --result-file.'), {code:'NATIVE_IMAGE_REQUIRED'});
+    }
     if(flags['session-file']) {
       const session=JSON.parse(await readFile(path.resolve(flags['session-file']),'utf8'));
       if(!session.manifest || !session.workerId)throw new Error('Execution session is incomplete');
@@ -79,6 +90,7 @@ export async function runTask(command, flags, execute) {
     if (flags.manifest) {
       const manifest = JSON.parse(await readFile(path.resolve(flags.manifest),'utf8'));
       url = manifest.url; requestId = manifest.requestId;
+      completedExecution = !!manifest.timings?.completedAt;
     }
     if (!url || !requestId) throw new Error('Use --url and --request-id, or the saved --manifest');
     flags = {...flags,url,'request-id':requestId};
@@ -98,7 +110,7 @@ export async function runTask(command, flags, execute) {
       if (!workerId) throw new Error('Use --worker-id returned by prepare for this chat');
       stage = 'worker-ownership';
       const ownershipAt=Date.now();
-      await post(url,'worker',{requestId,workerId,claim:command==='prepare',confirmStopped:flags['confirm-stopped'] === true});
+      await post(url,'worker',{requestId,workerId,claim:command==='prepare' || command==='complete' && completedExecution,confirmStopped:flags['confirm-stopped'] === true});
       timings.ownershipMs=Date.now()-ownershipAt;
       claimedPreparation = command === 'prepare' && !!preparedPath;
       stage = command;
@@ -124,13 +136,29 @@ export async function runTask(command, flags, execute) {
         if (!flags['qa-file']) throw new Error('Use --qa-file from the complete actual-image QA');
         const {saveRepairPlan}=await import('./repair-plan.mjs');
         result={ok:true,stage:command,...await saveRepairPlan(flags.manifest,flags['qa-file'])};
-      } else if (command === 'receive' || command === 'finalize' && (!flags.image || flags.result || flags['result-file'])) {
-        const {receiveImage,savedImage} = await import('./image-result.mjs');
-        const officialResult = flags.result || (flags['result-file'] ? JSON.parse(await readFile(flags['result-file'],'utf8')) : null);
-        const receipt = officialResult ? await receiveImage(flags.manifest,officialResult,{callStartedAt:flags['image-call-started-at'],toolReturnedAt:flags['image-tool-returned-at']}) : await savedImage(flags.manifest);
-        if (command==='finalize') await readImageInputs(flags.manifest);
-        result = command === 'receive' ? {ok:true,stage:command,...receipt}
-          : {ok:true,stage:command,...await runner('finalize',{...flags,image:receipt.absolutePath}),imageReceipt:receipt};
+      } else if (command === 'receive' || command === 'finalize') {
+        stage = 'receive';
+        const lockPath = path.join(path.dirname(flags.manifest), '.image-delivery.lock');
+        const lock = await open(lockPath, 'wx');
+        try {
+          const current = JSON.parse(await readFile(flags.manifest, 'utf8'));
+          if (flags['expected-attempt'] !== undefined && Number(flags['expected-attempt']) !== current.attempts?.at(-1)?.number) throw new Error('Image belongs to a different attempt');
+          const {receiveImage,receiveImageFile,savedImage} = await import('./image-result.mjs');
+          const officialResult = flags.result || (flags['result-file'] ? JSON.parse(await readFile(flags['result-file'],'utf8')) : null);
+          const timing={callStartedAt:flags['image-call-started-at'],toolReturnedAt:flags['image-tool-returned-at'],attempt:current.attempts?.at(-1)?.number};
+          const receipt = officialResult ? await receiveImage(flags.manifest,officialResult,timing)
+            : flags.image ? await receiveImageFile(flags.manifest,flags.image,timing)
+            : await savedImage(flags.manifest);
+          current.attempts.at(-1).imageReceipt = receipt;
+          await saveJson(flags.manifest, current);
+          stage = command;
+          if (command==='finalize') await readImageInputs(flags.manifest);
+          result = command === 'receive' ? {ok:true,stage:command,...receipt}
+            : {ok:true,stage:command,...await runner('finalize',{...flags,image:receipt.absolutePath}),imageReceipt:receipt};
+        } finally {
+          await lock.close();
+          await unlink(lockPath);
+        }
       } else if (command === 'ready') {
         const manifest = JSON.parse(await readFile(flags.manifest,'utf8'));
         if (manifest.output && !flags.guide && !flags.prompt) {
@@ -195,7 +223,9 @@ export async function runTask(command, flags, execute) {
         result.imageTransport=imageTransportPlan(inputs);
         result.sessionFile=path.join(path.dirname(path.resolve(result.manifest)),'session-'+workerId+'.json');
         await saveJson(result.sessionFile,{requestId,manifest:path.resolve(result.manifest),workerId});
-        result.next='Read page-input.json once, write one design brief, then ready --session-file <sessionFile> --brief-file <brief.json> --verified --packet-only';
+        result.next=manifest.artifacts
+          ? 'Read page-input.json and verify recorded artifacts and actual images once. Reuse unchanged inputs with ready --session-file <sessionFile> --packet-only; use --brief-file only for changed or invalid inputs.'
+          : 'Read page-input.json once, write one design brief, then ready --session-file <sessionFile> --brief-file <brief.json> --verified --packet-only';
       }
       if (['record','ready'].includes(command) && imageInputs && bindReferencesAllowed && result.generationRequired!==false) {
         await bindImageInputs(flags.manifest,imageInputs);
@@ -210,6 +240,7 @@ export async function runTask(command, flags, execute) {
           if (result.prompt) {
             result.toolInputPath=path.join(path.dirname(path.resolve(flags.manifest)),'tool-input.json');
             await saveJson(result.toolInputPath,{requestId,inputPaths:result.inputPaths,prompt:result.prompt,imageInputs:inputs,transport:result.imageTransport});
+            result.imageHandoff={manifest:flags.manifest,transport:'native-file',taskEntry:fileURLToPath(import.meta.url),next:'Run page-task finalize --session-file <sessionFile> --image <official-native-png> using the already-authorized local command tool. Pass only the path and actual call timestamps. Never relay data URLs into tools, shell arguments or node_repl. If this chat cannot supply a native file, report the transport limitation without another image call. Resume QA/complete from saved files.'};
           }
         }
       }
@@ -274,7 +305,7 @@ export async function runTask(command, flags, execute) {
     catch (error) { result.progressError=error.message; }
   }
   if (url && requestId && command !== 'inspect' && result.stage !== 'worker-ownership') {
-    try { await post(url,'environment',{requestId,workerId,environment:{ok:result.ok,stage:result.stage || command,code:result.code,error:result.error,category:result.category,recovery:result.recovery}}); }
+    try { await post(url,'environment',{requestId,workerId,environment:{ok:result.ok,stage:result.stage || command,code:result.code,error:result.error,category:result.category,recovery:result.recovery,elapsedMs:result.elapsedMs,timings:result.timings}}); }
     catch (error) { result.reportingError = error.message; }
   }
   if ((flags.summary || flags['packet-only']) && result.input) {

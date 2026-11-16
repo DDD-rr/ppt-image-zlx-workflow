@@ -144,6 +144,15 @@ async function handlePost(route, body) {
   return mutate(async () => {
     const saved = await state();
     const request = body.requestId && saved.requests[body.requestId];
+    if (route === '/api/page/mark') {
+      if (![null, 'manual', 'source-issue'].includes(body.mark)) return [400, {error:'页面标记无效'}];
+      const ctx = await context(body.pageId);
+      if (ctx.slide.deletedAt) return [409, {error:'该页已移入回收站'}];
+      const page = saved.pages[body.pageId] ||= {};
+      page.disposition = body.mark;
+      await atomic(statePath, saved);
+      return [200, {pageId:body.pageId, disposition:page.disposition}];
+    }
     if (route === '/api/run/worker') {
       if (!request || !['queued','running','ready'].includes(request.status)) return [409,{error:'该请求不可接手'}];
       if (typeof body.workerId !== 'string' || !/^[\da-f-]{36}$/i.test(body.workerId)) return [400,{error:'执行者标识无效'}];
@@ -152,6 +161,8 @@ async function handlePost(route, body) {
       if (owner && owner !== body.workerId && !(body.claim === true && body.confirmStopped === true)) return [409,{error:'该请求已由其他执行者接手。确认原执行者停止后，使用 prepare --confirm-stopped 接续。',code:'WORKER_CONFLICT'}];
       if (!owner && !body.claim && !body.release) return [409,{error:'先使用 prepare 接手同一请求',code:'WORKER_CONFLICT'}];
       request.worker = body.release ? null : {id:body.workerId,claimedAt:owner===body.workerId ? request.worker.claimedAt : new Date().toISOString(),lastCommandAt:new Date().toISOString()};
+      request.claimedAt ||= new Date().toISOString();
+      request.phase ||= 'preparing';
       await atomic(statePath,saved);
       return [200,{worker:request.worker}];
     }
@@ -162,6 +173,13 @@ async function handlePost(route, body) {
       const value = body.environment;
       if (!value || typeof value.ok !== 'boolean' || typeof value.stage !== 'string') return [400, {error:'检查结果无效'}];
       const environment = {ok:value.ok,stage:value.stage.slice(0,80),code:String(value.code || '').slice(0,40),error:String(value.error || '').slice(0,2000),category:String(value.category || '').slice(0,40),recovery:String(value.recovery || '').slice(0,80),checkedAt:new Date().toISOString()};
+      environment.elapsedMs = Number.isFinite(value.elapsedMs) ? value.elapsedMs : null;
+      environment.timings = Object.fromEntries(Object.entries(value.timings || {}).filter(([,elapsed])=>Number.isFinite(elapsed) && elapsed>=0));
+      request.stages ||= {};
+      request.stages[environment.stage] = environment;
+      if (value.ok && ['prepare','record'].includes(value.stage)) request.phase='preparing';
+      if (value.ok && ['ready','check'].includes(value.stage)) request.phase='generating';
+      if (value.ok && ['receive','finalize'].includes(value.stage)) request.phase='qa';
       // A read-only inspection cannot establish that an earlier write failure recovered.
       if (!(environment.ok && environment.stage === 'inspect' && request.environment?.ok === false)) request.environment = environment;
       await atomic(statePath,saved);
@@ -236,6 +254,7 @@ async function handlePost(route, body) {
         await stat(path.join(board, paletteReference.path));
       }
       const page = saved.pages[body.pageId] ||= {};
+      if (page.disposition) return [409, {error:'请先取消页头的手动制作或材料问题标记，再生成本页。'}];
       const active = activeRequests(saved);
       const samePage = active.find(item => item.pageId === body.pageId);
       const replacingReady = !!(body.retry && samePage?.status === 'ready');
@@ -250,7 +269,7 @@ async function handlePost(route, body) {
       }
       const id = randomUUID();
       const item = { id, pageId: body.pageId, status: 'queued', createdAt: new Date().toISOString(), sourceHash: ctx.sourceHash, decisionHash: ctx.decisionHash, note: String(body.note || '').slice(0, 2000), sourceDocument: (await readJson(path.join(board, 'board-data.json'))).sourceDocument?.path || null, guidePromptRebuildPending: guidePending(page, ctx) };
-      if (body.entryContract) item.entryContract = body.entryContract;
+      item.entryContract = 'page-task-v2';
       if (ctx.sourceInput) item.inactiveMarkdownHash = sha(ctx.slide.raw || '');
       if (ctx.sourceInput) { item.sourceDocument=null; item.sourceInput={...ctx.sourceInput,images:ctx.sourceInput.images.map(image=>({...image,absolutePath:path.join(board,image.path)}))}; }
       if (paletteReference) { item.paletteReference = { ...paletteReference, absolutePath: path.join(board, paletteReference.path), notes: String(ctx.decisionPage.palette_reference_notes || '').slice(0, 2000), policy: 'colors-only' }; }
@@ -333,6 +352,11 @@ async function handlePost(route, body) {
         await invalidateDesignCache(request.pageId, version.id, version.qa);
       } else if (route === '/api/run/fail') {
         if (!['queued', 'running'].includes(request.status)) return [409, { error: '该请求已结束' }];
+        if (body.recoverable === true) {
+          request.environment = {ok:false,stage:String(body.stage || 'image-handoff'),error:String(body.error || '图片交接待恢复').slice(0,2000),category:'execution',recovery:'resume-same-request',checkedAt:new Date().toISOString()};
+          await atomic(statePath,saved);
+          return [200,{request}];
+        }
         request.status = 'failed'; request.error = String(body.error || '生成失败').slice(0, 2000);
       } else if (route === '/api/accept') {
         if (request.status !== 'ready') return [409, { error: '该图尚未等待确认' }];
@@ -396,7 +420,7 @@ export async function handlePageFlow(req, res, url) {
         const markedCandidate = saved.versions[page.markedCandidateVersionId] || null;
         const markedCurrent = !!markedCandidate && markedCandidate.sourceHash === ctx.sourceHash;
         const confirmed = ctx.sourceMatches && !!current(page, ctx);
-        return { id: slide.id, label: slide.label, title: slide.title, role: slide.role, summary: slide.summary, raw: ctx.sourceInput ? '' : slide.raw, screenshotExtraction: slide.screenshotExtraction?.sourceHash === ctx.sourceHash ? {...slide.screenshotExtraction,raw:slide.raw,pageHash:sha(slide.raw)} : null, sourceInput: ctx.sourceInput, checked: confirmed, confirmed, reviewedForGeneration: reviewed(page, ctx), sourceMatches: ctx.sourceMatches, needsReview: !!page.adopted && !current(page, ctx), guidePromptRebuildPending: guidePending(page, ctx), decision: ctx.decisionPage, sourceHash: ctx.sourceHash, decisionHash: ctx.decisionHash, adopted: page.adopted || null, adoptedVersion: saved.versions[page.adopted?.id] || null, markedCandidate, lastRequest: last || null, candidate: markedCandidate || saved.versions[last?.finalVersionId] || null };
+        return { id: slide.id, disposition: page.disposition || null, label: slide.label, title: slide.title, role: slide.role, summary: slide.summary, raw: ctx.sourceInput ? '' : slide.raw, screenshotExtraction: slide.screenshotExtraction?.sourceHash === ctx.sourceHash ? {...slide.screenshotExtraction,raw:slide.raw,pageHash:sha(slide.raw)} : null, sourceInput: ctx.sourceInput, checked: confirmed, confirmed, reviewedForGeneration: reviewed(page, ctx), sourceMatches: ctx.sourceMatches, needsReview: !!page.adopted && !current(page, ctx), guidePromptRebuildPending: guidePending(page, ctx), decision: ctx.decisionPage, sourceHash: ctx.sourceHash, decisionHash: ctx.decisionHash, adopted: page.adopted || null, adoptedVersion: saved.versions[page.adopted?.id] || null, markedCandidate, lastRequest: last || null, candidate: markedCandidate || saved.versions[last?.finalVersionId] || null };
       }));
       const active = activeRequests(saved);
       return json(res, 200, { projectName: data.projectName, contentHandling: decision.content_handling, palette: decision.global_palette?.palette_label || decision.palette_direction, titleMode: decision.title_overlay?.label || decision.title_overlay?.mode, pages, activeRequest: active[0] || null, activeRequests: active });

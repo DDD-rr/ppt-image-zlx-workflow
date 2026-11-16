@@ -211,8 +211,14 @@ export async function run(command, flags) {
     await verifiedArtifacts(manifest);
     if (input.request.status !== 'running' || !manifest.attempts.length) throw new Error('Start request and save actual generation inputs first');
     if (!flags.image) throw new Error('finalize requires the official image tool output path via --image');
-    if (manifest.output) throw new Error('Output already finalized; run complete or record a distinct repair attempt');
     const bytes = await readFile(path.resolve(flags.image));
+    if (manifest.output) {
+      if (hash(bytes) !== manifest.output.bodyHash) throw new Error('Finalized output belongs to another image');
+      for (const kind of ['body', 'final']) {
+        if (hash(await readFile(await projectFile(root, manifest.output[kind]))) !== manifest.output[`${kind}Hash`]) throw new Error('Finalized image bytes changed');
+      }
+      return {...manifest.output, reused: true, next: 'inspect-image-and-complete'};
+    }
     if (bytes.length < 24 || bytes.subarray(0, 8).toString('hex') !== '89504e470d0a1a0a') throw new Error('Expected the official generated PNG');
     const width = bytes.readUInt32BE(16), height = bytes.readUInt32BE(20);
     if (!height || Math.abs(width / height - 16 / 9) > 0.01) throw new Error('Generated image is not 16:9');
@@ -228,12 +234,18 @@ export async function run(command, flags) {
     const names = [...await readdir(path.join(root, 'body_image')), ...await readdir(path.join(root, 'final_image'))];
     let version = 1;
     while (names.some(name => name.startsWith(`${prefix}${String(version).padStart(3, '0')}.`))) version++;
-    const name = `${prefix}${String(version).padStart(3, '0')}.png`;
+    const name = attempt.finalization?.name || `${prefix}${String(version).padStart(3, '0')}.png`;
     const body = `body_image/${name}`, final = `final_image/${name}`;
     const mode = input.global.title_overlay?.mode;
     if (!['no-title-reserved', 'overlay-title'].includes(mode)) throw new Error('Confirmed title_overlay.mode is required');
     if (mode === 'overlay-title') await projectFile(root, 'title_style.json');
-    await copyFile(path.resolve(flags.image), path.join(root, body), constants.COPYFILE_EXCL);
+    attempt.finalization ||= {name, imageHash: hash(bytes)};
+    if (attempt.finalization.imageHash !== hash(bytes)) throw new Error('Reserved output belongs to another image');
+    await save(manifestPath, manifest);
+    try { await copyFile(path.resolve(flags.image), path.join(root, body), constants.COPYFILE_EXCL); }
+    catch (error) {
+      if (error.code !== 'EEXIST' || hash(await readFile(path.join(root, body))) !== hash(bytes)) throw error;
+    }
     const titleMap = path.join(path.dirname(manifestPath), 'title-map.json');
     await save(titleMap, { slides: [{ body_file: name, output_file: name, title: input.title,
       subtitle: flags.subtitle || input.decision.subtitle || '', role: flags['title-role'] || 'content' }] });
@@ -261,6 +273,7 @@ export async function run(command, flags) {
     if (input.request.status === 'ready') {
       const expected = `final_image:${path.basename(manifest.output.final)}:${manifest.output.finalHash}`;
       if (input.request.finalVersionId !== expected) throw new Error('Ready request points to a different candidate');
+      if (manifest.qa && JSON.stringify(manifest.qa) === JSON.stringify(qa)) return {request:input.request, reused:true};
       throw new Error('Request is already complete; do not promote or replace cached QA from a later local edit');
     }
     const qaText = [

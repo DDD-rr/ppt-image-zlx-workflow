@@ -20,6 +20,7 @@ export async function receiveImage(manifestPath, result, timing = {}) {
   const manifest = JSON.parse(await readFile(manifestPath,'utf8'));
   const attempt = manifest.attempts?.at(-1);
   if(!attempt)throw new Error('Record and check the exact generation inputs first');
+  if (timing.attempt !== undefined && timing.attempt !== attempt.number) throw new Error('Image belongs to a different attempt');
   if(!result || typeof result!=='object')throw new Error('Pass the complete official image tool result');
   const root = await realpath(manifest.input.projectRoot);
   const parent = await realpath(path.dirname(path.resolve(manifestPath)));
@@ -48,6 +49,7 @@ export async function receiveImage(manifestPath, result, timing = {}) {
   const absolutePath=path.join(directory,'official.png');
   await immutable(absolutePath,bytes);
   const receipt={requestId:manifest.requestId,attempt:attempt.number,absolutePath,sha256:hash(bytes),bytes:bytes.length,width,height,
+    transport:result.transport ?? 'official-result',
     outputHint:result.output_hint ?? null,receivedAt,saveMs:Date.now()-started,resultPath};
   if (timing.callStartedAt && timing.toolReturnedAt) {
     const callStarted=Date.parse(timing.callStartedAt),returned=Date.parse(timing.toolReturnedAt);
@@ -66,6 +68,18 @@ export async function receiveImage(manifestPath, result, timing = {}) {
     return {...previous,receiptPath};
   }
   return {...receipt,receiptPath};
+}
+
+// Prefer the image tool's already-saved PNG path. This avoids copying a large
+// base64 data URL into a second tool call while preserving the exact PNG bytes.
+export async function receiveImageFile(manifestPath, imagePath, timing = {}) {
+  if (typeof imagePath !== 'string' || !/\.png$/i.test(imagePath)) throw new Error('Expected the official PNG output path');
+  const sourcePath = path.resolve(imagePath);
+  return receiveImage(manifestPath, {
+    image_url: sourcePath,
+    output_hint: sourcePath,
+    transport: 'native-png-path'
+  }, timing);
 }
 
 export async function savedImage(manifestPath) {

@@ -11,6 +11,60 @@ import { run, reusable, validateQa } from '../scripts/screenshot-execution.mjs';
 import { tableComponents } from '../scripts/page-execution-qa.mjs';
 import { extractedSourceRaw } from '../scripts/screenshot-source.mjs';
 import { runTask } from '../scripts/page-task.mjs';
+import {prepareDelivery, deliverImage} from '../scripts/image-delivery.mjs';
+
+test('页头两个标记支持设置、切换、取消并在快照中保留', async t => {
+  const f = await fixture(t);
+  for (const mark of ['manual','source-issue',null]) {
+    const saved = await f.api('page/mark', {pageId:'slide02',mark});
+    assert.equal(saved.status, 200);
+    const snapshot = (await f.api('snapshot')).value;
+    assert.equal(snapshot.pages.find(page=>page.id==='slide02').disposition, mark);
+    assert.equal(snapshot.pages.find(page=>page.id==='slide01').disposition, null);
+    if (mark) assert.equal((await f.api('request',{pageId:'slide02',confirmReview:true})).status,409);
+  }
+  assert.equal((await f.api('page/mark',{pageId:'slide02',mark:'invalid'})).status,400);
+  assert.equal((await f.api('request',{pageId:'slide02',confirmReview:true})).status,200);
+});
+
+test('统一保存入口接收原图、复用已保存版本并登记同一候选', async t => {
+  const f = await fixture(t);
+  const prepared = await runTask('prepare', {url:f.url, 'request-id':f.request.id, 'packet-only':true});
+  assert.equal(prepared.ok, true);
+  const brief = path.join(f.project, 'brief.json');
+  await writeFile(brief, JSON.stringify({layout:'Shared frame',colorRoles:{background:'graphite'},treatments:['Semantic product image'],prompt:'Exact test prompt'}));
+  const ready = await runTask('ready', {'session-file':prepared.sessionFile,'brief-file':brief,verified:true,'packet-only':true});
+  assert.equal(ready.ok, true);
+  const binding = await prepareDelivery(prepared.sessionFile);
+  assert.ok(binding.checkpointKey.includes(f.request.id));
+  const image = path.join(f.project,'official-native.png');
+  await writeFile(image, png());
+  await assert.rejects(deliverImage(binding,{image_url:'data:image/png;base64,blocked'}), {code:'NATIVE_IMAGE_REQUIRED'});
+  await assert.rejects(deliverImage({...binding,attempt:binding.attempt+1},image), /different request or attempt/);
+  // Simulate interruption after reserving and copying the body, before finalization.
+  const interrupted = JSON.parse(await readFile(binding.manifest,'utf8'));
+  const {createHash} = await import('node:crypto');
+  interrupted.attempts.at(-1).finalization = {name:'slide_01_v001.png', imageHash:createHash('sha256').update(png()).digest('hex')};
+  await writeFile(binding.manifest, JSON.stringify(interrupted));
+  await mkdir(path.join(f.project,'body_image'), {recursive:true});
+  await writeFile(path.join(f.project,'body_image','slide_01_v001.png'),png());
+  const delivered = await deliverImage(binding, image);
+  assert.equal(delivered.ok, true, delivered.error);
+  const retried = await deliverImage(binding, image);
+  assert.equal(retried.ok, true, retried.error);
+  assert.equal(retried.final, delivered.final);
+  assert.equal(retried.reused, true);
+  assert.equal((await readdir(path.join(f.project,'body_image'))).filter(name=>name.endsWith('.png')).length, 1);
+  const qaFile = path.join(f.project,'qa.json');
+  await writeFile(qaFile, JSON.stringify(qa));
+  const completed = await runTask('complete', {'session-file':prepared.sessionFile,'qa-file':qaFile});
+  assert.equal(completed.ok, true, completed.error);
+  const repeated = await runTask('complete', {'session-file':prepared.sessionFile,'qa-file':qaFile});
+  assert.equal(repeated.ok, true, repeated.error);
+  const snapshot = (await f.api('snapshot')).value.pages.find(page=>page.id==='slide01');
+  assert.equal(snapshot.candidate.status, 'candidate');
+  assert.equal(snapshot.adopted, null);
+});
 
 test('新版请求在生图前要求统一入口，且沿用已重建的页面输入',async t=>{
   const f=await fixture(t);
@@ -296,7 +350,7 @@ function png() {
   const header = Buffer.alloc(13); header.writeUInt32BE(320, 0); header.writeUInt32BE(180, 4); header[8] = 8; header[9] = 6;
   return Buffer.concat([Buffer.from('89504e470d0a1a0a', 'hex'), chunk('IHDR', header), chunk('IDAT', deflateSync(Buffer.alloc((320 * 4 + 1) * 180))), chunk('IEND', Buffer.alloc(0))]);
 }
-const qa = { textFeedback: [], compliance: { status: 'pass', evidence: 'Synthetic fixture matches the test source.' }, informationLayout: { status: 'pass', evidence: 'Synthetic test only; no production image judged.' }, visualCompletion: { status: 'pass', evidence: 'Synthetic fixture validates registration, not slide aesthetics.' } };
+const qa = { compliance: { status: 'pass', evidence: 'Synthetic fixture matches the test source.' }, informationLayout: { status: 'pass', evidence: 'Synthetic test only; no production image judged.' }, visualCompletion: { status: 'pass', evidence: 'Synthetic fixture validates registration, not slide aesthetics.' } };
 function tableQa(imageHash) {
   const report = structuredClone(qa);
   report.visualCompletion.table = { designType: 'flat-graphic', imageHash, tableOnlyInspected: true, wholePageInspected: true,
@@ -371,19 +425,6 @@ test('table QA rejects missing image observations, copied plans, and failed comp
   report.visualCompletion.table.components.backing.observed = 'Actual flat rectangle; planned carrier not present';
   report.visualCompletion.table.components.backing.status = 'fail';
   assert.throws(() => validateQa(report, { table: true, imageHash: 'hash', allowFailure: true }), /has not passed/);
-});
-
-test('文字差异作为候选提示，纯字号层级偏差不阻断表格候选', () => {
-  const report = tableQa('hash');
-  report.textFeedback = ['Audio Input 的字号可由用户自行调整'];
-  report.visualCompletion.table.components.typeHierarchy.status = 'unresolved';
-  report.visualCompletion.table.components.typeHierarchy.judgment = '字号层级可由用户后续调整';
-  validateQa(report, { table: true, imageHash: 'hash' });
-  report.visualCompletion.table.components.backing.status = 'fail';
-  assert.throws(() => validateQa(report, { table: true, imageHash: 'hash' }), /Table QA backing/);
-  report.visualCompletion.table.components.backing.status = 'pass';
-  report.textFeedback = [];
-  assert.throws(() => validateQa(report, { table: true, imageHash: 'hash' }), /typeHierarchy/);
 });
 
 test('same-run recorded artifacts resume without being called a validated reusable design', async t => {

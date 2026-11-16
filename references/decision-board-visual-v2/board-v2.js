@@ -36,6 +36,168 @@
     return message + ' ' + suffix;
   }
   const enhancedMaterialStatuses = new WeakSet();
+  const uiIcons = {
+    copy:'<rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V4H4v12h4"/>',
+    trash:'<path d="M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7m4-7v7"/>',
+    locate:'<circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2"/><path d="M12 2v3m0 14v3M2 12h3m14 0h3"/>',
+    arrow:'<path d="M5 12h14m-5-5 5 5-5 5"/>'
+  };
+  const iconSvg = name => '<svg viewBox="0 0 24 24" aria-hidden="true">' + uiIcons[name] + '</svg>';
+  const handIcon = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 13V5a1.5 1.5 0 0 1 3 0v6-8a1.5 1.5 0 0 1 3 0v8-6a1.5 1.5 0 0 1 3 0v7-4a1.5 1.5 0 0 1 3 0v8c0 4-3 6-6 6h-1c-2 0-4-1-5-3l-4-6a1.6 1.6 0 0 1 2.5-2L8 13Z"/></svg>';
+  let pageMenu;
+  let recycleMenu;
+  function enhanceRecycleBin(bridge) {
+    const heading=document.querySelector('.ui-progress-heading');
+    if(!heading || !bridge.recycleList || heading.querySelector('.ui-recycle-button')) return;
+    const button=document.createElement('button');button.type='button';button.className='ui-icon-button ui-recycle-button';button.innerHTML=iconSvg('trash');button.title='回收站';button.setAttribute('aria-label','回收站');button.setAttribute('aria-expanded','false');button.setAttribute('aria-haspopup','dialog');
+    const count=bridge.recycleList().length;if(count)button.title='回收站（'+count+' 页）';
+    heading.insertBefore(button,heading.querySelector('.ui-locate-current'));
+    button.onclick=()=>{
+      if(recycleMenu?.isConnected){recycleMenu.remove();button.setAttribute('aria-expanded','false');return;}
+      recycleMenu=document.createElement('section');recycleMenu.className='ui-recycle-menu';recycleMenu.setAttribute('role','dialog');recycleMenu.setAttribute('aria-label','已删除页面');
+      const title=document.createElement('strong');title.textContent='回收站 · '+bridge.recycleList().length+' 页';recycleMenu.append(title);
+      const list=document.createElement('div');list.className='ui-recycle-list';
+      for(const page of bridge.recycleList()){
+        const row=document.createElement('div');row.className='ui-recycle-row';const info=document.createElement('div');const name=document.createElement('strong');name.textContent=page.title;const detail=document.createElement('span');detail.textContent=page.label+' · 删除于 '+new Date(page.deletedAt).toLocaleString();info.append(name,detail);
+        const restore=document.createElement('button');restore.type='button';restore.textContent='恢复';restore.setAttribute('aria-label','恢复 '+page.title);restore.onclick=async()=>{restore.disabled=true;try{await bridge.managePages('restore',page.id);}catch(error){restore.disabled=false;status.textContent=error.message;}};row.append(info,restore);list.append(row);
+      }
+      if(!list.children.length){const empty=document.createElement('p');empty.textContent='回收站为空';list.append(empty);}
+      const status=document.createElement('p');status.setAttribute('role','status');recycleMenu.append(list,status);document.body.append(recycleMenu);const rect=button.getBoundingClientRect();recycleMenu.style.left=Math.max(8,Math.min(rect.left,window.innerWidth-390))+'px';recycleMenu.style.top=Math.min(rect.bottom+8,window.innerHeight-250)+'px';button.setAttribute('aria-expanded','true');
+    };
+  }
+  function enhancePageManagement() {
+    const bridge = window.__PAGE_FLOW_BRIDGE__;
+    if (!bridge?.pageList) return;
+    enhanceRecycleBin(bridge);
+    document.querySelectorAll('.ui-page-marker[data-mark="manual"]').forEach(button => {
+      if (!button.dataset.handIcon) { button.innerHTML = handIcon; button.dataset.handIcon = 'true'; }
+    });
+    const pages = bridge.pageList();
+    document.querySelectorAll('#slideNav .nav-button').forEach((button,index) => {
+      const page = pages[index]; if (!page) return;
+      button.classList.toggle('ui-page-hidden',page.hidden);
+      if (page.hidden && !button.querySelector('.ui-hidden-label')) { const label = document.createElement('span'); label.className='ui-hidden-label'; label.textContent='已隐藏'; button.append(label); }
+      if (button.dataset.pageMenu) return;
+      button.dataset.pageMenu='true';
+      const open = event => {
+        event.preventDefault(); pageMenu?.remove();
+        pageMenu = document.createElement('div'); pageMenu.className='ui-page-menu'; pageMenu.setAttribute('role','menu');
+        const act = async (action,title) => { try { await bridge.managePages(action,page.id,title); } catch(error) { alert(error.message); } };
+        for (const [label,run] of [
+          ['新增下一页',() => {
+            const dialog=document.createElement('dialog'); dialog.className='ui-create-page';
+            dialog.innerHTML='<form><h2>新增页面</h2><p>新页面将插入所选页的下一页。</p><label>页面名称 <span>必填</span><input name="title" required maxlength="100" autocomplete="off" placeholder="输入页面名称"></label><div><button type="button" data-cancel>取消</button><button type="submit">创建页面</button></div><p role="status"></p></form>';
+            document.body.append(dialog); dialog.querySelector('[data-cancel]').onclick=()=>dialog.close(); dialog.addEventListener('close',()=>dialog.remove());
+            dialog.querySelector('form').onsubmit=async e=>{e.preventDefault();const input=dialog.querySelector('input');if(!input.value.trim()){input.setCustomValidity('请输入页面名称');input.reportValidity();return;}input.setCustomValidity('');const submit=dialog.querySelector('[type="submit"]');submit.disabled=true;try{await bridge.managePages('create',page.id,input.value.trim());}catch(error){dialog.querySelector('[role="status"]').textContent=error.message;submit.disabled=false;}};
+            dialog.querySelector('input').oninput=e=>e.target.setCustomValidity('');dialog.showModal();
+          }],
+          [page.hidden?'取消隐藏':'隐藏所选页',()=>act('hide')],
+          ['删除页',()=>act('delete')],
+          ['重命名',() => {
+            const label=button.querySelector('.nav-title'); const input=document.createElement('input');input.className='ui-page-rename';input.value=page.title;input.maxLength=100;input.setAttribute('aria-label','页面名称');label.replaceWith(input);input.focus();input.select();let done=false;
+            const finish=async save=>{if(done)return;if(save&&!input.value.trim()){input.setCustomValidity('请输入页面名称');input.reportValidity();return;}done=true;if(save&&input.value.trim()!==page.title) await act('rename',input.value.trim());if(input.isConnected)input.replaceWith(label);};
+            input.onclick=e=>e.stopPropagation();input.oninput=()=>input.setCustomValidity('');input.onkeydown=e=>{e.stopPropagation();if(e.key==='Enter'){e.preventDefault();finish(true);}if(e.key==='Escape'){e.preventDefault();finish(false);}};input.onblur=()=>finish(true);
+          }]
+        ]) {const item=document.createElement('button');item.type='button';item.setAttribute('role','menuitem');item.textContent=label;item.onclick=()=>{pageMenu.remove();run();};pageMenu.append(item);}
+        document.body.append(pageMenu);const rect=button.getBoundingClientRect();pageMenu.style.left=Math.min(event.clientX||rect.right,window.innerWidth-190)+'px';pageMenu.style.top=Math.max(8,Math.min(event.clientY||rect.top,window.innerHeight-pageMenu.offsetHeight-8))+'px';pageMenu.querySelector('button').focus();
+      };
+      button.addEventListener('contextmenu',open);button.addEventListener('keydown',event=>{if(event.key==='ContextMenu'||event.shiftKey&&event.key==='F10')open(event);});
+    });
+    const info=bridge.tableChoice();
+    const review=document.querySelector('[data-ui-section="review"]');
+    if(review && !review.querySelector('.ui-table-question') && info.mode!=='images' && (/<table\b/i.test(info.raw)||/^\s*\|?.+\|.+\n\s*\|?\s*:?-{3,}/m.test(info.raw))) {
+      review.querySelector('.no-review-questions')?.remove();
+      const card=document.createElement('div');card.className='question-card ui-table-question';const heading=document.createElement('h3');heading.textContent='检测到有表格，希望如何呈现？';card.append(heading);
+      const options=document.createElement('div');options.className='ui-table-options';
+      for(const [value,label,detail] of [['flat-graphic','偏平面化','以图形化信息版面呈现，结合主题设计底板、表头与分组，不嵌入场景实体。'],['physical-object-integration','偏场景化','将表格融入符合主题的屏幕、展板等实体载体，协调材质、光线与透视，保持数据清晰。']]) {const option=document.createElement('button');option.type='button';option.className='radio-choice'+(info.value===value?' selected':'');option.setAttribute('aria-pressed',String(info.value===value));option.title=detail+' 两种方式均保留原始数据、顺序与行列对应关系。';option.textContent=label;option.onclick=()=>bridge.tableChoice(value);options.append(option);}
+      card.append(options);review.append(card);
+    }
+  }
+  document.addEventListener('pointerdown',event=>{if(pageMenu&&!pageMenu.contains(event.target))pageMenu.remove();});
+  const closeRecycle=()=>{recycleMenu?.remove();document.querySelector('.ui-recycle-button')?.setAttribute('aria-expanded','false');};
+  document.addEventListener('pointerdown',event=>{if(recycleMenu&&!recycleMenu.contains(event.target)&&!event.target.closest('.ui-recycle-button'))closeRecycle();});
+  document.addEventListener('keydown',event=>{if(event.key==='Escape')closeRecycle();});
+  document.addEventListener('keydown',event=>{if(event.key==='Escape')pageMenu?.remove();});
+  window.addEventListener('scroll',()=>pageMenu?.remove(),true);
+  window.addEventListener('scroll',event=>{if(!event.target.closest?.('.ui-recycle-menu'))closeRecycle();},true);
+  function locateCurrentPage() {
+    const nav = document.getElementById('slideNav');
+    const current = nav?.querySelector('.nav-button.active');
+    if (!current) return;
+    const frame = nav.getBoundingClientRect(), row = current.getBoundingClientRect();
+    const visibleTop = Math.max(0,frame.top+nav.clientTop);
+    const visibleBottom = Math.min(window.innerHeight-8,frame.top+nav.clientTop+nav.clientHeight);
+    const center = visibleBottom > visibleTop ? (visibleTop+visibleBottom)/2 : frame.top+nav.clientTop+nav.clientHeight/2;
+    const top = nav.scrollTop + row.top + row.height / 2 - center;
+    nav.scrollTo({top:Math.max(0,Math.min(top,nav.scrollHeight-nav.clientHeight)),behavior:'instant'});
+  }
+  let locateFrame = 0;
+  const queueLocateCurrentPage = () => {
+    if (locateFrame) return;
+    locateFrame = requestAnimationFrame(() => { locateFrame = 0; locateCurrentPage(); });
+  };
+  function enhanceNavigationShortcuts() {
+    const heading = document.getElementById('slideNav')?.closest('.panel')?.querySelector('h3');
+    if (heading && !heading.querySelector('.ui-locate-current')) {
+      heading.classList.add('ui-progress-heading');
+      const locate = document.createElement('button'); locate.type = 'button'; locate.className = 'ui-icon-button ui-locate-current';
+      locate.innerHTML = iconSvg('locate'); locate.title = '定位当前页'; locate.setAttribute('aria-label','定位当前页');
+      locate.addEventListener('click',queueLocateCurrentPage); heading.append(locate);
+    }
+    document.querySelectorAll('.raw-mark-item').forEach(row => {
+      const mode = row.querySelector('.raw-mark-mode');
+      const imageLink = mode?.textContent === '图片连接' || row.querySelector('.raw-mark-remove')?.getAttribute('aria-label')?.startsWith('移除图片连接：');
+      if (!imageLink || row.querySelector('.ui-image-link-jump')) return;
+      const jump = document.createElement('button'); jump.type = 'button'; jump.className = 'ui-image-link-jump';
+      jump.innerHTML = '<span>前往真实图片</span>' + iconSvg('arrow'); jump.title = '跳到本页真实素材，为图片选择对应文字';
+      jump.addEventListener('click', () => {
+        const target = document.querySelector('#slidePanel .asset-zone')?.closest('.content-group');
+        if (!target) return;
+        const headerHeight = document.querySelector('body > header')?.getBoundingClientRect().height || 64;
+        window.scrollTo({top:Math.max(0,window.scrollY+target.getBoundingClientRect().top-headerHeight-16),behavior:'smooth'});
+        target.classList.add('ui-jump-highlight');
+        setTimeout(() => target.classList.remove('ui-jump-highlight'),1200);
+      });
+      mode.before(jump);
+    });
+  }
+  document.addEventListener('click',event => {
+    const control = event.target.closest?.('button,select,summary,.asset-file-picker');
+    if (control && (control.closest('#slidePanel,#slideNav') || control.matches('.page-flow-bottom-link,#saveJson'))) queueLocateCurrentPage();
+  },true);
+  document.addEventListener('page-decision-changed',queueLocateCurrentPage);
+  document.addEventListener('page-action-complete',queueLocateCurrentPage);
+  function enhanceMaterialActions() {
+    document.querySelectorAll('.raw-head-tools').forEach(tools => {
+      if (tools.querySelector('.ui-copy-source-path')) return;
+      const copy = document.createElement('button'); copy.type = 'button'; copy.className = 'ui-icon-button ui-copy-source-path';
+      copy.innerHTML = iconSvg('copy'); copy.title = '复制材料路径'; copy.setAttribute('aria-label', '复制材料路径');
+      copy.addEventListener('click', async () => {
+        try {
+          await navigator.clipboard.writeText(tools.querySelector('.raw-file-details').textContent.trim());
+          copy.title = '已复制'; copy.setAttribute('aria-label', '路径已复制');
+          setTimeout(() => { if (copy.isConnected) { copy.title = '复制材料路径'; copy.setAttribute('aria-label', '复制材料路径'); } }, 1500);
+        } catch { copy.title = '复制失败，请选中右侧路径复制'; }
+      });
+      tools.prepend(copy);
+    });
+    document.querySelectorAll('.asset-record-remove').forEach(remove => {
+      if (remove.querySelector('svg')) return;
+      remove.innerHTML = iconSvg('trash'); remove.title = remove.getAttribute('aria-label') || '移除图片'; remove.classList.add('ui-icon-button');
+    });
+    const zones = [...document.querySelectorAll('.asset-zone')];
+    const first = zones[0];
+    if (!first || !document.querySelector('.asset-record') || first.querySelector('.ui-remove-all-images')) return;
+    const hint = first.querySelector('.asset-link-hint');
+    const footer = document.createElement('div'); footer.className = 'ui-asset-footer'; hint.before(footer); footer.append(hint);
+    const removeAll = document.createElement('button'); removeAll.type = 'button'; removeAll.className = 'ui-remove-all-images';
+    removeAll.innerHTML = iconSvg('trash') + '<span>移除全部</span>'; removeAll.title = '移除本页全部真实图片及其图片连接，保留原文标记'; removeAll.setAttribute('aria-label', '移除本页全部真实图片');
+    removeAll.addEventListener('click', () => {
+      try { window.__PAGE_FLOW_BRIDGE__.removeAllRealImages(); document.dispatchEvent(new Event('page-source-changed')); }
+      catch (error) { removeAll.title = error.message; }
+    });
+    footer.append(removeAll);
+  }
   function enhanceMaterialStatus(status) {
     if (enhancedMaterialStatuses.has(status)) return;
     enhancedMaterialStatuses.add(status);
@@ -213,6 +375,9 @@
     const globalNotes = document.getElementById('globalNotes');
     if (globalNotes) globalNotes.placeholder = '补充跨页通用要求（可选）';
     document.querySelectorAll('.raw-sync-status').forEach(enhanceMaterialStatus);
+    enhanceMaterialActions();
+    enhanceNavigationShortcuts();
+    enhancePageManagement();
     document.querySelectorAll('#slideNav .nav-index').forEach(number => number.classList.add('nav-num'));
     document.querySelectorAll('button.choice,button.mode-card,button.visual-card,button.card-option,button.toggle-option,button.category-tab').forEach(button => {
       button.setAttribute('aria-pressed', String(button.classList.contains('selected')));
@@ -222,7 +387,7 @@
     });
     document.querySelectorAll('.page-flow-status').forEach(node => {
       const text = node.textContent;
-      node.dataset.uiTone = /已采用/.test(text) ? 'success' : /失败|错误|过期/.test(text) ? 'error' : /重审|待同步/.test(text) ? 'warning' : 'info';
+      node.dataset.uiTone = /已采用|手动制作/.test(text) ? 'success' : /失败|错误|过期/.test(text) ? 'error' : /重审|待同步|材料待处理|已中止/.test(text) ? 'warning' : 'info';
     });
   }
   const schedule = () => { if (!scheduled) { scheduled = true; requestAnimationFrame(hydrate); } };
@@ -234,7 +399,7 @@
   }
   const header = document.querySelector('header h1');
   if (header) {
-    const badge = document.createElement('span'); badge.className = 'ui-preview-label'; badge.textContent = '视觉重构 V2'; header.before(badge);
+    const badge = document.createElement('span'); badge.className = 'ui-preview-label'; badge.textContent = '默认决策板 V2'; header.before(badge);
   }
   const actions = document.querySelector('header .top-actions');
   const spec = document.createElement('button'); spec.type = 'button'; spec.className = 'ui-utility-link'; spec.textContent = '设计规范';

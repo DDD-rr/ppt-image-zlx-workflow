@@ -142,7 +142,7 @@
     const current = requestState(page.lastRequest);
     if (['queued','running'].includes(current) && page.lastRequest?.environment?.ok === false) return page.lastRequest.environment.category === 'permission' ? '等待项目权限' : '执行待恢复';
     if (current === 'queued') return '等待 Codex 处理';
-    if (current === 'running') return '生成中';
+    if (current === 'running') return page.lastRequest.phase === 'preparing' ? '准备中' : page.lastRequest.phase === 'qa' ? '检查图片中' : '生成中';
     if (current === 'ready') return '待确认';
     if (page.needsReview) return '需要重审';
     if (page.adopted && page.adopted.sourceHash === page.sourceHash) return '已采用';
@@ -222,19 +222,30 @@
       if (!current || !['queued','running'].includes(current.status) || current.pageId !== request.pageId) throw new Error('本页当前没有可复制的待生成任务，请刷新状态。');
       if (service.status !== 'fulfilled' || !service.value.taskEntry) throw new Error('当前决策板未提供统一单页入口，请更新决策板服务后再复制指令。');
       request = current;
+      const shellQuote = value => {
+        const escaped = service.value.platform === 'win32'
+          ? String(value).replaceAll("'", "''")
+          : String(value).replaceAll("'", "'\\''");
+        return "'" + escaped + "'";
+      };
+      const taskCommand = service.value.nodeExecutable
+        ? `${service.value.platform === 'win32' ? '& ' : ''}${shellQuote(service.value.nodeExecutable)} ${shellQuote(service.value.taskEntry)}`
+        : `node "${service.value.taskEntry}"`;
       const pageNumberLabel = latest.value.pages.findIndex(item => item.id === request.pageId) + 1;
-      instruction = `请使用 $ppt-image-zlx-workflow 处理逐页决策板中的待生成任务。决策板：${location.origin}/；请求 ID：${request.id}；按 ID 查询任务：${location.origin}/api/page-flow/requests/next?requestId=${request.id}；目标：第 ${pageNumberLabel} 页（${target.title || target.label || request.pageId}）。只处理这一页，完成 QA 后回写候选结果并等待我验收，不要自动采用或处理其他页面。`;
+      instruction = `请在 Codex 桌面应用的本地项目会话中，使用 $ppt-image-zlx-workflow 处理本页生成任务。由本生成会话完成生图、原图保存、QA 和候选回写。决策板：${location.origin}/；请求 ID：${request.id}；按 ID 查询任务：${location.origin}/api/page-flow/requests/next?requestId=${request.id}；目标：第 ${pageNumberLabel} 页（${target.title || target.label || request.pageId}）。只处理这一页，完成 QA 后回写候选结果并等待我验收，不要自动采用或处理其他页面。`;
       instruction += `\n固定页面 ID ${request.pageId}，以请求 ID 和页面 ID 定位材料。按 skill 的单页流程处理，沿用同一请求及已有执行记录。`;
       if (service.status === 'fulfilled' && service.value.root) {
         const root = service.value.root;
         const project = root.slice(0,Math.max(root.lastIndexOf('/'),root.lastIndexOf('\\')));
         instruction += `\n本机项目目录：${project}。请在可访问此目录的本地工作区执行。`;
       }
-      instruction += `\n首次准备请直接使用当前服务提供的统一入口：node "${service.value.taskEntry}" prepare --url ${location.origin}/ --request-id ${request.id} --packet-only。只有回执包含 sessionFile，且 next 指向 --brief-file 时才继续；否则停止生图并报告入口版本过旧。不要调用 page-execution.mjs 或 heartbeat 路由。`;
+      instruction += `\n首次准备请直接使用当前服务提供的统一入口：${taskCommand} prepare --url ${location.origin}/ --request-id ${request.id} --packet-only。后续命令沿用同一运行器。回执应包含 sessionFile，并按 next 复用或准备本页设计；缺少 sessionFile 时报告入口版本过旧。不要调用 page-execution.mjs 或 heartbeat 路由。`;
+      instruction += '\n执行前核对应用返回的当前会话元数据，确认 kind=codex 且绑定本机项目。提示词中的“Codex”不能改变会话类型；kind=chatgpt 时在生图前说明执行位置不符，保留请求。每个会话核对一次，不能用另一个已有 Codex 会话的元数据替代当前会话。';
+      instruction += "\n一次读取 page-input.json 和适用规则，合并独立读取并复用经校验的设计。在 Codex 本地会话中，不得仅凭工具声明含 image_url 就判定没有本地文件；应依据官方本地输出说明及实际生成结果定位原图。请在支持官方生图原生 PNG 文件输出的 Codex 本地会话执行。ready 的 toolInputPath 提供准确输入；生图后仅将官方本地 PNG 路径及实际调用时间交给 page-task finalize --session-file，再做 QA 和 complete。禁止把 data URL/base64 或完整图片结果传入工具参数，勿使用 node_repl 接力保存。若当前会话只能返回 data URL 且无原生导出，报告保存通道限制并保留请求，勿为保存失败重新生图或重复尝试同一通道。";
       if (!navigator.clipboard?.writeText) throw new Error('剪贴板不可用');
-      return navigator.clipboard.writeText(instruction + (request.status === 'running' ? '\n该请求目前显示生成中。请先确认原会话已经停止；原会话仍在执行时不要重复生成。若已在决策板结束旧任务，请使用重新生成后的新请求 ID。' : ''));
+      return navigator.clipboard.writeText(instruction + (request.status === 'running' ? '\n该请求目前显示生成中。请先确认原会话已经停止；原会话仍在执行时不要重复生成。原会话停止且出现执行者冲突时，使用同一请求 prepare --confirm-stopped 接续。仅在旧请求已结束时使用决策板当前有效请求。' : ''));
     }).then(() => {
-      notice.textContent = '会话指令已复制，可粘贴到新会话处理此页。';
+      notice.textContent = '已复制。请粘贴到 Codex 本地项目会话，完成后回到本页验收。';
     }).catch(problem => {
       notice.textContent = instruction ? `复制失败，请手动复制：${instruction}` : problem.message;
     });
@@ -305,10 +316,10 @@
   }
   function taskActivity(request, now = Date.now()) {
     if (!request || !['queued','running'].includes(request.status)) return null;
-    const seen = request.lastHeartbeatAt || request.startedAt || request.createdAt;
+    const seen = request.environment?.checkedAt || request.worker?.lastCommandAt || request.lastHeartbeatAt || request.startedAt || request.createdAt;
     const minutes = Math.max(0, Math.floor((now - Date.parse(seen)) / 60000)) || 0;
     const queued = request.status === 'queued';
-    const timing = request.lastHeartbeatAt
+    const timing = request.environment?.checkedAt || request.worker?.lastCommandAt || request.lastHeartbeatAt
       ? `最近回报：${minutes < 1 ? '刚刚' : minutes + ' 分钟前'}`
       : `已启动 ${minutes} 分钟，尚无进度回报`;
     return { minutes, attention:minutes >= (queued ? 10 : 15), text:queued ? `本页待启动 ${minutes} 分钟` : `本页任务${timing}${request.phase ? ' · ' + request.phase : ''}` };
@@ -359,7 +370,7 @@
     const version = page.markedCandidate || (page.lastRequest?.status === 'ready' ? page.candidate : page.adoptedVersion);
     const manualCandidate = !!page.markedCandidate && page.markedCandidate.sourceHash === page.sourceHash;
     const adoptedCurrent = !!page.adopted && !page.needsReview && page.adopted.sourceHash === page.sourceHash;
-    const message = error || (!page.sourceMatches ? '原文与页面决策不一致，请先同步材料。' : page.needsReview && requestStatus === 'failed' ? `重新生成失败：${page.lastRequest.error || '请重试。'}；此前采用图片与当前决策不一致，需要重新验收。` : page.needsReview && requestStatus === 'stale' ? '本次结果已过期；此前采用图片与当前决策不一致，需要重新验收。' : page.markedCandidate && !manualCandidate ? '曾采用的图片与当前原文或决策不一致，请重新生成并验收。' : page.needsReview ? '此前采用的图片与当前决策不一致，需要重新验收。' : adoptedCurrent && (requestStatus === 'failed' || requestStatus === 'stale') ? `重新生成${requestStatus === 'failed' ? '失败' : '结果已过期'}：${page.lastRequest.error || '此前采用版本仍有效。'}；当前采用版本仍保留。` : page.adopted && manualCandidate ? `当前采用：${page.adoptedVersion?.path.split('/').at(-1) || '所选图片'}` : requestStatus === 'queued' ? '本页生成请求已创建，尚未启动。当前请求等待执行会话接手，不表示还有其他任务排在前面。请回到新会话发送处理指令；完成后图片会显示在本页。' : requestStatus === 'running' ? '正在生成一张图片。完成后会显示在下方。' : requestStatus === 'ready' ? '图片已生成，请在下方选择并采用。' : requestStatus === 'failed' ? `生成失败：${page.lastRequest.error || '请重试。'}` : requestStatus === 'stale' ? '采用图片已过期，请重新生成。' : page.adopted ? '此前采用图片与当前决策不一致，需要重新验收。' : '尚无采用图片。确认后生成一张。');
+    const message = error || (!page.sourceMatches ? '原文与页面决策不一致，请先同步材料。' : page.needsReview && requestStatus === 'failed' ? `重新生成失败：${page.lastRequest.error || '请重试。'}；此前采用图片与当前决策不一致，需要重新验收。` : page.needsReview && requestStatus === 'stale' ? '本次结果已过期；此前采用图片与当前决策不一致，需要重新验收。' : page.markedCandidate && !manualCandidate ? '曾采用的图片与当前原文或决策不一致，请重新生成并验收。' : page.needsReview ? '此前采用的图片与当前决策不一致，需要重新验收。' : adoptedCurrent && (requestStatus === 'failed' || requestStatus === 'stale') ? `重新生成${requestStatus === 'failed' ? '失败' : '结果已过期'}：${page.lastRequest.error || '此前采用版本仍有效。'}；当前采用版本仍保留。` : page.adopted && manualCandidate ? `当前采用：${page.adoptedVersion?.path.split('/').at(-1) || '所选图片'}` : requestStatus === 'queued' ? '本页生成请求已创建，尚未启动。当前请求等待执行会话接手，不表示还有其他任务排在前面。请点击“复制 Codex 指令”，粘贴到 Codex 本地项目会话执行；完成后图片会显示在本页。' : requestStatus === 'running' ? ({preparing:'正在准备本页素材和生成设计。',qa:'图片已保存，正在检查并登记候选。'}[page.lastRequest.phase] || '正在生成一张图片。完成后会显示在下方。') : requestStatus === 'ready' ? '图片已生成，请在下方选择并采用。' : requestStatus === 'failed' ? `生成失败：${page.lastRequest.error || '请重试。'}` : requestStatus === 'stale' ? '采用图片已过期，请重新生成。' : page.adopted ? '此前采用图片与当前决策不一致，需要重新验收。' : '尚无采用图片。确认后生成一张。');
     const dispositionMessage = page.disposition === 'manual' ? '本页由你在 PPT 中手动制作，已计入完成进度。' : page.disposition === 'source-issue' ? '本页材料有问题，请处理材料后取消页头的感叹号标记。' : '';
     const recoveryMessage = requestStatus === 'cancelled' ? '本次任务已中止。可点击“重新生成”准备新指令；已有图片保留。' : '';
     info.append(element('strong', error ? 'page-flow-error' : '', error || dispositionMessage || recoveryMessage || message));
@@ -389,7 +400,7 @@
     else if (preview?.placeholderIssue) generationBlock = preview.placeholderIssue;
     else if (annotationPending) generationBlock = '部分选中文字标记需要重新确认，请到“本页原始材料”的 Markdown 编辑区重新标记或移除。';
     else if (imageTextLinkPending) generationBlock = '图片对应的原文已修改或无法确认，请到 Markdown 编辑区重新标记，再为图片选择对应文字。';
-    else if (currentRequestActive) generationBlock = requestStatus === 'queued' ? '本页任务待启动；请在当前对话中处理，完成后回到本页验收。' : '本页正在生成，请等待候选图片出现后验收。';
+    else if (currentRequestActive) generationBlock = requestStatus === 'queued' ? '本页任务待启动；请将本页指令粘贴到 Codex 本地项目会话执行，完成后回到本页验收。' : '本页正在生成，请等待候选图片出现后验收。';
     else if (requestStatus === 'ready') generationBlock = '图片已经生成，请先采用、重做或暂不采用，再开始下一次生成。';
     const generationLabel = currentRequestActive ? (requestStatus === 'queued' ? '等待处理' : '生成中') : requestStatus === 'ready' ? '候选图待验收' : requestStatus === 'cancelled' ? '重新生成' : page.lastRequest?.status === 'failed' || page.lastRequest?.status === 'stale' ? '重试生成' : page.adopted ? '重新生成' : '生成本页';
     controls.append(generationButton(generationLabel, generationBlock, () => request(requestStatus === 'failed' || requestStatus === 'stale')));
@@ -397,13 +408,13 @@
     if (page.disposition) {
       // The persistent page marker owns this page until the user clears it.
     } else if (['queued','running'].includes(requestStatus)) {
-      const copy = button(`复制第 ${pagePosition(page.id)} 页指令`, () => copySessionInstruction(page.lastRequest));
+      const copy = button(`复制第 ${pagePosition(page.id)} 页 Codex 指令`, () => copySessionInstruction(page.lastRequest));
       copy.disabled = false; controls.append(copy);
       const activity = element('span', 'page-flow-activity'); info.append(activity);
       const recovery = element('details', 'page-flow-recovery');
       recovery.open = recoveryWasOpen;
       recovery.append(element('summary', '', '任务恢复'));
-      recovery.append(element('p', '', requestStatus === 'running' ? '只有确认原会话已停止时才结束任务。结束后可重新生成新指令；旧请求的迟到回写会被拒绝，已有图片保留。' : '若不再使用当前指令，可结束等待，再重新生成新指令。'));
+      recovery.append(element('p', '', requestStatus === 'running' ? '原会话停止后，可在 Codex 本地项目会话沿用当前请求接续。确需放弃本次任务时再结束任务，已有图片保留。' : '当前请求可直接交给 Codex 本地项目会话处理。确需放弃时再结束等待。'));
       recovery.append(button(requestStatus === 'running' ? '原会话已停止，结束任务' : '结束等待', () => action(() => endStoppedTask(page.lastRequest))));
       info.append(recovery);
     }

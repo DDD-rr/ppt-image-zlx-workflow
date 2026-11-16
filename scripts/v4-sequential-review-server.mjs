@@ -353,7 +353,7 @@ createServer(async (req, res) => {
       let saved = false;
       const currentBoard = await currentBoardHash() === boardHash && (await sourceOutOfSyncIds()).length === 0;
       try { const d = JSON.parse(await readFile(decisionPath, 'utf8')); saved = currentBoard && d._review_session === session && d._board_sha256 === boardHash; } catch {}
-      return json(res, 200, { service: 'ppt-image-review-v4', capabilities:{ pageManagement:true, screenshotExtraction:true, stagedExecution:true }, taskEntry:path.join(path.dirname(process.argv[1]),'page-task.mjs'), root, session, boardHash, currentBoard, saved, path: decisionPath });
+      return json(res, 200, { service: 'ppt-image-review-v4', capabilities:{ pageManagement:true, screenshotExtraction:true, stagedExecution:true }, taskEntry:path.join(path.dirname(process.argv[1]),'page-task.mjs'), nodeExecutable:process.execPath, platform:process.platform, root, session, boardHash, currentBoard, saved, path: decisionPath });
     }
     if (req.method === 'GET' && url.pathname === '/api/draft') {
       if (await currentBoardHash() !== boardHash || (await sourceOutOfSyncIds()).length) return json(res, 200, { stale: true });
