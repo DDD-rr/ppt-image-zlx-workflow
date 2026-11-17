@@ -11,6 +11,7 @@ Use the existing page guide's compact decision-to-treatment record as the page-s
 - Always include `textFeedback`: an array of up to five concise, text-only issues for the user to adjust (for example wording, labels/fields, values, units, punctuation, or typography). Use an empty array when there are none. These findings are advisory: do not fail or leave unresolved any QA gate solely for a text discrepancy. The user will handle those edits after viewing the candidate.
 - Accept either full-width or half-width comma separators when the parameter meaning is unchanged; do not flag or regenerate for comma width.
 - For each applicable high-impact gate, record pass, fail, or unresolved with a brief observable reason. Do not report a passing/ready candidate while a high-impact failure or required-fidelity uncertainty remains. Follow the existing repair/limitation path; do not invent another aesthetic standard, fixed quota, template, or approval gate.
+- Keep the report concise without dropping observations: each top-level gate covers its own criteria, so do not repeat the same finding across compliance, informationLayout and visualCompletion. When a table record is required, its component fields carry the table-specific evidence; visualCompletion.evidence summarizes the overall result or a separate page-level issue.
 
 ## Compliance QA
 
