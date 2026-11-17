@@ -48,17 +48,18 @@
     .generated-image-details-title { display:flex; align-items:center; justify-content:space-between; gap:12px; }
     .page-flow-mark-image { margin:0; padding:9px 16px; border:1px solid #218b43; border-radius:8px; background:#258d45; color:white; font-size:12px; font-weight:800; white-space:nowrap; cursor:pointer; }
     .page-flow-mark-image[aria-pressed="true"] { background:#eefaf1; color:#237d3c; }
-    .generated-image-details.page-flow-image-meta { display:grid !important; grid-template-columns:minmax(0,1fr) minmax(150px,auto) auto; align-items:center; gap:8px 20px; height:auto; min-height:72px; padding:10px 16px; }
+    .generated-image-details.page-flow-image-meta { display:grid !important; grid-template-columns:minmax(0,1fr) minmax(150px,auto) auto; align-items:center; gap:2px 20px; height:72px; min-height:72px; box-sizing:border-box; padding:6px 16px; }
     .generated-image-details.page-flow-image-meta[hidden] { display:none !important; }
     .page-flow-image-meta > div { min-width:0; }
     .page-flow-image-meta > div:last-child { display:flex; flex-direction:column; align-items:flex-end; gap:5px; }
-    .page-flow-image-meta .generated-image-filepath { display:block; max-height:none; margin-top:4px; white-space:normal; overflow-wrap:anywhere; color:#71869a; font-size:11px; }
+    .page-flow-image-meta .generated-image-filepath { display:block; max-height:none; margin-top:1px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:#71869a; font-size:11px; line-height:13px; }
     .page-flow-image-meta .generated-image-detail-label { display:none; }
-    .page-flow-image-name { display:block; color:#244a67; font-size:13px; font-weight:800; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-    .page-flow-image-path { margin-top:4px; color:#667f95; font-size:11px; }
+    .page-flow-image-name { display:block; color:#244a67; font-size:13px; font-weight:800; line-height:16px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .page-flow-image-path { display:block; margin-top:1px; color:#667f95; font-size:11px; line-height:13px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .page-flow-image-feedback { display:block; max-width:100%; margin-top:1px; color:#9a6400; font-size:11px; line-height:13px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
     .page-flow-image-time { color:#314f69; font-size:12px; white-space:nowrap; }
     .page-flow-image-action { display:flex; justify-content:flex-end; }
-    @media (max-width:700px) { .generated-image-details.page-flow-image-meta { grid-template-columns:1fr; } .page-flow-image-meta > div:last-child { align-items:flex-start; } .page-flow-image-action { justify-content:flex-start; } }
+    @media (max-width:700px) { .generated-image-details.page-flow-image-meta { grid-template-columns:1fr; height:auto; min-height:72px; } .page-flow-image-meta > div:last-child { align-items:flex-start; } .page-flow-image-action { justify-content:flex-start; } }
     .page-flow-bottom-link { position:fixed; right:22px; bottom:20px; z-index:1000; padding:10px 14px; border:1px solid #b6cde1; border-radius:999px; background:#fff; color:#245d8c; box-shadow:0 4px 18px #14314b26; font-weight:800; cursor:pointer; }
     .generated-image-group:has(.page-flow-panel) { padding: 16px; }
     .generated-image-group:has(.page-flow-panel) .generated-image-layout { position: relative; grid-template-columns: 160px minmax(0, 1fr); min-height: 0; height: auto; }
@@ -141,7 +142,7 @@
     const current = requestState(page.lastRequest);
     if (['queued','running'].includes(current) && page.lastRequest?.environment?.ok === false) return page.lastRequest.environment.category === 'permission' ? '等待项目权限' : '执行待恢复';
     if (current === 'queued') return '等待 Codex 处理';
-    if (current === 'running') return '生成中';
+    if (current === 'running') return page.lastRequest.phase === 'preparing' ? '准备中' : page.lastRequest.phase === 'qa' ? '检查图片中' : '生成中';
     if (current === 'ready') return '待确认';
     if (page.needsReview) return '需要重审';
     if (page.adopted && page.adopted.sourceHash === page.sourceHash) return '已采用';
@@ -221,19 +222,29 @@
       if (!current || !['queued','running'].includes(current.status) || current.pageId !== request.pageId) throw new Error('本页当前没有可复制的待生成任务，请刷新状态。');
       if (service.status !== 'fulfilled' || !service.value.taskEntry) throw new Error('当前决策板未提供统一单页入口，请更新决策板服务后再复制指令。');
       request = current;
+      const shellQuote = value => {
+        const escaped = service.value.platform === 'win32'
+          ? String(value).replaceAll("'", "''")
+          : String(value).replaceAll("'", "'\\''");
+        return "'" + escaped + "'";
+      };
+      const taskCommand = service.value.nodeExecutable
+        ? `${service.value.platform === 'win32' ? '& ' : ''}${shellQuote(service.value.nodeExecutable)} ${shellQuote(service.value.taskEntry)}`
+        : `node "${service.value.taskEntry}"`;
       const pageNumberLabel = latest.value.pages.findIndex(item => item.id === request.pageId) + 1;
-      instruction = `请使用 $ppt-image-zlx-workflow 处理逐页决策板中的待生成任务。决策板：${location.origin}/；请求 ID：${request.id}；按 ID 查询任务：${location.origin}/api/page-flow/requests/next?requestId=${request.id}；目标：第 ${pageNumberLabel} 页（${target.title || target.label || request.pageId}）。只处理这一页，完成 QA 后回写候选结果并等待我验收，不要自动采用或处理其他页面。`;
-      instruction += `\n固定页面 ID ${request.pageId}，以请求 ID 和页面 ID 定位材料。按 skill 的单页流程处理，沿用同一请求及已有执行记录。`;
+      instruction = '使用 $ppt-image-zlx-workflow，在 Codex 本地项目会话执行单页生成。';
       if (service.status === 'fulfilled' && service.value.root) {
         const root = service.value.root;
         const project = root.slice(0,Math.max(root.lastIndexOf('/'),root.lastIndexOf('\\')));
-        instruction += `\n本机项目目录：${project}。请在可访问此目录的本地工作区执行。`;
+        instruction += `\n项目：${project}`;
       }
-      instruction += `\n首次准备请直接使用当前服务提供的统一入口：node "${service.value.taskEntry}" prepare --url ${location.origin}/ --request-id ${request.id} --packet-only。只有回执包含 sessionFile，且 next 指向 --brief-file 时才继续；否则停止生图并报告入口版本过旧。不要调用 page-execution.mjs 或 heartbeat 路由。`;
+      instruction += `\n页面：${request.pageId}（第 ${pageNumberLabel} 页｜${target.title || target.label || request.pageId}）`;
+      instruction += `\n入口：${taskCommand} prepare --url ${location.origin}/ --request-id ${request.id} --packet-only`;
+      instruction += '\n按技能单页流程，由本会话完成生图、保存、QA 和候选回写，等待我验收。仅处理本页，沿用同一请求及已有执行记录，不自动采用。';
       if (!navigator.clipboard?.writeText) throw new Error('剪贴板不可用');
-      return navigator.clipboard.writeText(instruction + (request.status === 'running' ? '\n该请求目前显示生成中。请先确认原会话已经停止；原会话仍在执行时不要重复生成。若已在决策板结束旧任务，请使用重新生成后的新请求 ID。' : ''));
+      return navigator.clipboard.writeText(instruction + (request.status === 'running' ? '\n请求正在执行；确认原会话已停止后，按技能恢复流程接续。' : ''));
     }).then(() => {
-      notice.textContent = '会话指令已复制，可粘贴到新会话处理此页。';
+      notice.textContent = '已复制。请粘贴到 Codex 本地项目会话，完成后回到本页验收。';
     }).catch(problem => {
       notice.textContent = instruction ? `复制失败，请手动复制：${instruction}` : problem.message;
     });
@@ -304,10 +315,10 @@
   }
   function taskActivity(request, now = Date.now()) {
     if (!request || !['queued','running'].includes(request.status)) return null;
-    const seen = request.lastHeartbeatAt || request.startedAt || request.createdAt;
+    const seen = request.environment?.checkedAt || request.worker?.lastCommandAt || request.lastHeartbeatAt || request.startedAt || request.createdAt;
     const minutes = Math.max(0, Math.floor((now - Date.parse(seen)) / 60000)) || 0;
     const queued = request.status === 'queued';
-    const timing = request.lastHeartbeatAt
+    const timing = request.environment?.checkedAt || request.worker?.lastCommandAt || request.lastHeartbeatAt
       ? `最近回报：${minutes < 1 ? '刚刚' : minutes + ' 分钟前'}`
       : `已启动 ${minutes} 分钟，尚无进度回报`;
     return { minutes, attention:minutes >= (queued ? 10 : 15), text:queued ? `本页待启动 ${minutes} 分钟` : `本页任务${timing}${request.phase ? ' · ' + request.phase : ''}` };
@@ -358,7 +369,7 @@
     const version = page.markedCandidate || (page.lastRequest?.status === 'ready' ? page.candidate : page.adoptedVersion);
     const manualCandidate = !!page.markedCandidate && page.markedCandidate.sourceHash === page.sourceHash;
     const adoptedCurrent = !!page.adopted && !page.needsReview && page.adopted.sourceHash === page.sourceHash;
-    const message = error || (!page.sourceMatches ? '原文与页面决策不一致，请先同步材料。' : page.needsReview && requestStatus === 'failed' ? `重新生成失败：${page.lastRequest.error || '请重试。'}；此前采用图片与当前决策不一致，需要重新验收。` : page.needsReview && requestStatus === 'stale' ? '本次结果已过期；此前采用图片与当前决策不一致，需要重新验收。' : page.markedCandidate && !manualCandidate ? '曾采用的图片与当前原文或决策不一致，请重新生成并验收。' : page.needsReview ? '此前采用的图片与当前决策不一致，需要重新验收。' : adoptedCurrent && (requestStatus === 'failed' || requestStatus === 'stale') ? `重新生成${requestStatus === 'failed' ? '失败' : '结果已过期'}：${page.lastRequest.error || '此前采用版本仍有效。'}；当前采用版本仍保留。` : page.adopted && manualCandidate ? `当前采用：${page.adoptedVersion?.path.split('/').at(-1) || '所选图片'}` : requestStatus === 'queued' ? '本页生成请求已创建，尚未启动。当前请求等待执行会话接手，不表示还有其他任务排在前面。请回到新会话发送处理指令；完成后图片会显示在本页。' : requestStatus === 'running' ? '正在生成一张图片。完成后会显示在下方。' : requestStatus === 'ready' ? '图片已生成，请在下方选择并采用。' : requestStatus === 'failed' ? `生成失败：${page.lastRequest.error || '请重试。'}` : requestStatus === 'stale' ? '采用图片已过期，请重新生成。' : page.adopted ? '此前采用图片与当前决策不一致，需要重新验收。' : '尚无采用图片。确认后生成一张。');
+    const message = error || (!page.sourceMatches ? '原文与页面决策不一致，请先同步材料。' : page.needsReview && requestStatus === 'failed' ? `重新生成失败：${page.lastRequest.error || '请重试。'}；此前采用图片与当前决策不一致，需要重新验收。` : page.needsReview && requestStatus === 'stale' ? '本次结果已过期；此前采用图片与当前决策不一致，需要重新验收。' : page.markedCandidate && !manualCandidate ? '曾采用的图片与当前原文或决策不一致，请重新生成并验收。' : page.needsReview ? '此前采用的图片与当前决策不一致，需要重新验收。' : adoptedCurrent && (requestStatus === 'failed' || requestStatus === 'stale') ? `重新生成${requestStatus === 'failed' ? '失败' : '结果已过期'}：${page.lastRequest.error || '此前采用版本仍有效。'}；当前采用版本仍保留。` : page.adopted && manualCandidate ? `当前采用：${page.adoptedVersion?.path.split('/').at(-1) || '所选图片'}` : requestStatus === 'queued' ? '本页生成请求已创建，尚未启动。当前请求等待执行会话接手，不表示还有其他任务排在前面。请点击“复制 Codex 指令”，粘贴到 Codex 本地项目会话执行；完成后图片会显示在本页。' : requestStatus === 'running' ? ({preparing:'正在准备本页素材和生成设计。',qa:'图片已保存，正在检查并登记候选。'}[page.lastRequest.phase] || '正在生成一张图片。完成后会显示在下方。') : requestStatus === 'ready' ? '图片已生成，请在下方选择并采用。' : requestStatus === 'failed' ? `生成失败：${page.lastRequest.error || '请重试。'}` : requestStatus === 'stale' ? '采用图片已过期，请重新生成。' : page.adopted ? '此前采用图片与当前决策不一致，需要重新验收。' : '尚无采用图片。确认后生成一张。');
     const dispositionMessage = page.disposition === 'manual' ? '本页由你在 PPT 中手动制作，已计入完成进度。' : page.disposition === 'source-issue' ? '本页材料有问题，请处理材料后取消页头的感叹号标记。' : '';
     const recoveryMessage = requestStatus === 'cancelled' ? '本次任务已中止。可点击“重新生成”准备新指令；已有图片保留。' : '';
     info.append(element('strong', error ? 'page-flow-error' : '', error || dispositionMessage || recoveryMessage || message));
@@ -388,7 +399,7 @@
     else if (preview?.placeholderIssue) generationBlock = preview.placeholderIssue;
     else if (annotationPending) generationBlock = '部分选中文字标记需要重新确认，请到“本页原始材料”的 Markdown 编辑区重新标记或移除。';
     else if (imageTextLinkPending) generationBlock = '图片对应的原文已修改或无法确认，请到 Markdown 编辑区重新标记，再为图片选择对应文字。';
-    else if (currentRequestActive) generationBlock = requestStatus === 'queued' ? '本页任务待启动；请在当前对话中处理，完成后回到本页验收。' : '本页正在生成，请等待候选图片出现后验收。';
+    else if (currentRequestActive) generationBlock = requestStatus === 'queued' ? '本页任务待启动；请将本页指令粘贴到 Codex 本地项目会话执行，完成后回到本页验收。' : '本页正在生成，请等待候选图片出现后验收。';
     else if (requestStatus === 'ready') generationBlock = '图片已经生成，请先采用、重做或暂不采用，再开始下一次生成。';
     const generationLabel = currentRequestActive ? (requestStatus === 'queued' ? '等待处理' : '生成中') : requestStatus === 'ready' ? '候选图待验收' : requestStatus === 'cancelled' ? '重新生成' : page.lastRequest?.status === 'failed' || page.lastRequest?.status === 'stale' ? '重试生成' : page.adopted ? '重新生成' : '生成本页';
     controls.append(generationButton(generationLabel, generationBlock, () => request(requestStatus === 'failed' || requestStatus === 'stale')));
@@ -396,13 +407,13 @@
     if (page.disposition) {
       // The persistent page marker owns this page until the user clears it.
     } else if (['queued','running'].includes(requestStatus)) {
-      const copy = button(`复制第 ${pagePosition(page.id)} 页指令`, () => copySessionInstruction(page.lastRequest));
+      const copy = button(`复制第 ${pagePosition(page.id)} 页 Codex 指令`, () => copySessionInstruction(page.lastRequest));
       copy.disabled = false; controls.append(copy);
       const activity = element('span', 'page-flow-activity'); info.append(activity);
       const recovery = element('details', 'page-flow-recovery');
       recovery.open = recoveryWasOpen;
       recovery.append(element('summary', '', '任务恢复'));
-      recovery.append(element('p', '', requestStatus === 'running' ? '只有确认原会话已停止时才结束任务。结束后可重新生成新指令；旧请求的迟到回写会被拒绝，已有图片保留。' : '若不再使用当前指令，可结束等待，再重新生成新指令。'));
+      recovery.append(element('p', '', requestStatus === 'running' ? '原会话停止后，可在 Codex 本地项目会话沿用当前请求接续。确需放弃本次任务时再结束任务，已有图片保留。' : '当前请求可直接交给 Codex 本地项目会话处理。确需放弃时再结束等待。'));
       recovery.append(button(requestStatus === 'running' ? '原会话已停止，结束任务' : '结束等待', () => action(() => endStoppedTask(page.lastRequest))));
       info.append(recovery);
     }
@@ -457,6 +468,13 @@
   function selectedImagePath() {
     return document.querySelector('#slidePanel .generated-image-group')?.dataset.selectedImagePath || '';
   }
+  function selectedTextFeedback(page, selectedPath) {
+    const name = selectedPath.split(/[\\/]/).at(-1);
+    const version = [page.candidate, page.markedCandidate, page.adoptedVersion].find(item => item?.path?.split(/[\\/]/).at(-1) === name);
+    const feedback = version?.qaReport?.textFeedback;
+    if (typeof feedback === 'string') return feedback.trim() ? [feedback.trim()] : [];
+    return Array.isArray(feedback) ? feedback.filter(item => typeof item === 'string' && item.trim()).slice(0, 5) : [];
+  }
   function decorateHistory() {
     const page = snapshot?.pages.find(item => item.id === bridge()?.active());
     const wrap = document.querySelector('#slidePanel .generated-image-group');
@@ -495,6 +513,15 @@
     const selectedPath = selectedImagePath();
     name.textContent = selectedPath.split(/[\\/]/).at(-1) || '当前版本';
     file.textContent = selectedPath;
+    file.classList.add('page-flow-image-path');
+    let feedbackLine = fileColumn.querySelector('.page-flow-image-feedback');
+    const textFeedback = selectedTextFeedback(page, selectedPath);
+    if (textFeedback.length) {
+      if (!feedbackLine) { feedbackLine = element('span', 'page-flow-image-feedback'); fileColumn.append(feedbackLine); }
+      feedbackLine.textContent = `文字待你调整：${textFeedback[0]}${textFeedback.length > 1 ? ` 等${textFeedback.length}项` : ''}`;
+      feedbackLine.title = textFeedback.join('\n');
+      feedbackLine.setAttribute('aria-label', feedbackLine.title);
+    } else feedbackLine?.remove();
     timeColumn.classList.add('page-flow-image-time');
     let actionColumn = details.querySelector('.page-flow-image-action');
     if (!actionColumn) {

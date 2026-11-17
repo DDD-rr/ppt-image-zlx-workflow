@@ -11,6 +11,79 @@ import { run, reusable, validateQa } from '../scripts/screenshot-execution.mjs';
 import { tableComponents } from '../scripts/page-execution-qa.mjs';
 import { extractedSourceRaw } from '../scripts/screenshot-source.mjs';
 import { runTask } from '../scripts/page-task.mjs';
+import {prepareDelivery, deliverImage} from '../scripts/image-delivery.mjs';
+
+test('页头两个标记支持设置、切换、取消并在快照中保留', async t => {
+  const f = await fixture(t);
+  for (const mark of ['manual','source-issue',null]) {
+    const saved = await f.api('page/mark', {pageId:'slide02',mark});
+    assert.equal(saved.status, 200);
+    const snapshot = (await f.api('snapshot')).value;
+    assert.equal(snapshot.pages.find(page=>page.id==='slide02').disposition, mark);
+    assert.equal(snapshot.pages.find(page=>page.id==='slide01').disposition, null);
+    if (mark) assert.equal((await f.api('request',{pageId:'slide02',confirmReview:true})).status,409);
+  }
+  assert.equal((await f.api('page/mark',{pageId:'slide02',mark:'invalid'})).status,400);
+  assert.equal((await f.api('request',{pageId:'slide02',confirmReview:true})).status,200);
+});
+
+test('统一保存入口接收原图、复用已保存版本并登记同一候选', async t => {
+  const f = await fixture(t);
+  const prepared = await runTask('prepare', {url:f.url, 'request-id':f.request.id, 'packet-only':true});
+  assert.equal(prepared.ok, true);
+  const brief = path.join(f.project, 'brief.json');
+  await writeFile(brief, JSON.stringify({layout:'Shared frame',colorRoles:{background:'graphite'},treatments:['Semantic product image'],prompt:'Exact test prompt'}));
+  const ready = await runTask('ready', {'session-file':prepared.sessionFile,'brief-file':brief,verified:true,'packet-only':true});
+  assert.equal(ready.ok, true);
+  const binding = await prepareDelivery(prepared.sessionFile);
+  assert.ok(binding.checkpointKey.includes(f.request.id));
+  const image = path.join(f.project,'official-native.png');
+  await writeFile(image, png());
+  await assert.rejects(deliverImage(binding,{image_url:'data:image/png;base64,blocked'}), {code:'NATIVE_IMAGE_REQUIRED'});
+  await assert.rejects(deliverImage({...binding,attempt:binding.attempt+1},image), /different request or attempt/);
+  // Simulate interruption after reserving and copying the body, before finalization.
+  const interrupted = JSON.parse(await readFile(binding.manifest,'utf8'));
+  const {createHash} = await import('node:crypto');
+  interrupted.attempts.at(-1).finalization = {name:'slide_01_v001.png', imageHash:createHash('sha256').update(png()).digest('hex')};
+  await writeFile(binding.manifest, JSON.stringify(interrupted));
+  await mkdir(path.join(f.project,'body_image'), {recursive:true});
+  await writeFile(path.join(f.project,'body_image','slide_01_v001.png'),png());
+  const delivered = await deliverImage(binding, image);
+  assert.equal(delivered.ok, true, delivered.error);
+  const template = JSON.parse(await readFile(delivered.qaTemplatePath,'utf8'));
+  assert.equal(template.compliance.status,'unresolved');
+  assert.equal(delivered.qaRules.length,1);
+  const retried = await deliverImage(binding, image);
+  assert.equal(retried.ok, true, retried.error);
+  assert.equal(retried.final, delivered.final);
+  assert.equal(retried.reused, true);
+  assert.equal((await readdir(path.join(f.project,'body_image'))).filter(name=>name.endsWith('.png')).length, 1);
+  const qaFile = path.join(f.project,'qa.json');
+  const report = structuredClone(qa);
+  report.compliance.evidence = 'Synthetic actual-image evidence. '.repeat(100);
+  await writeFile(qaFile, JSON.stringify(report));
+  const completed = await runTask('complete', {'session-file':prepared.sessionFile,'qa-file':qaFile});
+  assert.equal(completed.ok, true, completed.error);
+  const repeated = await runTask('complete', {'session-file':prepared.sessionFile,'qa-file':qaFile});
+  assert.equal(repeated.ok, true, repeated.error);
+  const snapshot = (await f.api('snapshot')).value.pages.find(page=>page.id==='slide01');
+  assert.equal(snapshot.candidate.status, 'candidate');
+  assert.equal(snapshot.candidate.qaReport.compliance.evidence,report.compliance.evidence);
+  assert.ok(snapshot.candidate.qa.length<=2000);
+  assert.equal(snapshot.adopted, null);
+  const cache=JSON.parse(await readFile(path.join(f.board,'page-execution-cache/slide01.json'),'utf8'));
+  assert.equal(cache.standaloneInputContractVersion,1);
+  assert.equal(cache.standaloneInputStatus,'approved');
+  assert.equal(cache.standalonePromptSha,JSON.parse(await readFile(prepared.manifest,'utf8')).artifacts.prompt.sha256);
+  assert.equal(cache.imageInputSet.mode,'generate');
+  assert.ok(Array.isArray(cache.imageInputSet.images));
+  assert.equal(cache.imageInputSet.fingerprint,JSON.parse(await readFile(path.join(f.board,'page-executions',f.request.id,'attempt-001','image-inputs.json'),'utf8')).fingerprint);
+  await f.api('accept',{requestId:f.request.id});
+  const next=(await f.api('request',{pageId:'slide01',confirmReview:true})).value.request;
+  const reused=await runTask('prepare',{url:f.url,'request-id':next.id});
+  assert.equal(reused.ok,true,reused.error);
+  assert.equal(reused.reuse,true);
+});
 
 test('新版请求在生图前要求统一入口，且沿用已重建的页面输入',async t=>{
   const f=await fixture(t);
@@ -42,7 +115,7 @@ test('准备一次后用会话文件与单份简稿直接就绪，旧执行身�
   assert.equal(prepared.ok,true);assert.ok(prepared.sessionFile);
   const briefFile=path.join(f.project,'brief.json');
   await writeFile(briefFile,JSON.stringify({layout:'A single shared frame',colorRoles:{background:'graphite'},treatments:['Product-specific semantic imagery'],prompt:'Exact compiled prompt'}));
-  const ready=await runTask('ready',{'session-file':prepared.sessionFile,'brief-file':briefFile,verified:true,'source-only-inputs':true,'packet-only':true});
+  const ready=await runTask('ready',{'session-file':prepared.sessionFile,'brief-file':briefFile,verified:true,'packet-only':true});
   assert.equal(ready.ok,true);assert.ok(ready.toolInputPath);
   const tool=JSON.parse(await readFile(ready.toolInputPath,'utf8'));
   assert.equal(tool.prompt,'Exact compiled prompt');
@@ -66,7 +139,7 @@ test('补充参考图贯穿准备包和生成输入，变更后停止复用旧�
   await writeFile(path.join(f.project,'guide.md'),'Complete guide including layout reference');
   await writeFile(path.join(f.project,'prompt.txt'),'Exact prompt with both actual references');
   const flags={manifest:prepared.manifest,'worker-id':prepared.workerId};
-  const ready=await runTask('ready',{...flags,guide:'guide.md',prompt:'prompt.txt',verified:true,'source-only-inputs':true,'packet-only':true});
+  const ready=await runTask('ready',{...flags,guide:'guide.md',prompt:'prompt.txt',verified:true,'packet-only':true});
   assert.equal(ready.ok,true);assert.equal(ready.prompt,undefined);
   const toolInput=JSON.parse(await readFile(ready.toolInputPath,'utf8'));
   assert.equal(toolInput.inputPaths.length,2);assert.ok(toolInput.inputPaths.includes(crop));
@@ -92,8 +165,16 @@ test('补充参考图贯穿准备包和生成输入，变更后停止复用旧�
 });
 
 test('旧草案缺少图片输入完整性声明时不自动跨请求复用',async t=>{
-  const f=await prepared(t);
+  const f=await fixture(t);
+  const initial=await runTask('prepare',{url:f.url,'request-id':f.request.id});
+  const guide=path.join(f.project,'guide.md'),prompt=path.join(f.project,'prompt.txt');
+  await writeFile(guide,'legacy guide');await writeFile(prompt,'legacy standalone prompt');
+  await runTask('ready',{manifest:initial.manifest,'worker-id':initial.workerId,guide:'guide.md',prompt:'prompt.txt',verified:true});
   await f.api('run/fail',{requestId:f.request.id,error:'Synthetic stop'});
+  const cachePath=path.join(f.board,'page-execution-cache/slide01.json');
+  const legacy=JSON.parse(await readFile(cachePath,'utf8'));
+  delete legacy.standalonePromptSha;delete legacy.imageInputSet;delete legacy.standaloneInputContractVersion;delete legacy.standaloneInputStatus;
+  await writeFile(cachePath,JSON.stringify(legacy));
   const request=(await f.api('request',{pageId:'slide01',confirmReview:true})).value.request;
   const result=await runTask('prepare',{url:f.url,'request-id':request.id});
   assert.equal(result.ok,true);assert.equal(result.inputReuse,false);assert.equal(result.reuse,false);
@@ -130,7 +211,7 @@ test('ready 合并记录启动检查，重试保留同一尝试并输出接续�
   assert.equal((await f.api('execution-input?requestId='+f.request.id)).value.request.status,'queued');
   await writeFile(path.join(f.project,'guide.md'),'verified guide');
   await writeFile(path.join(f.project,'prompt.txt'),'exact official prompt');
-  const inputs = {...flags,guide:'guide.md',prompt:'prompt.txt',verified:true,'source-only-inputs':true};
+  const inputs = {...flags,guide:'guide.md',prompt:'prompt.txt',verified:true};
   const ready = await runTask('ready',inputs);
   assert.equal(ready.ok,true); assert.equal(ready.prompt,'exact official prompt');
   assert.equal(ready.generationRequired,true);
@@ -239,7 +320,15 @@ test('截图候选完成后自动回填 Markdown 和合并表格，同步失败�
   assert.ok(draft.state.raw_materials.slide01.includes(extracted));
 });
 
-async function fixture(t, titleMode = 'no-title-reserved', table = false) {
+async function makeLegacyRequest(board, request) {
+  delete request.entryContract;
+  await writeFile(path.join(board, 'page-flow-requests', `${request.id}.json`), JSON.stringify(request));
+  const statePath = path.join(board, 'page-flow-state.json');
+  const state = JSON.parse(await readFile(statePath, 'utf8'));
+  delete state.requests[request.id].entryContract;
+  await writeFile(statePath, JSON.stringify(state));
+}
+async function fixture(t, titleMode = 'no-title-reserved', table = false, { legacyRequest = false } = {}) {
   const project = await mkdtemp(path.join(os.tmpdir(), 'ppt-execution-'));
   const board = path.join(project, 'decision_board_visual_v2');
   await mkdir(path.join(board, 'uploads'), { recursive: true });
@@ -277,10 +366,12 @@ async function fixture(t, titleMode = 'no-title-reserved', table = false) {
     return { status: response.status, value: await response.json() };
   }
   const request = (await api('request', { pageId: 'slide01', confirmReview: true })).value.request;
+  // These lower-level engine tests exercise compatibility with pre-unified-entry requests.
+  if (legacyRequest) await makeLegacyRequest(board, request);
   return { project, board, url, request, api };
 }
 async function prepared(t, titleMode, table) {
-  const f = await fixture(t, titleMode, table);
+  const f = await fixture(t, titleMode, table, { legacyRequest: true });
   const prepared = await run('prepare', { url: f.url, 'request-id': f.request.id });
   const flags = { manifest: prepared.manifest };
   await run('start', flags);
@@ -404,6 +495,7 @@ test('finalize and completion preserve no-title bytes and register only an unado
   await f.api('accept', { requestId: f.request.id });
   assert.equal((await f.api('run/review', { requestId: f.request.id, versionId: result.request.finalVersionId, qaReport: qa })).status, 409);
   const retry = (await f.api('request', { pageId: 'slide01', confirmReview: true })).value.request;
+  await makeLegacyRequest(f.board, retry);
   const retryPrepared = await run('prepare', { url: f.url, 'request-id': retry.id });
   assert.equal(retryPrepared.reuse, true);
   // Server independently rejects stale asset manifests even if a caller bypasses the CLI.
@@ -413,7 +505,7 @@ test('finalize and completion preserve no-title bytes and register only an unado
   const manifest = JSON.parse(await readFile(retryPrepared.manifest));
   await writeFile(path.join(f.board, 'uploads', 'device.png'), 'replaced after generation');
   const rejected = await f.api('run/complete', { requestId: retry.id, body: manifest.output.body, final: manifest.output.final,
-    executionManifest: path.relative(f.project, retryPrepared.manifest), guideHash: manifest.artifacts.guide.sha256, promptHash: manifest.artifacts.prompt.sha256 });
+    executionManifest: path.relative(f.project, retryPrepared.manifest), guideHash: manifest.artifacts.guide.sha256, promptHash: manifest.artifacts.prompt.sha256, qaReport: qa });
   assert.equal(rejected.status, 409);
   await assert.rejects(run('complete', { manifest: retryPrepared.manifest, 'qa-file': qaFile }), /Frozen execution inputs changed/);
 });

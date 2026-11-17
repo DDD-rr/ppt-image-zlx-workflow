@@ -21,19 +21,44 @@ export async function compilePageDesign(manifestPath,briefFile) {
   await projectFile(manifest.input.projectRoot,manifestPath);
   const briefPath=await projectFile(manifest.input.projectRoot,briefFile);
   const original=await readFile(briefPath);
-  const brief=JSON.parse(original);
-  for(const field of ['layout','colorRoles','treatments','prompt']) {
-    if(!brief[field] || !JSON.stringify(brief[field]).trim())throw new Error('Design brief requires '+field);
+  const originalText=original.toString('utf8');
+  let brief, briefNormalization, briefBytes=original;
+  try { brief=JSON.parse(originalText); }
+  catch (error) {
+    const trailingLiteralNewline=/^([\s\S]*})[\t\r\n ]*(?:\\n[\t\r\n ]*)+$/.exec(originalText);
+    if (trailingLiteralNewline) {
+      try {
+        brief=JSON.parse(trailingLiteralNewline[1]);
+        briefNormalization='removed-trailing-literal-\\n-outside-json';
+      } catch {}
+    }
+    if (!briefNormalization) {
+      throw Object.assign(new Error('Invalid design brief JSON in '+briefPath+'. Serialize the same JavaScript brief object with Node.js JSON.stringify so multiline prompt text is escaped automatically. '+error.message), {code:'BRIEF_JSON_INVALID'});
+    }
   }
-  if(typeof brief.prompt!=='string' || !brief.prompt.trim())throw new Error('Exact prompt must be nonempty text');
+  if(!brief || Array.isArray(brief) || typeof brief!=='object')throw new Error('Design brief must be a JSON object');
+  for(const field of ['layout','colorRoles','treatments']) {
+    const value=brief[field];
+    if(value===undefined || value===null || (typeof value==='string' && !value.trim()) || (Array.isArray(value) && value.length===0) || (typeof value==='object' && !Array.isArray(value) && Object.keys(value).length===0)) throw new Error('Design brief requires nonempty '+field);
+  }
+  if(typeof brief.layout!=='string')throw new Error('Design brief layout must be text');
+  if(!['string','object'].includes(typeof brief.colorRoles) || Array.isArray(brief.colorRoles) || typeof brief.colorRoles==='object' && brief.colorRoles===null)throw new Error('Design brief colorRoles must be text or an object');
+  if(!Array.isArray(brief.treatments) && typeof brief.treatments!=='string' && typeof brief.treatments!=='object')throw new Error('Design brief treatments must be text, an array or an object');
+  if(typeof brief.prompt!=='string' || !brief.prompt.trim())throw new Error('Design brief requires a nonempty exact prompt string');
+  if(brief.readingOrder!==undefined && typeof brief.readingOrder!=='string')throw new Error('Design brief readingOrder must be text');
+  if(brief.extractedSource!==undefined && typeof brief.extractedSource!=='string')throw new Error('Design brief extractedSource must be text');
   const references=brief.imageReferences || manifest.imageInputSpecification || {mode:'generate',references:[]};
   await collectImageInputs(manifest.input,references);
+  if (briefNormalization) {
+    briefBytes=Buffer.from(JSON.stringify(brief,null,2)+'\n');
+    await writeFile(briefPath,briefBytes);
+  }
   let extracted;
   if(manifest.input.sourceInput) {
     if(typeof brief.extractedSource!=='string')throw new Error('Screenshot brief requires extractedSource Markdown');
     extracted=extractedSourceBody(brief.extractedSource);
   }
-  const directory=path.join(path.dirname(path.resolve(manifestPath)),'design-'+hash(original).slice(0,16));
+  const directory=path.join(path.dirname(path.resolve(manifestPath)),'design-'+hash(briefBytes).slice(0,16));
   await mkdir(directory,{recursive:true});
   const guide={requestId:manifest.requestId,pageId:manifest.input.pageId,
     sourceHash:manifest.input.sourceHash,decisionHash:manifest.input.decisionHash,
@@ -52,5 +77,5 @@ export async function compilePageDesign(manifestPath,briefFile) {
     flags['extracted-source']=path.join(directory,'extracted-source.md');
     await immutable(flags['extracted-source'],Buffer.from(extracted));
   }
-  return flags;
+  return briefNormalization ? {...flags,briefNormalization} : flags;
 }

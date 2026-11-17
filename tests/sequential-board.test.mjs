@@ -5,6 +5,15 @@ import { createServer } from 'node:net';
 import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
+import { deflateSync } from 'node:zlib';
+import { runTask } from '../scripts/page-task.mjs';
+
+function png() {
+  const crc = bytes => { let n = 0xffffffff; for (const b of bytes) { n ^= b; for (let i = 0; i < 8; i++) n = (n >>> 1) ^ (n & 1 ? 0xedb88320 : 0); } return (n ^ 0xffffffff) >>> 0; };
+  const chunk = (type, data) => { const name = Buffer.from(type), length = Buffer.alloc(4), sum = Buffer.alloc(4); length.writeUInt32BE(data.length); sum.writeUInt32BE(crc(Buffer.concat([name, data]))); return Buffer.concat([length, name, data, sum]); };
+  const header = Buffer.alloc(13); header.writeUInt32BE(320, 0); header.writeUInt32BE(180, 4); header[8] = 8; header[9] = 6;
+  return Buffer.concat([Buffer.from('89504e470d0a1a0a', 'hex'), chunk('IHDR', header), chunk('IDAT', deflateSync(Buffer.alloc((320 * 4 + 1) * 180))), chunk('IEND', Buffer.alloc(0))]);
+}
 
 async function freePort() {
   const server = createServer();
@@ -19,7 +28,7 @@ test('新版保留原板并按页请求、验收和追踪版本', async () => {
   const old = path.join(project, 'decision_board');
   const source = '# Slide01 第一页\n原文一\n\n# Slide02 第二页\n原文二\n';
   const data = { projectName: '测试', sourceDocument: { path: 'source_documents/source.md' }, slides: [{ id: 'slide01', label: '第 1 页', title: '第一页', raw: '# Slide01 第一页\n原文一' }, { id: 'slide02', label: '第 2 页', title: '第二页', raw: '# Slide02 第二页\n原文二' }] };
-  const decision = { content_handling: 'strict', palette_direction: 'warm', visual_direction: 'overview', density: 'hybrid', page_treatment: 'hybrid', slides: { slide01: { checked: false }, slide02: { checked: true } } };
+  const decision = { content_handling: 'strict', palette_direction: 'warm', visual_direction: 'overview', density: 'hybrid', page_treatment: 'hybrid', title_overlay: { mode: 'no-title-reserved' }, slides: { slide01: { checked: false }, slide02: { checked: true } } };
   await mkdir(old);
   await mkdir(path.join(project, 'source_documents'));
   await mkdir(path.join(project, 'final_image'));
@@ -61,14 +70,27 @@ test('新版保留原板并按页请求、验收和追踪版本', async () => {
     assert.notEqual(secondId, id);
     assert.equal((await api('/api/page-flow/request', { pageId: 'slide01' }, true)).status, 409);
     assert.equal((await api('/api/page-flow/request', { pageId: 'slide02' }, true)).status, 409);
-    assert.equal((await api('/api/page-flow/run/start', { requestId: id })).status, 200);
-    await writeFile(path.join(project, 'final_image', 'slide_01_v001.png'), Buffer.from('file-backed candidate'));
-    assert.equal((await api('/api/page-flow/run/complete', { requestId: id, final: 'final_image/slide_01_v001.png', qa: '通过' })).status, 200);
+    const unprepared = await api('/api/page-flow/run/start', { requestId: id });
+    assert.equal(unprepared.status, 409);
+    assert.equal(unprepared.value.code, 'ENTRY_REQUIRED');
+    const prepared = await runTask('prepare', { url: base, 'request-id': id, 'packet-only': true });
+    assert.equal(prepared.ok, true, prepared.error);
+    const brief = path.join(project, 'brief.json');
+    await writeFile(brief, JSON.stringify({ layout: 'Two ordered source modules', colorRoles: { background: 'warm neutral' }, treatments: ['clear hierarchy'], prompt: 'Synthetic candidate for the workflow contract.' }));
+    assert.equal((await runTask('ready', { 'session-file': prepared.sessionFile, 'brief-file': brief, verified: true, 'packet-only': true })).ok, true);
+    const sourceImage = path.join(project, 'synthetic.png'); await writeFile(sourceImage, png());
+    const finalized = await runTask('finalize', { 'session-file': prepared.sessionFile, image: sourceImage });
+    assert.equal(finalized.ok, true, finalized.error);
+    const qa = path.join(project, 'qa.json');
+    await writeFile(qa, JSON.stringify({ compliance: { status: 'pass', evidence: 'Synthetic source content retained.' }, informationLayout: { status: 'pass', evidence: 'Synthetic layout inspected.' }, visualCompletion: { status: 'pass', evidence: 'Synthetic image inspected for the board workflow test.' } }));
+    const completed = await runTask('complete', { 'session-file': prepared.sessionFile, 'qa-file': qa });
+    assert.equal(completed.ok, true, completed.error);
     assert.equal((await api('/api/page-flow/request', { pageId: 'slide02' }, true)).status, 409);
     assert.equal((await api('/api/page-flow/accept', { requestId: id }, true)).status, 200);
     assert.ok((await api('/api/page-flow/snapshot')).value.pages[0].adopted);
     assert.equal((await api('/api/page-flow/request', { pageId: 'slide02' }, true)).status, 409);
-    assert.equal((await api('/api/page-flow/run/start', { requestId: secondId })).status, 200);
+    const preparedSecond = await runTask('prepare', { url: base, 'request-id': secondId, 'packet-only': true });
+    assert.equal(preparedSecond.ok, true, preparedSecond.error);
     assert.equal((await api('/api/page-flow/run/fail', { requestId: secondId, error: '测试释放本页任务' })).status, 200);
     assert.equal((await api('/api/page-flow/request', { pageId: 'slide02' }, true)).status, 200);
     assert.deepEqual(JSON.parse(await readFile(path.join(old, 'style_decision.json'))), decision);

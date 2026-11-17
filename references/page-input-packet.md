@@ -22,7 +22,7 @@ Only include a crop that actually exists and has been inspected. Allowed roles a
 
 Each actual recorded attempt receives immutable image-inputs.json with every path, role, byte count and hash. The execution record points to that list by hash. Later checks verify supplemental images along with the packaged assets. Changed references require a distinct verified attempt. A cross-request standalone draft can retain its supplemental references only while all hashes remain current. Missing or changed cache references cause a rebuild. Old same-run records remain available for inspection; an absent image list cannot establish complete reference coverage.
 
-For a fresh generation, --source-only-inputs confirms that the complete declared input set supports a standalone generation, including any declared supplemental references. Use it only after inspecting that set and comparing it to the prompt. Edit mode always retains its base dependency and prevents standalone cache promotion.
+For a fresh generation, `ready` binds the exact prompt to the complete declared image-input set. The wrapper records that contract only after successful image QA and candidate registration, then rechecks every current path and hash before reuse. Edit mode retains its base dependency and prevents standalone cache promotion. The legacy `--source-only-inputs` flag is not required for normal generation.
 
 ## Fixed transport plan
 

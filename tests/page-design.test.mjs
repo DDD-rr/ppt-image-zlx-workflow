@@ -43,6 +43,43 @@ test('一次设计简稿由程序写入完整决策指南，精确提示词字�
   assert.equal(await readFile(result.prompt,'utf8'),'Exact prompt\n中文与数值 24 路。');
 });
 
+test('未转义的提示词换行提供明确编码恢复指导',async t=>{
+  const root=await directory(t);
+  const manifest=path.join(root,'execution.json');
+  await writeFile(manifest,JSON.stringify({requestId:'same',input:{projectRoot:root,assets:[],global:{},decision:{}}}));
+  const file=path.join(root,'brief.json');
+  await writeFile(file,'{"layout":"shared","colorRoles":{"background":"dark"},"treatments":["scene"],"prompt":"first line\nsecond line"}');
+  await assert.rejects(compilePageDesign(manifest,file),error=>error.code==='BRIEF_JSON_INVALID' && error.message.includes('JSON.stringify'));
+  const prompt='first line\nsecond line';
+  await writeFile(file,JSON.stringify({layout:'shared',colorRoles:{background:'dark'},treatments:['scene'],prompt}));
+  const result=await compilePageDesign(manifest,file);
+  assert.equal(await readFile(result.prompt,'utf8'),prompt);
+});
+
+test('仅修复 brief 对象外误加的字面量换行尾缀并保留提示词',async t=>{
+  const root=await directory(t);
+  const manifest=path.join(root,'execution.json');
+  await writeFile(manifest,JSON.stringify({requestId:'same',input:{projectRoot:root,assets:[],global:{},decision:{}}}));
+  const prompt='Exact prompt\n第二行，型号 24 路。';
+  const brief={layout:'shared',colorRoles:{background:'dark'},treatments:['scene'],prompt};
+  const file=path.join(root,'brief.json');
+  await writeFile(file,JSON.stringify(brief)+'\\n');
+  const result=await compilePageDesign(manifest,file);
+  assert.equal(result.briefNormalization,'removed-trailing-literal-\\n-outside-json');
+  assert.deepEqual(JSON.parse(await readFile(file,'utf8')),brief);
+  assert.equal(await readFile(result.prompt,'utf8'),prompt);
+});
+
+test('简稿字段类型错误在 ready 前被指出且不改写原设计字段',async t=>{
+  const root=await directory(t);
+  const manifest=path.join(root,'execution.json');
+  await writeFile(manifest,JSON.stringify({requestId:'same',input:{projectRoot:root,assets:[],global:{},decision:{}}}));
+  const brief={layout:['unexpected'],colorRoles:{background:'graphite'},treatments:['semantic image'],prompt:'Exact prompt'};
+  const file=path.join(root,'brief.json');await writeFile(file,JSON.stringify(brief));
+  await assert.rejects(compilePageDesign(manifest,file),/layout must be text/);
+  assert.deepEqual(JSON.parse(await readFile(file,'utf8')),brief);
+});
+
 test('运行脚本和入口说明变更不触发设计失效，视觉规则变更仍失效',async t=>{
   const root=await directory(t);
   await mkdir(path.join(root,'scripts'));await mkdir(path.join(root,'references'));

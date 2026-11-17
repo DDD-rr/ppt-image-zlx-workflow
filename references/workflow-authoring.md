@@ -183,7 +183,7 @@ Before showing any sample or final image, reject and repair pages with:
 - title overlay collision or near-collision with body modules, borders, section labels, bright lines, device edges, screenshot edges, or decorative strokes;
 - major-zone drift when the guide specified shared parent content frames or shared edges;
 - flat full-canvas module tiling when the decision called for reading priority, visual-anchor priority, path priority, body-text carrier, reading-first, or a richer composition;
-- invented evidence, fake real-image replacement, serious text fidelity loss, cramped main content, or visually generic output.
+- invented evidence, fake real-image replacement, non-text layout failures that materially harm the composition, or visually generic output. Text-only mismatches are reported in `textFeedback` for user adjustment and do not trigger a rerender by themselves.
 
 Use `references/qa-gates.md` for full QA and `references/failure-repair.md` only after a high-impact failure. When the failure is color collapse, same-family flattening, or weak gradient execution, also use `references/color-failure-repair.md`. For title collision risk, use `scripts/create_title_reference_mask.ps1` as a temporary planning/reference mask. Never deliver the mask.
 
